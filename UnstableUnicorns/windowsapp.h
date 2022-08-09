@@ -15,7 +15,7 @@
 #define PARTYSTRSIZE 296
 
 extern HINSTANCE hInstanceGlob;
-extern char ip[16], hexcode[21];
+extern char ip[16], hexcode[43];
 extern short menustate;
 extern char partymems[PARTYSTRSIZE];
 extern HWND webhwnd;

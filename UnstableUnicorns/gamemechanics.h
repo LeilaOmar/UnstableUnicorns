@@ -3,19 +3,6 @@
 
 // ******************** Utility Functions ********************
 
-// hash functions for scrambling IP addresses
-// https://stackoverflow.com/questions/664014/what-integer-hash-function-are-good-that-accepts-an-integer-hash-key
-unsigned int hash(unsigned int x);
-unsigned int unhash(unsigned int x);
-
-// IP stuff
-// https://stackoverflow.com/questions/39566240/how-to-get-the-external-ip-address-in-c
-void getIPreq(char *ip_address);
-
-// uses hash function to get code for ip (and vice versa)
-unsigned int IPtoHexCode(char* ip);
-void HexCodetoIP(char* code, char* dest);
-
 void printPlayers(void);
 void printNursery(size_t start, size_t size);
 void printDeck(size_t start, size_t size, int class, int species);

@@ -519,7 +519,10 @@ int serverInit(short portno) {
           sprintf_s(buf, BUF_SIZE, "\n%d. %s", i + 2, player[i + 1].username);
           strncat_s(partymems, PARTYSTRSIZE, buf, 36); // 36 is NAME_SIZE + 4 for the '\n%d. ' part
 
-          // send an update to every player
+          // send full lobby code to the player that just joined
+          send(clientsockfd[i], hexcode, sizeof(hexcode), 0);
+
+          // send an update on party size/names/unicorns to every player
           for (int j = 0; j < current_players - 1; j++) {
             sendLobbyPacket(current_players, j + 1, clientsockfd[j]);
           }

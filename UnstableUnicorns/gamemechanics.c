@@ -1,8 +1,6 @@
 #include "gamemechanics.h"
 #include "networkfuncs.h"
 
-#define BUFSIZE 200
-
 // ******************** Utility Functions ********************
 
 // declare these in advance so they can be used in the card effect functions
@@ -11,109 +9,6 @@ void sacrifice(int pnum, int class);
 void enterStableEffects(int pnum, int effect);
 void sacrificeDestroyEffects(int pnum, int cindex, int effect);
 void toggleFlags(int pnum, int effect);
-
-// hash functions for scrambling IP addresses
-// https://stackoverflow.com/questions/664014/what-integer-hash-function-are-good-that-accepts-an-integer-hash-key
-unsigned int hash(unsigned int x) {
-  x = ((x >> 16) ^ x) * 0x45d9f3b;
-  x = ((x >> 16) ^ x) * 0x45d9f3b;
-  x = (x >> 16) ^ x;
-  return x;
-}
-unsigned int unhash(unsigned int x) {
-  x = ((x >> 16) ^ x) * 0x119de1f3;
-  x = ((x >> 16) ^ x) * 0x119de1f3;
-  x = (x >> 16) ^ x;
-  return x;
-}
-
-// IP stuff
-// https://stackoverflow.com/questions/39566240/how-to-get-the-external-ip-address-in-c
-// unfortunately the internetopen way didn't work :(
-void getIPreq(char *ip_address) {
-  //WSADATA wsaData;
-  struct addrinfo hints;
-  struct addrinfo* result = NULL;
-  int sd, err;
-  char buffer[BUFSIZE] = { 0 };
-
-  // api.ipify.org is only for IPv4; api64.ipify.org is both v4 and v6 w/ priority for v6
-  // **don't forget to change it in getaddrinfo too if ever**
-  char* httpreq = "GET / HTTP/1.1\r\nHost: api.ipify.org\r\nConnection: close\r\n\r\n";
-
-  //if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
-  //  // error handling
-  //  return;
-  //  //cout << "WSAStartup failed.\n";
-  //  //system("pause");
-  //}
-
-  ZeroMemory(&hints, sizeof(hints));
-  hints.ai_family = AF_UNSPEC; // allows for both ipv4 and ipv6
-  hints.ai_socktype = SOCK_STREAM;
-  hints.ai_protocol = IPPROTO_TCP;
-  err = getaddrinfo("api.ipify.org", "80", &hints, &result);
-  if (err != 0)
-  {
-    // error handling
-    abort();
-    //fprintf(stderr, "%s: %s\n", url, gai_strerror(err));
-  }
-
-
-  for (struct addrinfo* addr = result; addr != NULL; addr = addr->ai_next)
-  {
-    sd = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
-    if (sd == -1)
-    {
-      err = errno;
-      continue; // if using AF_UNSPEC above instead of AF_INET/6 specifically,
-                // replace this 'break' with 'continue' instead, as the 'ai_family'
-                // may be different on the next iteration...
-    }
-
-    if (connect(sd, addr->ai_addr, addr->ai_addrlen) == 0)
-      break;
-
-    err = errno;
-  }
-
-  send(sd, httpreq, strlen(httpreq), 0);
-  recv(sd, buffer, BUFSIZE, 0);
-
-  freeaddrinfo(result);
-  closesocket(sd);
-  //WSACleanup();
-
-  // this only works because the text is the only output from the site
-  // therefore it's the last line and does not have a newline after it
-  int index = 0;
-  for (int i = BUFSIZE - 1; i >= 0; i--) {
-    if (buffer[i] == '\n') {
-      index = i + 1;
-      break;
-    }
-  }
-
-  // using sizeof(ip) for MaxCount may not be appropriate since the length is variable
-  // it still works though since everything afterwards is \0 *shrugs in laziness*
-  strncpy_s(ip_address, 16, buffer + index, 16);
-}
-
-// uses hash function to get code for ip (and vice versa); only for IPv4
-unsigned int IPtoHexCode(char* ip) {
-  struct in_addr addr;
-  inet_pton(AF_INET, ip, &addr);
-  unsigned int num = ntohl(addr.s_addr); // convert network byte to machine byte order
-
-  return hash(num);
-}
-
-void HexCodetoIP(char* code, char* dest) {
-  memset(dest, 0, 16); // reset ip in case it was entered before somehow
-  unsigned int tmp = unhash(strtoul(code, NULL, 16)); // 16 represents base
-  sprintf_s(dest, 16, "%d.%d.%d.%d", (tmp & 0xFF000000) >> 24, (tmp & 0x00FF0000) >> 16, (tmp & 0x0000FF00) >> 8, tmp & 0x000000FF);
-}
 
 void printPlayers(void) {
   puts("List of players:");

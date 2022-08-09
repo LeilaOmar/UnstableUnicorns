@@ -378,6 +378,7 @@ int clientJoin(short portno) {
   // success! ^.^
   // using player[0] just for the start; will be overwritten later
   send(sockfd, player[0].username, strlen(player[0].username), 0);
+  recv(sockfd, hexcode, sizeof(hexcode), 0); // this isn't part of the lobby packet because it never changes
   receiveLobbyPacket(&current_players, &clientpnum, sockfd);
 
   // ***** test *****

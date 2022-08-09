@@ -37,7 +37,7 @@ struct BMPHeader {
 
 // super global variables TM
 HINSTANCE hInstanceGlob;
-char ip[16], hexcode[21] = "Lobby Code: ";
+char ip[16], hexcode[43] = "Wi-Fi Code: ";
 short menustate = 0;
 char partymems[PARTYSTRSIZE] = { 0 };
 HWND webhwnd;
@@ -597,27 +597,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     windowOpen[0] = 1;
     webhwnd = hWnd; // for server and client to access in the wsapoll lobby loop
 
-
-    //HDC hdcWindow = GetDC(hWnd);
-    //
-    //// make back buffer
-    //GetClientRect(hWnd, &rc);
-    //hdcBackBuffer = CreateCompatibleDC(hdcWindow);
-    //hbmBackBuffer = CreateCompatibleBitmap(hdcBackBuffer, rc.right - rc.left, rc.bottom - rc.top);
-    //SelectObject(hdcBackBuffer, hbmBackBuffer);  // SHOULD SAVE PREVIOUS...
-    //
-    //// make sprite
-    //hdcSprite = CreateCompatibleDC(hdcWindow);
-    //hbmSprite = CreateCompatibleBitmap(hdcSprite, 50, 50);
-    //SelectObject(hdcSprite, hbmSprite);  // SHOULD SAVE PREVIOUS...
-    //RECT rcSprite;
-    //SetRect(&rcSprite, 0, 0, 50, 50);
-    //FillRect(hdcSprite, &rcSprite, (HBRUSH)GetStockObject(WHITE_BRUSH));
-    //
-    //ReleaseDC(hWnd, hdcWindow);
-
-
-
     //gamethread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)GameLoop, hWnd, 0, &tId);
     break;
   case WM_ACTIVATE:
@@ -640,7 +619,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
     // validate that HWND
     hdc = BeginPaint(hWnd, &ps);
-    // int savedDC = SaveDC(hdc);
 
     // for clicking purposes
     GetCursorPos(&pnt);
@@ -739,29 +717,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
     // create memory DC and memory bitmap where we shall do our drawing
     hdcMem = CreateCompatibleDC(hdc);
-    // // if i use CreateCompatibleBitmap, then it only gets Selected once and will not update the DC (whyyy??)
-    // hBitmapBuffer = CreateCompatibleBitmap(hdc, rc.right - rc.left, rc.bottom - rc.top);
-    // hBitmapBuffer = hBitmapTitle[menustate];
-    // oldBitmap = SelectObject(hdcMem, hBitmapBuffer);
-
+    // create a deep copy so that the original image doesn't get updated when bitblt'ing the extra info to the memory bitmap
     hBitmapBuffer = (HBITMAP)CopyImage(hBitmapTitle[menustate], IMAGE_BITMAP, BWIDTH, BHEIGHT, LR_COPYRETURNORG);
     oldBitmap = SelectObject(hdcMem, hBitmapBuffer);
-
-    // oldBitmap = SelectObject(hdcMem, hBitmapTitle[menustate]);
-
-    // loading a new image each time does work! but that's terrible >.<
-    // oldBitmap = SelectObject(hdcMem, (HBITMAP)LoadImage(NULL, "Assets\\lobby.bmp",
-    //   IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE));
-
-    if (whatever == 5) {
-      // it looks like hBitMapTitle[xxx] gets overwritten upon blitting, because the lobby menu still has
-      // outdated text and selected characters and doesn't properly flush it out; switching to a different
-      // bitmap will indeed show a change, but that would also get overwritten eventually
-      
-      FillRect(hdc, &rc, (HBRUSH)GetStockObject(BLACK_BRUSH));
-      oldBitmap = SelectObject(hdcMem, hBitmapTitle[TITLEBLANK]);
-      BitBlt(hdc, 0, 0, BWIDTH, BHEIGHT, hdcMem, 0, 0, SRCCOPY);
-    }
 
     if (menustate == LOBBY) {
       // initialize custom font
@@ -796,13 +754,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
       DeleteObject(chonkyfont);
       DrawText(hdcMem, partymems, strlen(partymems), &rc, DT_LEFT);
 
-      // test to see what's in hdcMem and draw it at this stage before hdcSprite
-      if (whatever == 5) {
-        GetClientRect(hWnd, &rc);
-        FillRect(hdc, &rc, (HBRUSH)GetStockObject(BLACK_BRUSH));
-        BitBlt(hdc, 0, 0, BWIDTH, BHEIGHT, hdcMem, 0, 0, SRCCOPY);
-      }
-
       // draw border for chosen baby unicorns (ughhhh)
       // TODO: MAX_PLAYERS is an inefficient hacky fix; should be current_players (see: server.c)
       hdcSprite = CreateCompatibleDC(hdc);
@@ -824,14 +775,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     // render memory buffer to on-screen DC
     BitBlt(hdc, 0, 0, BWIDTH, BHEIGHT, hdcMem, 0, 0, SRCCOPY);
 
-    // RestoreDC(hdc, savedDC);
-
     // cleanup
     SelectObject(hdcMem, oldBitmap);
     DeleteDC(hdcMem);
-
-    //ReleaseDC(hWnd, hdc); // paired w/ GetDC()
-    //hdc = NULL;
     EndPaint(hWnd, &ps);
     break;
   case WM_DESTROY:
@@ -891,9 +837,11 @@ LRESULT CALLBACK WndProcHost(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
       if (player[0].username != NULL && portno >= 1024 && portno <= 65535) {
         // close this window and switch to lobby window
         getIPreq(ip);
+        char localIPcode[16];
+        getLocalIP(localIPcode);
         // using strlen instead of int length return to avoid using another global variable
-        sprintf_s(hexcode + strlen(hexcode), 9, "%08X", IPtoHexCode(ip));
-
+        sprintf_s(hexcode + strlen(hexcode), 31, "%08X, Local Code: %08X", IPtoHexCode(ip), IPtoHexCode(localIPcode));
+        
         //serverInit(portno);
         networkthread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)serverInit, portno, 0, &tIdweb);
 
@@ -956,8 +904,6 @@ LRESULT CALLBACK WndProcJoin(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
 
       // input check for username and port #
       if (player[0].username != NULL && portno >= 1024 && portno <= 65535 && strlen(codestr) == 8) {
-        // using strlen instead of int length return to avoid using another global variable
-        sprintf_s(hexcode + strlen(hexcode), 9, "%s", codestr);
         // local ip 127.0.0.1: 142B8F0B
         HexCodetoIP(codestr, ip);
 
