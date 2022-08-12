@@ -37,7 +37,7 @@ struct BMPHeader {
 
 // super global variables TM
 HINSTANCE hInstanceGlob;
-char ip[16], hexcode[43] = "Wi-Fi Code: ";
+char ip[16], hexcode[43];
 short menustate = 0;
 char partymems[PARTYSTRSIZE] = { 0 };
 HWND webhwnd;
@@ -70,10 +70,10 @@ const RECT BABYPURPLE   = {  839,  358,  928,  447 };
 const RECT BABYBLACK    = {  959,  358, 1048,  447 };
 const RECT BABYWHITE    = { 1079,  358, 1168,  447 };
 
-const RECT BABYBROWN    = {  659,  473,  748,  652 };
-const RECT BABYRAINBOW  = {  779,  473,  868,  652 };
-const RECT BABYDEATH    = {  899,  473,  988,  652 };
-const RECT BABYNARWHAL  = { 1019,  473, 1108,  652 };
+const RECT BABYBROWN    = {  659,  473,  748,  562 };
+const RECT BABYRAINBOW  = {  779,  473,  868,  562 };
+const RECT BABYDEATH    = {  899,  473,  988,  562 };
+const RECT BABYNARWHAL  = { 1019,  473, 1108,  562 };
 
 #define BORDERWIDTH 97
 
@@ -565,6 +565,49 @@ void LoadImages(HWND hWnd) {
 
 volatile DWORD whatever;
 
+void GUIstuff(HWND hWnd) {
+  POINT pnt;
+  int ret;
+
+  // gets mouse click for baby unicorn picker
+  GetCursorPos(&pnt);
+  ScreenToClient(hWnd, &pnt);
+
+  if (GetAsyncKeyState(VK_LBUTTON) < 0 && is_active) {
+    if (pnt.x >= 360 && pnt.x <= 549 && pnt.y >= 590 && pnt.y <= 639) {
+      // user clicked the leave button
+      closesocket(sockfd); // this is causing too many problems ;-;
+      menustate = TITLEBLANK;
+
+      if (!isclient) {
+        // wipe all relevant lobby global variables and return to title screen
+        memset(babytoggle, 0, 13);
+        memset(pselect, 0, MAX_PLAYERS);
+        memset(partymems, '\0', PARTYSTRSIZE);
+        // for (int i = 0; i < current_players; i++) {
+        //   memset(player[i].username, '\0', NAME_SIZE);
+        // }
+        current_players = 1;
+      }
+      return;
+    }
+
+    if (isclient) {
+      sendInt(pnt.x, sockfd);
+      sendInt(pnt.y, sockfd);
+    }
+    else {
+      ret = SelectBabyUnicorn(0, pnt); // server is always player index 0
+      // if (ret) {
+      //   // clientsockfd should already be initialized by the time current_players updates
+      //   for (int i = 0; i < current_players - 1; i++) {
+      //     sendLobbyPacket(current_players, i + 1, clientsockfd[i]);
+      //   }
+      // }
+    }
+  }
+}
+
 //  FUNCTION: WndProc(HWND, UINT, WPARAM, LPARAM)
 //
 //  PURPOSE:  Processes messages for the main window.
@@ -613,6 +656,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     break;
   case WM_ERASEBKGND:
     return (LRESULT)1; // Say we handled it.
+  case WM_LBUTTONDOWN:
+    if (menustate == LOBBY) {
+      GUIstuff(hWnd);
+    }
+    break;
   case WM_PAINT:
     // TODO: use UpdateLayeredWindow() instead of WM_PAINT????
     // https://stackoverflow.com/questions/67689087/correct-way-to-handle-and-redraw-a-layered-window-with-a-bitmap
@@ -775,9 +823,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     // render memory buffer to on-screen DC
     BitBlt(hdc, 0, 0, BWIDTH, BHEIGHT, hdcMem, 0, 0, SRCCOPY);
 
-    // cleanup
+    // cleanup, be aware of memory leaks >.<
     SelectObject(hdcMem, oldBitmap);
     DeleteDC(hdcMem);
+    DeleteObject(hBitmapBuffer);
     EndPaint(hWnd, &ps);
     break;
   case WM_DESTROY:
@@ -789,6 +838,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
       DeleteObject(hBitmapBorder[i]);
     }
     PostQuitMessage(0);
+    WSACleanup();
     break;
   }
 
@@ -839,8 +889,7 @@ LRESULT CALLBACK WndProcHost(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
         getIPreq(ip);
         char localIPcode[16];
         getLocalIP(localIPcode);
-        // using strlen instead of int length return to avoid using another global variable
-        sprintf_s(hexcode + strlen(hexcode), 31, "%08X, Local Code: %08X", IPtoHexCode(ip), IPtoHexCode(localIPcode));
+        sprintf_s(hexcode, sizeof(hexcode), "Wi-Fi Code: %08X, Local Code: %08X", IPtoHexCode(ip), IPtoHexCode(localIPcode));
         
         //serverInit(portno);
         networkthread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)serverInit, portno, 0, &tIdweb);
@@ -910,7 +959,8 @@ LRESULT CALLBACK WndProcJoin(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
         //clientJoin(portno);
         networkthread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)clientJoin, portno, 0, &tIdweb);
 
-        menustate = LOBBY;
+        // TODO: add a "loading" state as an intermediate period while connecting to the host
+        // menustate = LOBBY;
         DestroyWindow(hWnd);
       }
 

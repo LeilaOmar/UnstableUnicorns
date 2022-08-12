@@ -2,6 +2,8 @@
 #include "gamemechanics.h"
 #include "windowsapp.h"
 
+#define ERRORBUF 256
+
 int clientMain(void) {
   int isvalid, clientpnum, index;
   short portno;
@@ -309,10 +311,14 @@ int clientMain(void) {
 int clientJoin(short portno) {
   struct sockaddr_in server;
   int clientpnum, versioncheck;
+  char errormsg[ERRORBUF];
 
   // *****************************************************
   // ******************* Client Set-up *******************
   // *****************************************************
+
+  // TODO: isclient is kind of superfluous when i could just use the player number to check instead
+  isclient = 1;
 
   if (inet_pton(AF_INET, ip, &server.sin_addr.s_addr) != 1) {
     // oopsie
@@ -321,59 +327,35 @@ int clientJoin(short portno) {
   
   server.sin_family = AF_INET;
   server.sin_port = htons(portno);
-  
-  int tmp;
-  if (tmp = connect(sockfd, (struct sockaddr*)&server, sizeof(server)) < 0) {
-    versioncheck = WSAGetLastError();
+
+  if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == INVALID_SOCKET) {
+    sprintf_s(errormsg, ERRORBUF, "Could not create socket. Error code : % d", WSAGetLastError());
     MessageBoxA(NULL,
-      _T("Attempt to connect to the server was unsuccessful. Error code : %d"),
+      errormsg,
+      _T("Server Set-up"),
+      NULL);
+    return 1;
+  }
+
+  if (connect(sockfd, (struct sockaddr*)&server, sizeof(server)) < 0) {
+    sprintf_s(errormsg, ERRORBUF, "Attempt to connect to the server was unsuccessful. Error code : %d", WSAGetLastError());
+    MessageBoxA(NULL,
+      errormsg,
       _T("Client Connection Set-up"),
       NULL);
+    closesocket(sockfd);
     menustate = TITLEBLANK;
     return 1;
   }
 
-  //struct addrinfo* result = NULL, hints;
-  //ZeroMemory(&hints, sizeof(hints));
-  //hints.ai_family = AF_INET;
-  //hints.ai_socktype = SOCK_STREAM;
-  //hints.ai_protocol = IPPROTO_TCP;
-  //
-  //// Resolve the server address and port
-  //result = getaddrinfo(ip, htons(portno), &hints, &result);
-  //if (result != 0)
-  //{
-  //  //printf("getaddrinfo failed with error: %d\n", result);
-  //  WSACleanup();
-  //  return 1;
-  //}
-  //
-  //// Attempt to connect to an address until one succeeds
-  //for (struct addrinfo *ptr = result; ptr != NULL; ptr = ptr->ai_next)
-  //{
-  //
-  //  // Create a SOCKET for connecting to server
-  //  sockfd = socket(ptr->ai_family, ptr->ai_socktype,
-  //    ptr->ai_protocol);
-  //  if (sockfd == INVALID_SOCKET)
-  //  {
-  //    //printf("socket failed with error: %ld\n", WSAGetLastError());
-  //    WSACleanup();
-  //    return 1;
-  //  }
-  //
-  //  // Connect to server.
-  //  result = connect(sockfd, ptr->ai_addr, (int)ptr->ai_addrlen);
-  //  if (result == SOCKET_ERROR)
-  //  {
-  //    closesocket(sockfd);
-  //    sockfd = INVALID_SOCKET;
-  //    continue;
-  //  }
-  //  break;
-  //}
-  //
-  //freeaddrinfo(result);
+  // TODO: re-enter a username until it is confirmed to be available.
+  // this needs to be in the join window tbh... unless i create another one *barf*.
+  // may just add (copy #) to the end if it's a duplicate name...
+  // int nameVerify = 0;
+  // do {
+  //   send(sockfd, player[0].username, strlen(player[0].username), 0);
+  //   receiveInt(&nameVerify, sockfd);
+  // } while (nameVerify != 0);
 
   // success! ^.^
   // using player[0] just for the start; will be overwritten later
@@ -382,6 +364,7 @@ int clientJoin(short portno) {
   receiveLobbyPacket(&current_players, &clientpnum, sockfd);
 
   // ***** test *****
+  menustate = LOBBY; // only switch to the lobby after successfully connecting
 
   int ret, isvalid = 0;
   char buf[BUF_SIZE];
@@ -399,22 +382,22 @@ int clientJoin(short portno) {
     // timeout after 150 seconds
     ret = WSAPoll(&pfd, 1, -1);
     if (ret == SOCKET_ERROR) {
+      sprintf_s(errormsg, ERRORBUF, "ERROR: poll() failed. Error code : %d", WSAGetLastError());
       MessageBoxA(NULL,
-        _T("ERROR: poll() failed. Error code : %d", WSAGetLastError()),
+        errormsg,
         _T("Client Connection"),
         NULL);
       closesocket(sockfd);
-      WSACleanup();
       menustate = TITLEBLANK;
       return 2;
     }
     else if (ret == 0) {
+      sprintf_s(errormsg, ERRORBUF, "ERROR: server timed out. Error code : %d", WSAGetLastError());
       MessageBoxA(NULL,
-        _T("ERROR: server timed out. Error code : %d", WSAGetLastError()),
+        errormsg,
         _T("Client Connection"),
         NULL);
       closesocket(sockfd);
-      WSACleanup();
       menustate = TITLEBLANK;
       return 2;
     }
@@ -426,31 +409,31 @@ int clientJoin(short portno) {
     }
 
     // Connection lost [server dieded uh-oh]
+    // TODO: program will crash if i try to send data (e.g. choose a baby unicorn) while this
+    // message is popped up; has to do with the sendInt code in GUIstuff() from windowsapp i'm sure
     if (pfd.revents & (POLLHUP | POLLERR)) {
       MessageBoxA(NULL,
-        _T("ERROR: Client received POLLHUP or POLLERR signal (Host disconnected)", WSAGetLastError()),
+        _T("ERROR: Client received POLLHUP or POLLERR signal (Host disconnected)"),
         _T("Client Connection"),
         NULL);
       closesocket(sockfd);
-      WSACleanup();
       menustate = TITLEBLANK;
       return 2;
     }
 
-    GetCursorPos(&pnt);
-    ScreenToClient(webhwnd, &pnt);
-    
-    if (GetAsyncKeyState(VK_LBUTTON) < 0 && is_active) {
-      if (pnt.x >= 360 && pnt.x <= 549 && pnt.y >= 590 && pnt.y <= 639) {
-        // user clicked the leave button
-        closesocket(sockfd);
-        WSACleanup();
-        menustate = TITLEBLANK;
-        return 1;
-      }
-      sendInt(pnt.x, sockfd);
-      sendInt(pnt.y, sockfd);
-    }
+    // GetCursorPos(&pnt);
+    // ScreenToClient(webhwnd, &pnt);
+    // 
+    // if (GetAsyncKeyState(VK_LBUTTON) < 0 && is_active) {
+    //   if (pnt.x >= 360 && pnt.x <= 549 && pnt.y >= 590 && pnt.y <= 639) {
+    //     // user clicked the leave button
+    //     closesocket(sockfd);
+    //     menustate = TITLEBLANK;
+    //     return 1;
+    //   }
+    //   sendInt(pnt.x, sockfd);
+    //   sendInt(pnt.y, sockfd);
+    // }
 
     Sleep(15);
   }

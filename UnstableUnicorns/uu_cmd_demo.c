@@ -280,14 +280,14 @@ int WINAPI WinMain(
     return 1;
   }
 
-  if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == INVALID_SOCKET) {
-    MessageBoxA(NULL,
-      _T("Could not create socket : %d", WSAGetLastError()),
-      _T("Server Set-up"),
-      NULL);
-    WSACleanup();
-    return 1;
-  }
+  // if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == INVALID_SOCKET) {
+  //   MessageBoxA(NULL,
+  //     _T("Could not create socket : %d", WSAGetLastError()),
+  //     _T("Server Set-up"),
+  //     NULL);
+  //   WSACleanup();
+  //   return 1;
+  // }
 
   // Main message loop:
   MSG msg;

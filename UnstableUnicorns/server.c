@@ -2,23 +2,23 @@
 #include "gamemechanics.h"
 #include "windowsapp.h"
 
-void newConnection(SOCKET *cfd) {
+#define ERRORBUF 256
+
+int newConnection(SOCKET *cfd) {
   struct sockaddr_in client_addr;
   socklen_t client_addr_size = sizeof(client_addr);
+  char errormsg[ERRORBUF];
 
   if ((cfd[current_players - 1] = accept(sockfd, (struct sockaddr*)&client_addr, &client_addr_size)) == INVALID_SOCKET) {
-    // printf("Accept failed with error code : %d", WSAGetLastError());
-    // exit(1);
+    sprintf_s(errormsg, ERRORBUF, "Accept failed with error code : %d", WSAGetLastError());
     MessageBoxA(NULL,
-      _T("Accept failed with error code : %d", WSAGetLastError()),
+      errormsg,
       _T("Client Connection Set-up"),
       NULL);
     return 1;
   }
 
-  // puts("Incoming connection accepted!");
-
-  current_players++;
+  return 0;
 }
 
 void initGame(void) {
@@ -419,23 +419,36 @@ int serverMain(void) {
 }
 
 int serverInit(short portno) {
-  char* end, buf[BUF_SIZE];
+  char* buf[BUF_SIZE], errormsg[ERRORBUF];
   struct sockaddr_in addr;
 
   // *****************************************************
   // ******************* Server Set-up *******************
   // *****************************************************
 
+  // TODO: isclient is kind of superfluous when i could just use the player number to check instead
+  isclient = 0;
+
   addr.sin_family = AF_INET;
   addr.sin_addr.s_addr = INADDR_ANY;
   addr.sin_port = htons(portno);
 
-  if (bind(sockfd, (struct sockaddr*)&addr, sizeof addr) == SOCKET_ERROR) {
+  if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == INVALID_SOCKET) {
+    sprintf_s(errormsg, ERRORBUF, "Could not create socket. Error code : % d", WSAGetLastError());
     MessageBoxA(NULL,
-      _T("Bind failed with error code : %d.", WSAGetLastError()),
+      errormsg,
       _T("Server Set-up"),
       NULL);
-    WSACleanup();
+    return 1;
+  }
+
+  if (bind(sockfd, (struct sockaddr*)&addr, sizeof addr) == SOCKET_ERROR) {
+    sprintf_s(errormsg, ERRORBUF, "Bind failed with error code : %d.", WSAGetLastError());
+    MessageBoxA(NULL,
+      errormsg,
+      _T("Server Set-up"),
+      NULL);
+    closesocket(sockfd);
     return 1;
   }
 
@@ -470,51 +483,58 @@ int serverInit(short portno) {
     // timeout after 150 seconds
     ret = WSAPoll(pfd, MAX_PLAYERS, -1);
     if (ret == SOCKET_ERROR) {
+      sprintf_s(errormsg, ERRORBUF, "ERROR: poll() failed. Error code : %d", WSAGetLastError());
       MessageBoxA(NULL,
-        _T("ERROR: poll() failed. Error code : %d", WSAGetLastError()),
+        errormsg,
         _T("Server Set-up"),
         NULL);
       closesocket(sockfd);
-      WSACleanup();
+      menustate = TITLEBLANK;
       return 2;
     }
     else if (ret == 0) {
+      sprintf_s(errormsg, ERRORBUF, "ERROR: server timed out. Error code : %d", WSAGetLastError());
       MessageBoxA(NULL,
-        _T("ERROR: server timed out. Error code : %d", WSAGetLastError()),
+        errormsg,
         _T("Server Set-up"),
         NULL);
       closesocket(sockfd);
-      WSACleanup();
+      menustate = TITLEBLANK;
       return 2;
     }
 
     // incoming connection
     if (pfd[0].revents & POLLIN) {
       // create a new connection given that there aren't already 7 clients
-      if (current_players < MAX_PLAYERS - 1) {
-        newConnection(clientsockfd);
-        ioctlsocket(clientsockfd[current_players - 2], FIONBIO, &on);
-        pfd[current_players - 1].fd = clientsockfd[current_players - 2];
-        pfd[current_players - 1].events = POLLIN | POLLOUT;
+      if (current_players < MAX_PLAYERS) {
+        if (newConnection(clientsockfd) != 0)
+        {
+          // shouldn't update sockfd stuff if accept() failed
+          continue;
+        }
+        ioctlsocket(clientsockfd[current_players - 1], FIONBIO, &on);
+        pfd[current_players].fd = clientsockfd[current_players - 1];
+        pfd[current_players].events = POLLIN | POLLOUT;
+        current_players++;
       }
     }
 
     if (pfd[0].revents & (POLLHUP | POLLERR)) {
+      sprintf_s(errormsg, ERRORBUF, "ERROR: Server received POLLHUP or POLLERR signal. Error code : %d", WSAGetLastError());
       MessageBoxA(NULL,
-        _T("ERROR: Server received POLLHUP or POLLERR signal", WSAGetLastError()),
+        errormsg,
         _T("Server Set-up"),
         NULL);
       closesocket(sockfd);
-      WSACleanup();
+      menustate = TITLEBLANK;
       return 2;
     }
 
     // IO operation came in from a client socket
     for (int i = 0; i < current_players - 1; i++) {
-      if (pfd[i + 1].revents & POLLIN && clientsockfd[i] != -1) {
+      if (pfd[i + 1].revents & POLLIN) {
         if (player[i + 1].username[0] == '\0') {
-          // TODO: maybe move this condition (without the if statement) to the socket POLLIN
-          // or at least get rid of the clientsockfd[i] = -1 part
+          // TODO: move this condition (without the if statement) to the socket POLLIN w/ new connections
           recv(clientsockfd[i], player[i + 1].username, NAME_SIZE, 0);
           sprintf_s(buf, BUF_SIZE, "\n%d. %s", i + 2, player[i + 1].username);
           strncat_s(partymems, PARTYSTRSIZE, buf, 36); // 36 is NAME_SIZE + 4 for the '\n%d. ' part
@@ -544,24 +564,42 @@ int serverInit(short portno) {
 
       // player disconnected; update existing lobby to boot player
       if (pfd[i + 1].revents & (POLLHUP | POLLERR)) {
+        // close/reset client-specific data; the baby unicorn toggle is just a simple 1 or 0 depending
+        // on whether or not the specific unicorn was selected, so it shouldn't be shifted over and once
+        // this player leaves, it should go back to 0
         closesocket(clientsockfd[i]);
+        babytoggle[player[i + 1].stable.unicorns[0]] = 0;
         current_players--;
+
         // shift all data from client[i] (i.e. player[i + 1]) onwards down a step to replace the disconnected client
         for (int j = i; j < current_players - 1; j++) {
           clientsockfd[j] = clientsockfd[j + 1];
           // deselect the unicorn
-          if (pselect[j + 1].left != 0) {
-            babytoggle[player[j + 1].stable.unicorns[0]] = 0;
-          }
+          // if (pselect[j + 1].left != 0) {
+          //   // TODO: maybe checking if pselect is valid may be worse than just assigning zero again when it's not
+          //   babytoggle[player[j + 1].stable.unicorns[0]] = 0;
+          // }
           pselect[j + 1].left = pselect[j + 2].left;
           pselect[j + 1].top = pselect[j + 2].top;
+          player[j + 1].stable.unicorns[0] = player[j + 2].stable.unicorns[0];
+          strcpy_s(player[j + 1].username, NAME_SIZE, player[j + 2].username);
         }
+
+        // reset the previous last player index to zero since one person left;
+        // current_players has an offset of 1, so the current player count (after being decremented earlier)
+        // would be the same as the previous last valid index
+        // technically the unicorn in the stable should reset too, but it doesn't matter because it would get
+        // overwritten later on, and '0' would mean that it is a baby red unicorn anyways which would be wrong
+        pselect[current_players].left = 0;
+        pselect[current_players].top = 0;
+        memset(player[current_players].username, '\0', NAME_SIZE);
+        // closesocket(clientsockfd[current_players - 1]);
 
         // change lobby username list too...
         memset(partymems, 0, PARTYSTRSIZE);
-        count = sprintf_s(partymems, PARTYSTRSIZE, "1. %s", player[0].username);
-        for (int k = 1; k < current_players; k++) {
-          count += sprintf_s(partymems + count, PARTYSTRSIZE, "\n%d. %s", k + 1, player[k + 1].username);
+        count = 0;
+        for (int k = 0; k < current_players; k++) {
+          count += sprintf_s(partymems + count, PARTYSTRSIZE - count, "\n%d. %s", k + 1, player[k].username);
         }
 
         // send data to remaining clients
@@ -571,37 +609,41 @@ int serverInit(short portno) {
       }
     }
 
-    // gets mouse click for baby unicorn picker
-    GetCursorPos(&pnt);
-    ScreenToClient(webhwnd, &pnt);
-    
-    if (GetAsyncKeyState(VK_LBUTTON) < 0 && is_active) {
-      if (pnt.x >= 360 && pnt.x <= 549 && pnt.y >= 590 && pnt.y <= 639) {
-        // user clicked the leave button
-        // TODO: this causes a bind failure once the host tries hosting again, sigh
-        // also pselect still shows a selection when re-hosting??
-        closesocket(sockfd);
+    // // gets mouse click for baby unicorn picker
+    // GetCursorPos(&pnt);
+    // ScreenToClient(webhwnd, &pnt);
+    // 
+    // if (GetAsyncKeyState(VK_LBUTTON) < 0 && is_active) {
+    //   if (pnt.x >= 360 && pnt.x <= 549 && pnt.y >= 590 && pnt.y <= 639) {
+    //     // user clicked the leave button
+    //     // TODO: this causes a bind failure once the host tries hosting again, sigh
+    //     // also pselect still shows a selection when re-hosting??
+    //     closesocket(sockfd);
+    // 
+    //     // wipe all relevant lobby global variables and return to title screen
+    //     memset(babytoggle, 0, 13);
+    //     memset(pselect, 0, MAX_PLAYERS);
+    //     memset(partymems, '\0', PARTYSTRSIZE);
+    //     current_players = 1;
+    //     // for (int i = sizeof(hexcode) - 2; i >= sizeof(hexcode) - 10; i--) {
+    //     //   hexcode[i] = '\0'; // wipes out the actual code part (last 8 characters)
+    //     // }
+    //     menustate = TITLEBLANK;
+    //     return 1;
+    //   }
+    //   ret = SelectBabyUnicorn(0, pnt); // server is always player index 0
+    //   if (ret) {
+    //     // clientsockfd should already be initialized by the time current_players updates
+    //     for (int i = 0; i < current_players - 1; i++) {
+    //       sendLobbyPacket(current_players, i + 1, clientsockfd[i]);
+    //     }
+    //   }
+    // }
 
-        // wipe all relevant lobby global variables and return to title screen
-        memset(babytoggle, 0, 13);
-        memset(pselect, 0, MAX_PLAYERS);
-        memset(partymems, 0, PARTYSTRSIZE);
-        current_players = 1;
-        for (int i = sizeof(hexcode) - 2; i >= sizeof(hexcode) - 10; i--) {
-          hexcode[i] = '\0'; // wipes out the actual code part (last 8 characters)
-        }
-        menustate = TITLEBLANK;
-        return 1;
-      }
-      ret = SelectBabyUnicorn(0, pnt); // server is always player index 0
-      if (ret) {
-        // clientsockfd should already be initialized by the time current_players updates
-        for (int i = 0; i < current_players - 1; i++) {
-          sendLobbyPacket(current_players, i + 1, clientsockfd[i]);
-        }
-      }
-    }
-
+    // TODO: ideally i shouldn't have to continuously send lobby packets when nothing changes
+    // for (int i = 0; i < current_players - 1; i++) {
+    //   sendLobbyPacket(current_players, i + 1, clientsockfd[i]);
+    // }
     Sleep(15);
   }
 
