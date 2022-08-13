@@ -420,7 +420,7 @@ int serverMain(void) {
 
 int serverInit(short portno) {
   char* buf[BUF_SIZE], errormsg[ERRORBUF];
-  struct sockaddr_in addr;
+  struct sockaddr_in addr, addr2;
 
   // *****************************************************
   // ******************* Server Set-up *******************
@@ -452,7 +452,22 @@ int serverInit(short portno) {
     return 1;
   }
 
-  listen(sockfd, MAX_PLAYERS);
+  listen(sockfd, MAX_PLAYERS - 1);
+
+
+  // *****************************************************
+  // ***************** UDP Socket Set-up *****************
+  // *****************************************************
+
+  // dummy/unbound udp socket used for the purpose of interrupting WSAPoll
+  if ((udpfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == INVALID_SOCKET) {
+    sprintf_s(errormsg, ERRORBUF, "Could not create udp socket. Error code : % d", WSAGetLastError());
+    MessageBoxA(NULL,
+      errormsg,
+      _T("Server Set-up"),
+      NULL);
+    return 1;
+  }
 
   // *****************************************************
   // ******************** Poll Set-up ********************
@@ -463,6 +478,7 @@ int serverInit(short portno) {
   // server should be in non-blocking mode
   unsigned long on = 1;
   ioctlsocket(sockfd, FIONBIO, &on);
+  ioctlsocket(udpfd, FIONBIO, &on);
 
   // read data from the connection
   char data[BUF_SIZE] = { 0 };
@@ -473,12 +489,11 @@ int serverInit(short portno) {
   // that was just slightly slower. if the version is not the same then the server must either
   // merge data or force the client to re-enter/send the data
   int versioncheck = 0;
-  WSAPOLLFD pfd[MAX_PLAYERS] = { -1 };  // original sockfd + 7 additional players
+  WSAPOLLFD pfd[MAX_PLAYERS + 1] = { -1 };  // original sockfd + udp socket fd + 7 additional players
   pfd[0].fd = sockfd;
   pfd[0].events = POLLIN | POLLOUT;
+  pfd[1].fd = udpfd;
 
-  // TODO: host can't interact or leave until somebody else joins because it is stuck at wsapoll
-  // so fix it later :')
   for (;;) {
     // timeout after 150 seconds
     ret = WSAPoll(pfd, MAX_PLAYERS, -1);
@@ -488,6 +503,7 @@ int serverInit(short portno) {
         errormsg,
         _T("Server Set-up"),
         NULL);
+      closesocket(udpfd);
       closesocket(sockfd);
       menustate = TITLEBLANK;
       return 2;
@@ -498,6 +514,7 @@ int serverInit(short portno) {
         errormsg,
         _T("Server Set-up"),
         NULL);
+      closesocket(udpfd);
       closesocket(sockfd);
       menustate = TITLEBLANK;
       return 2;
@@ -513,8 +530,8 @@ int serverInit(short portno) {
           continue;
         }
         ioctlsocket(clientsockfd[current_players - 1], FIONBIO, &on);
-        pfd[current_players].fd = clientsockfd[current_players - 1];
-        pfd[current_players].events = POLLIN | POLLOUT;
+        pfd[current_players + 1].fd = clientsockfd[current_players - 1];
+        pfd[current_players + 1].events = POLLIN | POLLOUT;
         current_players++;
       }
     }
@@ -525,6 +542,7 @@ int serverInit(short portno) {
         errormsg,
         _T("Server Set-up"),
         NULL);
+      closesocket(udpfd);
       closesocket(sockfd);
       menustate = TITLEBLANK;
       return 2;
@@ -532,7 +550,7 @@ int serverInit(short portno) {
 
     // IO operation came in from a client socket
     for (int i = 0; i < current_players - 1; i++) {
-      if (pfd[i + 1].revents & POLLIN) {
+      if (pfd[i + 2].revents & POLLIN) {
         if (player[i + 1].username[0] == '\0') {
           // TODO: move this condition (without the if statement) to the socket POLLIN w/ new connections
           recv(clientsockfd[i], player[i + 1].username, NAME_SIZE, 0);
@@ -562,8 +580,8 @@ int serverInit(short portno) {
 
       }
 
-      // player disconnected; update existing lobby to boot player
-      if (pfd[i + 1].revents & (POLLHUP | POLLERR)) {
+      // client player disconnected; update existing lobby to boot player
+      if (pfd[i + 2].revents & (POLLHUP | POLLERR)) {
         // close/reset client-specific data; the baby unicorn toggle is just a simple 1 or 0 depending
         // on whether or not the specific unicorn was selected, so it shouldn't be shifted over and once
         // this player leaves, it should go back to 0
@@ -574,11 +592,8 @@ int serverInit(short portno) {
         // shift all data from client[i] (i.e. player[i + 1]) onwards down a step to replace the disconnected client
         for (int j = i; j < current_players - 1; j++) {
           clientsockfd[j] = clientsockfd[j + 1];
+          pfd[j + 2] = pfd[j + 3];
           // deselect the unicorn
-          // if (pselect[j + 1].left != 0) {
-          //   // TODO: maybe checking if pselect is valid may be worse than just assigning zero again when it's not
-          //   babytoggle[player[j + 1].stable.unicorns[0]] = 0;
-          // }
           pselect[j + 1].left = pselect[j + 2].left;
           pselect[j + 1].top = pselect[j + 2].top;
           player[j + 1].stable.unicorns[0] = player[j + 2].stable.unicorns[0];
@@ -593,7 +608,6 @@ int serverInit(short portno) {
         pselect[current_players].left = 0;
         pselect[current_players].top = 0;
         memset(player[current_players].username, '\0', NAME_SIZE);
-        // closesocket(clientsockfd[current_players - 1]);
 
         // change lobby username list too...
         memset(partymems, 0, PARTYSTRSIZE);
@@ -609,41 +623,37 @@ int serverInit(short portno) {
       }
     }
 
-    // // gets mouse click for baby unicorn picker
-    // GetCursorPos(&pnt);
-    // ScreenToClient(webhwnd, &pnt);
-    // 
-    // if (GetAsyncKeyState(VK_LBUTTON) < 0 && is_active) {
-    //   if (pnt.x >= 360 && pnt.x <= 549 && pnt.y >= 590 && pnt.y <= 639) {
-    //     // user clicked the leave button
-    //     // TODO: this causes a bind failure once the host tries hosting again, sigh
-    //     // also pselect still shows a selection when re-hosting??
-    //     closesocket(sockfd);
-    // 
-    //     // wipe all relevant lobby global variables and return to title screen
-    //     memset(babytoggle, 0, 13);
-    //     memset(pselect, 0, MAX_PLAYERS);
-    //     memset(partymems, '\0', PARTYSTRSIZE);
-    //     current_players = 1;
-    //     // for (int i = sizeof(hexcode) - 2; i >= sizeof(hexcode) - 10; i--) {
-    //     //   hexcode[i] = '\0'; // wipes out the actual code part (last 8 characters)
-    //     // }
-    //     menustate = TITLEBLANK;
-    //     return 1;
-    //   }
-    //   ret = SelectBabyUnicorn(0, pnt); // server is always player index 0
-    //   if (ret) {
-    //     // clientsockfd should already be initialized by the time current_players updates
-    //     for (int i = 0; i < current_players - 1; i++) {
-    //       sendLobbyPacket(current_players, i + 1, clientsockfd[i]);
-    //     }
-    //   }
-    // }
+    // this should only activate once per action, so toggle the var again at the end
+    // theoretically only one flag should be active at a time
+    if (networktoggle & 1) {
+      // clicked the leave button; udpfd was already closed in the main thread
+      closesocket(sockfd);
+      menustate = TITLEBLANK;
+      networktoggle ^= 1;
 
-    // TODO: ideally i shouldn't have to continuously send lobby packets when nothing changes
-    // for (int i = 0; i < current_players - 1; i++) {
-    //   sendLobbyPacket(current_players, i + 1, clientsockfd[i]);
-    // }
+      // close all client fd's
+      for (int i = 0; i < current_players - 1; i++) {
+        closesocket(clientsockfd[i]);
+      }
+
+      // wipe all relevant lobby global variables and return to title screen
+      memset(babytoggle, 0, 13);
+      memset(pselect, 0, MAX_PLAYERS);
+      memset(partymems, '\0', PARTYSTRSIZE);
+      for (int i = 0; i < MAX_PLAYERS; i++) {
+        memset(player[i].username, '\0', NAME_SIZE);
+      }
+      current_players = 1;
+      return 1;
+    }
+    else if (networktoggle & 2) {
+      // host changed their baby unicorn and must send the updated list to every client
+      for (int i = 0; i < current_players - 1; i++) {
+        sendLobbyPacket(current_players, i + 1, clientsockfd[i]);
+      }
+      networktoggle ^= 2;
+    }
+
     Sleep(15);
   }
 

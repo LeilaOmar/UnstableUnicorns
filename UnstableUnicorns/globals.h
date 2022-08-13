@@ -210,6 +210,7 @@ struct Player player[MAX_PLAYERS];
 extern struct Unicorn deck[129];
 
 SOCKET sockfd;
+SOCKET udpfd;
 
 // deck_index and nursery_index point to top-most card that is currently
 // available; discard index is basically the size count

@@ -378,6 +378,8 @@ int clientJoin(short portno) {
   pfd.fd = sockfd;
   pfd.events = POLLIN | POLLOUT;
 
+  // TODO: occassionally will get range check error and the client will auto-close when trying to join???
+  // Unhandled exception at 0x00369628 in UnstableUnicorns.exe: RangeChecks instrumentation code detected an out of range array access.
   for (;;) {
     // timeout after 150 seconds
     ret = WSAPoll(&pfd, 1, -1);
@@ -409,9 +411,7 @@ int clientJoin(short portno) {
     }
 
     // Connection lost [server dieded uh-oh]
-    // TODO: program will crash if i try to send data (e.g. choose a baby unicorn) while this
-    // message is popped up; has to do with the sendInt code in GUIstuff() from windowsapp i'm sure
-    if (pfd.revents & (POLLHUP | POLLERR)) {
+    if (pfd.revents & (POLLHUP | POLLERR | POLLNVAL)) {
       MessageBoxA(NULL,
         _T("ERROR: Client received POLLHUP or POLLERR signal (Host disconnected)"),
         _T("Client Connection"),
@@ -421,19 +421,23 @@ int clientJoin(short portno) {
       return 2;
     }
 
-    // GetCursorPos(&pnt);
-    // ScreenToClient(webhwnd, &pnt);
-    // 
-    // if (GetAsyncKeyState(VK_LBUTTON) < 0 && is_active) {
-    //   if (pnt.x >= 360 && pnt.x <= 549 && pnt.y >= 590 && pnt.y <= 639) {
-    //     // user clicked the leave button
-    //     closesocket(sockfd);
-    //     menustate = TITLEBLANK;
-    //     return 1;
-    //   }
-    //   sendInt(pnt.x, sockfd);
-    //   sendInt(pnt.y, sockfd);
-    // }
+    // this should only activate once per action, so toggle the var again at the end
+    // theoretically only one flag should be active at a time
+    if (networktoggle & 1) {
+      // clicked the leave button
+      closesocket(sockfd);
+      menustate = TITLEBLANK;
+      networktoggle ^= 1;
+      return 1;
+    } else if (networktoggle & 2) {
+      // client clicked somewhere and must send the point info to the server
+      // to check whether or not they clicked a valid baby unicorn
+      // TODO: (low priority) only send point when it's on a baby unicorn square; could make
+      // another helper function for SelectBabyUnicorn that returns the unicorn index
+      sendInt(clientPnt.x, sockfd);
+      sendInt(clientPnt.y, sockfd);
+      networktoggle ^= 2;
+    }
 
     Sleep(15);
   }

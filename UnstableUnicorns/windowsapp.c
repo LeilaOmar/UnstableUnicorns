@@ -46,6 +46,9 @@ unsigned char is_active = 1;
 RECT pselect[MAX_PLAYERS];
 // toggle to see whether or not a baby unicorn is taken during lobby selection; 0 = free, 1 = taken
 unsigned char babytoggle[13] = { 0 };
+// switch to activate certain networking features in the network thread to avoid improperly closing a socket
+// this is super ugly :/
+unsigned char networktoggle = 0;
 
 // global variables for this source file only
 HWND gamethread, networkthread, textNameHwnd, portHwnd, codeHwnd;
@@ -576,34 +579,22 @@ void GUIstuff(HWND hWnd) {
   if (GetAsyncKeyState(VK_LBUTTON) < 0 && is_active) {
     if (pnt.x >= 360 && pnt.x <= 549 && pnt.y >= 590 && pnt.y <= 639) {
       // user clicked the leave button
-      closesocket(sockfd); // this is causing too many problems ;-;
-      menustate = TITLEBLANK;
-
+      networktoggle ^= 1;
       if (!isclient) {
-        // wipe all relevant lobby global variables and return to title screen
-        memset(babytoggle, 0, 13);
-        memset(pselect, 0, MAX_PLAYERS);
-        memset(partymems, '\0', PARTYSTRSIZE);
-        // for (int i = 0; i < current_players; i++) {
-        //   memset(player[i].username, '\0', NAME_SIZE);
-        // }
-        current_players = 1;
+        closesocket(udpfd);
       }
       return;
     }
 
     if (isclient) {
-      sendInt(pnt.x, sockfd);
-      sendInt(pnt.y, sockfd);
+      clientPnt = pnt;
+      networktoggle ^= 2;
     }
     else {
       ret = SelectBabyUnicorn(0, pnt); // server is always player index 0
-      // if (ret) {
-      //   // clientsockfd should already be initialized by the time current_players updates
-      //   for (int i = 0; i < current_players - 1; i++) {
-      //     sendLobbyPacket(current_players, i + 1, clientsockfd[i]);
-      //   }
-      // }
+      if (ret) {
+        networktoggle ^= 2;
+      }
     }
   }
 }
@@ -879,8 +870,8 @@ LRESULT CALLBACK WndProcHost(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
       //     break;
       // }
       GetWindowText(textNameHwnd, player[0].username, NAME_SIZE);
-      sprintf_s(partymems, PARTYSTRSIZE, "1. %s (host)", player[0].username);
       GetWindowText(portHwnd, portstr, NAME_SIZE);
+      if (portstr[0] == '\0') strcpy_s(portstr, 5, "1234");
       portno = atoi(portstr);
 
       // input check for username and port #
@@ -890,6 +881,7 @@ LRESULT CALLBACK WndProcHost(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
         char localIPcode[16];
         getLocalIP(localIPcode);
         sprintf_s(hexcode, sizeof(hexcode), "Wi-Fi Code: %08X, Local Code: %08X", IPtoHexCode(ip), IPtoHexCode(localIPcode));
+        sprintf_s(partymems, PARTYSTRSIZE, "1. %s (host)", player[0].username);
         
         //serverInit(portno);
         networkthread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)serverInit, portno, 0, &tIdweb);
@@ -949,6 +941,8 @@ LRESULT CALLBACK WndProcJoin(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
       GetWindowText(textNameHwnd, player[0].username, NAME_SIZE);
       GetWindowText(portHwnd, portstr, NAME_SIZE);
       GetWindowText(codeHwnd, codestr, 9);
+      if (codestr[0] == '\0') strcpy_s(codestr, 9, "142B8F0B");
+      if (portstr[0] == '\0') strcpy_s(portstr, 5, "1234");
       portno = atoi(portstr);
 
       // input check for username and port #

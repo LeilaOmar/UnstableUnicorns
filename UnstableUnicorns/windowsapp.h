@@ -22,6 +22,10 @@ extern HWND webhwnd;
 extern unsigned char is_active;
 extern unsigned char babytoggle[13];
 extern RECT pselect[MAX_PLAYERS];
+extern unsigned char networktoggle; // 00000000 nothing
+																		// 00000001 closesocket
+																		// 00000010 selectbabyunicorn
+POINT clientPnt;
 
 // Forward declarations of functions included in this code module:
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
