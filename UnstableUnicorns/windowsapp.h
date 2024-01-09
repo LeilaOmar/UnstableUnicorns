@@ -10,6 +10,8 @@
 #define RULESONE 4
 #define RULESTWO 5
 #define LOBBY 6
+#define GAMESTART 7
+#define DEBUGMODE 8
 #define BWIDTH 1280
 #define BHEIGHT 720
 #define PARTYSTRSIZE 296

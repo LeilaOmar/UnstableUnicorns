@@ -207,15 +207,26 @@ int WINAPI WinMain(
   wcex.cbClsExtra = 0;
   wcex.cbWndExtra = 0;
   wcex.hInstance = hInstance;
-  wcex.hIcon = LoadIcon(wcex.hInstance, IDI_APPLICATION);
+  // wcex.hIcon = LoadIcon(wcex.hInstance, IDI_APPLICATION);
+  // wcex.hIconSm = LoadIcon(wcex.hInstance, IDI_APPLICATION);
+
+  wcex.hIcon = LoadImage(wcex.hInstance, "Assets\\horn.ico", IMAGE_ICON, 0, 0, LR_LOADFROMFILE);
+  wcex.hIconSm = LoadImage(wcex.hInstance, "Assets\\horn.ico", IMAGE_ICON, 0, 0, LR_LOADFROMFILE);
+
+  // wcex.hIcon = LoadImage(wcex.hInstance, "Assets\\horn.ico", IMAGE_ICON, 256, 256, 0);
+  // wcex.hIconSm = LoadImage(wcex.hInstance, "Assets\\horn.ico", IMAGE_ICON, 16, 16, 0);
+
+  // wcex.hIcon = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IMAGE_ICON));
+  // wcex.hIconSm = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IMAGE_ICON));
+
   wcex.hCursor = LoadCursor(NULL, IDC_ARROW);
   wcex.hbrBackground = GetSysColorBrush(COLOR_3DFACE);
   wcex.lpszMenuName = NULL;
   wcex.lpszClassName = _T("DesktopApp");
-  wcex.hIconSm = LoadIcon(wcex.hInstance, IDI_APPLICATION);
 
   if (!RegisterClassEx(&wcex))
   {
+    int test = GetLastError();
     MessageBox(NULL,
       _T("Call to RegisterClassEx failed!"),
       _T("Windows Desktop Guided Tour"),

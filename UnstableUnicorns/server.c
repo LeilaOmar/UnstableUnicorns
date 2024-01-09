@@ -419,12 +419,12 @@ int serverMain(void) {
 }
 
 int serverInit(short portno) {
-  char* buf[BUF_SIZE], errormsg[ERRORBUF];
-  struct sockaddr_in addr, addr2;
-
   // *****************************************************
   // ******************* Server Set-up *******************
   // *****************************************************
+
+  struct sockaddr_in addr;
+  char errormsg[ERRORBUF];
 
   // TODO: isclient is kind of superfluous when i could just use the player number to check instead
   isclient = 0;
@@ -478,12 +478,12 @@ int serverInit(short portno) {
   // server should be in non-blocking mode
   unsigned long on = 1;
   ioctlsocket(sockfd, FIONBIO, &on);
-  ioctlsocket(udpfd, FIONBIO, &on);
 
   // read data from the connection
-  char data[BUF_SIZE] = { 0 };
+  char buf[BUF_SIZE];
   int count, ret, isvalid;
   POINT pnt;
+
   // count for the number of times server has been officially updated; this is for cases where
   // two clients may send data at (near) the same time before getting updated about the other one
   // that was just slightly slower. if the version is not the same then the server must either
@@ -654,7 +654,13 @@ int serverInit(short portno) {
       networktoggle ^= 2;
     }
 
-    Sleep(15);
+    // TODO: re out of range bug mentioned in client.c; this will reliably produce the same issue,
+    // presumably because they go out of sync
+    // for (int i = 0; i < current_players - 1; i++) {
+    //   sendLobbyPacket(current_players, i + 1, clientsockfd[i]);
+    // }
+
+    Sleep(20);
   }
 
   if (current_players >= 6) WIN_CONDITION = 6;

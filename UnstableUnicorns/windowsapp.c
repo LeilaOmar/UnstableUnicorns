@@ -55,7 +55,7 @@ HWND gamethread, networkthread, textNameHwnd, portHwnd, codeHwnd;
 DWORD tId, tIdweb;
 WNDCLASSEX wcexHost;
 WNDCLASSEX wcexJoin;
-HBITMAP hBitmapTitle[7], hBitmapBorder[8];
+HBITMAP hBitmapTitle[9], hBitmapBorder[8], hBitmapIcon[13];
 int windowOpen[2] = { 0 };
 unsigned char isButton = 0;
 unsigned char childWindow[2] = { 0 };
@@ -197,6 +197,7 @@ void CreateJoinWindow(HWND hwnd) {
   SetParent(hWndJoin, hwnd);
 }
 
+// TODO: reorganize WM_PAINT or whichever future function since this is currently not in use
 void GameLoop(HWND hwnd) {
   HDC hdc, hdcMem;
   BITMAP bitmap;
@@ -329,6 +330,9 @@ void GameLoop(HWND hwnd) {
 }
 
 int SelectBabyUnicorn(int pnum, POINT pnt) {
+  // TODO: loop the outer if-statements by grouping the clickable
+  // baby unicorn assets into their own structure
+
   if (pnt.y >= BABYRED.top && pnt.y <= BABYRED.bottom) {
     if (pnt.x >= BABYRED.left && pnt.x <= BABYRED.right && babytoggle[0] == 0) {
       babytoggle[0] = 1;
@@ -474,95 +478,152 @@ int SelectBabyUnicorn(int pnum, POINT pnt) {
 }
 
 void LoadImages(HWND hWnd) {
+  int msg[8] = { 0 };
+  int bordermsg[8] = { 0 };
+  char errors[1024] = "";
+  unsigned char issuccess = 1;
+
+  // TODO: make this a loop by using a c-string array for the image file names. this is too unsightly...
 
   hBitmapTitle[TITLEBLANK] = (HBITMAP)LoadImage(NULL, "Assets\\titleblank.bmp",
     IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
   if (hBitmapTitle[TITLEBLANK] == NULL) {
-    MessageBox(hWnd, "Failed to load image", "Error", MB_OK);
+    issuccess = 0;
+    strcat_s(errors, sizeof errors, "titleblank.bmp ");
   }
 
   hBitmapTitle[TITLEHOST] = (HBITMAP)LoadImage(NULL, "Assets\\titlehost.bmp",
     IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
   if (hBitmapTitle[TITLEHOST] == NULL) {
-    MessageBox(hWnd, "Failed to load image", "Error", MB_OK);
+    issuccess = 0;
+    strcat_s(errors, sizeof errors, "titlehost.bmp ");
   }
 
   hBitmapTitle[TITLEJOIN] = (HBITMAP)LoadImage(NULL, "Assets\\titlejoin.bmp",
     IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
   if (hBitmapTitle[TITLEJOIN] == NULL) {
-    MessageBox(hWnd, "Failed to load image", "Error", MB_OK);
+    issuccess = 0;
+    strcat_s(errors, sizeof errors, "titlejoin.bmp ");
   }
 
   hBitmapTitle[TITLERULES] = (HBITMAP)LoadImage(NULL, "Assets\\titlerules.bmp",
     IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
   if (hBitmapTitle[TITLERULES] == NULL) {
-    MessageBox(hWnd, "Failed to load image", "Error", MB_OK);
+    issuccess = 0;
+    strcat_s(errors, sizeof errors, "titlerules.bmp ");
   }
 
   hBitmapTitle[RULESONE] = (HBITMAP)LoadImage(NULL, "Assets\\rules1.bmp",
     IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
   if (hBitmapTitle[RULESONE] == NULL) {
-    MessageBox(hWnd, "Failed to load image", "Error", MB_OK);
+    issuccess = 0;
+    strcat_s(errors, sizeof errors, "rules1.bmp ");
   }
 
   hBitmapTitle[RULESTWO] = (HBITMAP)LoadImage(NULL, "Assets\\rules2.bmp",
     IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
   if (hBitmapTitle[RULESTWO] == NULL) {
-    MessageBox(hWnd, "Failed to load image", "Error", MB_OK);
+    issuccess = 0;
+    strcat_s(errors, sizeof errors, "rules2.bmp ");
   }
 
   hBitmapTitle[LOBBY] = (HBITMAP)LoadImage(NULL, "Assets\\lobby.bmp",
     IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
   if (hBitmapTitle[LOBBY] == NULL) {
-    MessageBox(hWnd, "Failed to load image", "Error", MB_OK);
+    issuccess = 0;
+    strcat_s(errors, sizeof errors, "lobby.bmp ");
   }
+
+  hBitmapTitle[GAMESTART] = (HBITMAP)LoadImage(NULL, "Assets\\game.bmp",
+    IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+  if (hBitmapTitle[GAMESTART] == NULL) {
+    issuccess = 0;
+    strcat_s(errors, sizeof errors, "game.bmp ");
+  }
+  hBitmapTitle[DEBUGMODE] = hBitmapTitle[GAMESTART];
 
   hBitmapBorder[0] = (HBITMAP)LoadImage(NULL, "Assets\\border1.bmp",
     IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
   if (hBitmapBorder[0] == NULL) {
-    MessageBox(hWnd, "Failed to load image", "Error", MB_OK);
+    issuccess = 0;
+    strcat_s(errors, sizeof errors, "border1.bmp ");
   }
 
   hBitmapBorder[1] = (HBITMAP)LoadImage(NULL, "Assets\\border2.bmp",
     IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
   if (hBitmapBorder[1] == NULL) {
-    MessageBox(hWnd, "Failed to load image", "Error", MB_OK);
+    issuccess = 0;
+    strcat_s(errors, sizeof errors, "border2.bmp ");
   }
 
   hBitmapBorder[2] = (HBITMAP)LoadImage(NULL, "Assets\\border3.bmp",
     IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
   if (hBitmapBorder[2] == NULL) {
-    MessageBox(hWnd, "Failed to load image", "Error", MB_OK);
+    issuccess = 0;
+    strcat_s(errors, sizeof errors, "border3.bmp ");
   }
 
   hBitmapBorder[3] = (HBITMAP)LoadImage(NULL, "Assets\\border4.bmp",
     IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
   if (hBitmapBorder[3] == NULL) {
-    MessageBox(hWnd, "Failed to load image", "Error", MB_OK);
+    issuccess = 0;
+    strcat_s(errors, sizeof errors, "border4.bmp ");
   }
 
   hBitmapBorder[4] = (HBITMAP)LoadImage(NULL, "Assets\\border5.bmp",
     IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
   if (hBitmapBorder[4] == NULL) {
-    MessageBox(hWnd, "Failed to load image", "Error", MB_OK);
+    issuccess = 0;
+    strcat_s(errors, sizeof errors, "border5.bmp ");
   }
 
   hBitmapBorder[5] = (HBITMAP)LoadImage(NULL, "Assets\\border6.bmp",
     IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
   if (hBitmapBorder[5] == NULL) {
-    MessageBox(hWnd, "Failed to load image", "Error", MB_OK);
+    issuccess = 0;
+    strcat_s(errors, sizeof errors, "border6.bmp ");
   }
 
   hBitmapBorder[6] = (HBITMAP)LoadImage(NULL, "Assets\\border7.bmp",
     IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
   if (hBitmapBorder[6] == NULL) {
-    MessageBox(hWnd, "Failed to load image", "Error", MB_OK);
+    issuccess = 0;
+    strcat_s(errors, sizeof errors, "border7.bmp ");
   }
 
   hBitmapBorder[7] = (HBITMAP)LoadImage(NULL, "Assets\\border8.bmp",
     IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
   if (hBitmapBorder[7] == NULL) {
-    MessageBox(hWnd, "Failed to load image", "Error", MB_OK);
+    issuccess = 0;
+    strcat_s(errors, sizeof errors, "border8.bmp ");
+  }
+
+  // these three should ideally all fall under the same structure because they
+  // have the same default size
+  hBitmapIcon[0] = (HBITMAP)LoadImage(NULL, "Assets\\icon_narwhal.bmp",
+    IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+  if (hBitmapIcon[0] == NULL) {
+    issuccess = 0;
+    strcat_s(errors, sizeof errors, "icon_narwhal.bmp ");
+  }
+  hBitmapIcon[1] = (HBITMAP)LoadImage(NULL, "Assets\\player1.bmp",
+    IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+  if (hBitmapIcon[0] == NULL) {
+    issuccess = 0;
+    strcat_s(errors, sizeof errors, "player1.bmp ");
+  }
+  hBitmapIcon[2] = (HBITMAP)LoadImage(NULL, "Assets\\stable1.bmp",
+    IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+  if (hBitmapIcon[0] == NULL) {
+    issuccess = 0;
+    strcat_s(errors, sizeof errors, "stable1.bmp ");
+  }
+
+  if (issuccess == 0) {
+    char errormsg[1024] = "Failed to load image(s) ";
+    strcat_s(errormsg, sizeof errormsg, errors);
+
+    MessageBox(hWnd, errormsg, "Error", MB_OK);
   }
 }
 
@@ -571,21 +632,78 @@ volatile DWORD whatever;
 void GUIstuff(HWND hWnd) {
   POINT pnt;
   int ret;
+  DWORD waitResult;
 
   // gets mouse click for baby unicorn picker
   GetCursorPos(&pnt);
   ScreenToClient(hWnd, &pnt);
 
   if (GetAsyncKeyState(VK_LBUTTON) < 0 && is_active) {
-    if (pnt.x >= 360 && pnt.x <= 549 && pnt.y >= 590 && pnt.y <= 639) {
-      // user clicked the leave button
-      networktoggle ^= 1;
-      if (!isclient) {
-        closesocket(udpfd);
-      }
-      return;
-    }
+    // TODO: use a mutex to selectively access current_players, networktoggle, and clientPnt
+    // waitResult = WaitForSingleObject(
+    //   mutex,      // mutex handle
+    //   INFINITE);  // no time-out interval
+    // 
+    // switch (waitResult) {
+    // case WAIT_OBJECT_0:
+    //   if (pnt.y >= 590 && pnt.y <= 639) {
+    //     if (pnt.x >= 360 && pnt.x <= 549) {
+    //       // user clicked the leave button
+    //       networktoggle ^= 1;
+    //       if (!isclient) {
+    //         closesocket(udpfd);
+    //       }
+    //       return;
+    //     }
+    //     else if (pnt.x >= 120 && pnt.x <= 309) {
+    //       // user clicked the start button; only the host can properly start the game
+    //       if (!isclient && current_players >= 2) {
+    //         networktoggle ^= 4;
+    //         closesocket(udpfd);
+    //       }
+    //       return;
+    //     }
+    //   }
+    // 
+    //   if (isclient) {
+    //     clientPnt = pnt;
+    //     networktoggle ^= 2;
+    //   }
+    //   else {
+    //     ret = SelectBabyUnicorn(0, pnt); // server is always player index 0
+    //     if (ret) {
+    //       networktoggle ^= 2;
+    //     }
+    //   }
+    // 
+    //   if (!ReleaseMutex(mutex)) {
+    //     // handle error
+    //   }
+    //   break;
+    // case WAIT_ABANDONED:
+    //   // thread holding the mutex was killed rip in peace :'(
+    //   return;
+    // }
 
+    if (pnt.y >= 590 && pnt.y <= 639) {
+      if (pnt.x >= 360 && pnt.x <= 549) {
+        // user clicked the leave button
+        networktoggle ^= 1;
+        if (!isclient) {
+          closesocket(udpfd);
+        }
+        return;
+      }
+      else if (pnt.x >= 120 && pnt.x <= 309) {
+        // user clicked the start button; only the host can properly start the game
+        if (!isclient && current_players >= 2) {
+          networktoggle ^= 4;
+          closesocket(udpfd);
+        }
+        return;
+      }
+    }
+    
     if (isclient) {
       clientPnt = pnt;
       networktoggle ^= 2;
@@ -663,6 +781,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     GetCursorPos(&pnt);
     ScreenToClient(hWnd, &pnt);
 
+    // TODO: get rid of these magic numbers and add new constants or pre-defined variables to globals.c
+    // this is sickening :/
     switch (menustate) {
     case TITLEBLANK:
     case TITLEHOST:
@@ -717,15 +837,22 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
       else {
         menustate = TITLEBLANK;
       }
+
+      // TOOD: write a proper ifdef
+      if (pnt.x >= 0 && pnt.x <= 50 && pnt.y >= 0 && pnt.y <= 50) {
+        // use Async instead of GetKeyState because this loop doesn't process messages ig
+        // https://stackoverflow.com/questions/59923765/getkeystate-function-not-working-when-checking-if-left-mouse-button-is-clicked
+        if (GetAsyncKeyState(VK_LBUTTON) < 0 && is_active) {
+          menustate = DEBUGMODE;
+        }
+      }
       break;
     case RULESONE:
       if (pnt.y >= 619 && pnt.y <= 650 && GetAsyncKeyState(VK_LBUTTON) < 0 && is_active) {
         if (pnt.x >= 975 && pnt.x <= 1074) {
-          hBitmapBuffer = hBitmapTitle[TITLEBLANK];
           menustate = TITLEBLANK;
         }
         else if (pnt.x >= 1129 && pnt.x <= 1160) {
-          hBitmapBuffer = hBitmapTitle[RULESTWO];
           menustate = RULESTWO;
         }
       }
@@ -733,11 +860,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     case RULESTWO:
       if (pnt.y >= 619 && pnt.y <= 650 && GetAsyncKeyState(VK_LBUTTON) < 0 && is_active) {
         if (pnt.x >= 975 && pnt.x <= 1074) {
-          hBitmapBuffer = hBitmapTitle[TITLEBLANK];
           menustate = TITLEBLANK;
         }
         else if (pnt.x >= 1087 && pnt.x <= 1118) {
-          hBitmapBuffer = hBitmapTitle[RULESONE];
           menustate = RULESONE;
         }
       }
@@ -747,6 +872,18 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
       //  // start game
       //}
       break;
+    case DEBUGMODE:
+      // TOOD: write a proper ifdef
+      if (pnt.x >= 0 && pnt.x <= 50 && pnt.y >= 0 && pnt.y <= 50) {
+        // use Async instead of GetKeyState because this loop doesn't process messages ig
+        // https://stackoverflow.com/questions/59923765/getkeystate-function-not-working-when-checking-if-left-mouse-button-is-clicked
+        if (GetAsyncKeyState(VK_LBUTTON) < 0 && is_active) {
+          menustate = TITLEBLANK;
+        }
+      }
+      else {
+        menustate = DEBUGMODE;
+      }
     default:
       break;
     }
@@ -760,6 +897,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     hBitmapBuffer = (HBITMAP)CopyImage(hBitmapTitle[menustate], IMAGE_BITMAP, BWIDTH, BHEIGHT, LR_COPYRETURNORG);
     oldBitmap = SelectObject(hdcMem, hBitmapBuffer);
 
+    // TODO cleanup: decide whether or not this should be moved to inside of the switch statement while
+    // the lines "GetClientRect(hWnd, &rc)" -> "oldBitmap =" are moved before the switch. there would be
+    // a slight delay because the buffer would only update on the next cycle
     if (menustate == LOBBY) {
       // initialize custom font
       // create larger font because default is teeny tiny
@@ -811,6 +951,27 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
       DeleteDC(hdcSprite);
     }
 
+    if (menustate == DEBUGMODE) {
+      // draw player Narwhal!!
+      hdcSprite = CreateCompatibleDC(hdc);
+      // TODO: this one actually has to be based off of current players, so it is capped at 1 for now
+      for (int i = 0; i < 1; i++) {
+        // // for whatever reason, the original hdcMem is incompatible and will draw the whole
+        // // border (non-alpha included) at the top-left corner
+        // SelectObject(hdcMem, hBitmapBorder[i]);
+        // TransparentBlt(hdcMem, pselect[i].left, pselect[i].top, BORDERWIDTH, BORDERWIDTH, hBitmapBorder[i], 0, 0, BORDERWIDTH, BORDERWIDTH, RGB(0, 255, 0));
+
+        // TODO: replace magic numbers later :) this for loop will get deleted once variables are better organized in the next 1 or 2 updates!
+        // 95 x 81 = width x height; 1064 is the left coordinate on the plane and 28 is the top coordinate
+        for (int j = 0; j < 3; j++) {
+          oldSprite = SelectObject(hdcSprite, hBitmapIcon[j]);
+          TransparentBlt(hdcMem, 1064, 28, 95, 81, hdcSprite, 0, 0, 95, 81, RGB(0, 255, 0));
+          SelectObject(hdcSprite, oldSprite);
+        }
+      }
+      DeleteDC(hdcSprite);
+    }
+
     // render memory buffer to on-screen DC
     BitBlt(hdc, 0, 0, BWIDTH, BHEIGHT, hdcMem, 0, 0, SRCCOPY);
 
@@ -829,6 +990,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
       DeleteObject(hBitmapBorder[i]);
     }
     PostQuitMessage(0);
+    CloseHandle(mutex);
     WSACleanup();
     break;
   }
@@ -883,6 +1045,20 @@ LRESULT CALLBACK WndProcHost(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
         sprintf_s(hexcode, sizeof(hexcode), "Wi-Fi Code: %08X, Local Code: %08X", IPtoHexCode(ip), IPtoHexCode(localIPcode));
         sprintf_s(partymems, PARTYSTRSIZE, "1. %s (host)", player[0].username);
         
+        mutex = CreateMutex(
+          NULL,              // default security attributes
+          FALSE,             // initially not owned
+          NULL);             // unnamed mutex
+
+        if (mutex == NULL)
+        {
+          MessageBoxA(NULL,
+            _T("CreateMutex error before creating network thread :("),
+            _T("Server Connection"),
+            NULL);
+          DestroyWindow(hWnd);
+        }
+
         //serverInit(portno);
         networkthread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)serverInit, portno, 0, &tIdweb);
 

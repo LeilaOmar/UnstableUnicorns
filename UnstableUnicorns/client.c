@@ -410,6 +410,10 @@ int clientJoin(short portno) {
       receiveLobbyPacket(&current_players, &clientpnum, sockfd);
     }
 
+    // TODO: the client gets borked whenever the host leaves, presumably due to trying to connect before the timeout is over.
+    // new clients also have issues connecting, and re-connecting to the same host shortly after a POLLHUP results in an
+    // additional client numbering error (on top of not working) as it will still have some information from the previous host
+    // TODO: (low priority) potentially add a suuuuper rudimentary CPU to act in stead of the disconnectee in case they come back
     // Connection lost [server dieded uh-oh]
     if (pfd.revents & (POLLHUP | POLLERR | POLLNVAL)) {
       MessageBoxA(NULL,
@@ -439,7 +443,7 @@ int clientJoin(short portno) {
       networktoggle ^= 2;
     }
 
-    Sleep(15);
+    Sleep(20);
   }
 
   return 0;

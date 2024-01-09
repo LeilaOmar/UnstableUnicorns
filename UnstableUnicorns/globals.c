@@ -448,12 +448,12 @@ unsigned int nursery_index = 0;
 unsigned int dnurse_size = NURSERY_SIZE;  // decreases by 1 after each player picks a baby unicorn
 unsigned int isclient; // 0 = server, 1 = client
 unsigned int WIN_CONDITION = 7;
-int turn_count = 0;
+unsigned int turn_count = 0;
 int uni_lasso_flag[3] = { 0 };  // 0 = crd ind of p1, 1 = plyr stealer, 2 = victim
 int puppicorn_index = -1;
-int deck_flag = 0;            // toggles whether deck is printed out or not
-int discard_flag = 0;
-int nursery_flag = 0;
+unsigned char deck_flag = 0;    // toggles whether deck is printed out or not
+unsigned char discard_flag = 0;
+unsigned char nursery_flag = 0;
 int deck_ref[] = {
     13,  14,  15,  16,  17,  18,  19,  20,  21,  22,  23,  24,  25,  26,  27,
     28,  29,  30,  31,  32,  33,  34,  35,  36,  37,  38,  39,  40,  41,  42,

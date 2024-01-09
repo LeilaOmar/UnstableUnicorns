@@ -58,5 +58,14 @@
     <ClInclude Include="windowsapp.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="UnstableUnicorns.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="Assets\horn.ico" />
   </ItemGroup>
 </Project>

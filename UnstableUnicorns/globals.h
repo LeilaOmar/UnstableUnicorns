@@ -212,6 +212,8 @@ extern struct Unicorn deck[129];
 SOCKET sockfd;
 SOCKET udpfd;
 
+HANDLE mutex;
+
 // deck_index and nursery_index point to top-most card that is currently
 // available; discard index is basically the size count
 extern unsigned int deck_index;
@@ -220,12 +222,12 @@ extern unsigned int nursery_index;
 extern unsigned int dnurse_size;
 extern unsigned int isclient; // 0 = server, 1 = client
 extern unsigned int WIN_CONDITION;
-extern int turn_count;
+extern unsigned int turn_count;
 extern int uni_lasso_flag[3];  // 0 = crd ind of p1, 1 = plyr stealer, 2 = victim
 extern int puppicorn_index;
-extern int deck_flag;            // toggles whether deck is printed out or not
-extern int discard_flag;
-extern int nursery_flag;
+extern unsigned char deck_flag;            // toggles whether deck is printed out or not
+extern unsigned char discard_flag;
+extern unsigned char nursery_flag;
 extern int deck_ref[DECK_SIZE];
 extern int discard_ref[DECK_SIZE];
 extern int nursery_ref[NURSERY_SIZE];
