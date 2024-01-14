@@ -46,7 +46,7 @@ LRESULT CALLBACK WndProcJoin(HWND, UINT, WPARAM, LPARAM);
 HWND CreateScrollBar(HWND, int);
 void CreateHostWindow(HWND);
 void CreateJoinWindow(HWND);
-void DisplayCardWindow(HDC*, HDC*);
+void DisplayCardWindow(HDC*, HDC*, int, int*, int);
 
 // helper functions
 void GameLoop(HWND);

@@ -623,10 +623,27 @@ void InitDebugMode() {
   // add some arbitrary number of cards to the player's stable for testing purposes
   // TODO: if I want to quickly edit future tests, then I can read text files for easier input and testing
 
-  for (int i = 0; i < 12; i++) {
-    player[0].stable.unicorns[i] = (i & 1) ? 128 : 30; 
-    player[0].stable.num_unicorns++;
+  // // this should output 7 unicorns in the first page and 1 in the 2nd page
+  // // WILL BUG OUT if i keep the stable_size at 25 instead of 100+, so use
+  // // this test specifically for the deck later on
+  // for (int i = 0; i < 80; i++) {
+  //   player[0].stable.unicorns[i] = (i % 10) ? 128 : 30;
+  //   if (checkClass(ANYUNICORN, deck[player[0].stable.unicorns[i]].class))
+  //     player[0].stable.num_unicorns++;
+  //   player[0].stable.size++;
+  // }
+
+  // this should output 7 unicorns in the first page and 1 in the 2nd page
+  for (int i = 0; i < 15; i++) {
+    player[0].stable.unicorns[i] = (i & 1) ? 128 : 30;
+    if (checkClass(ANYUNICORN, deck[player[0].stable.unicorns[i]].class))
+      player[0].stable.num_unicorns++;
     player[0].stable.size++;
+  }
+
+  for (int i = 0; i < 5; i++) {
+    player[0].hand.cards[i] = 60;
+    player[0].hand.num_cards++;
   }
 }
 
@@ -634,16 +651,15 @@ void ResetDebugMode() {
   // reset player's cards/stable/etc. to 0;
   // TODO: this should be implemented as a hard reset when you join the game, but for now this will close off the init function
   memset(player[0].stable.unicorns, 0, sizeof player[0].stable.unicorns);
+  memset(player[0].hand.cards, 0, sizeof player[0].hand.cards);
   player[0].stable.num_unicorns = 0;
   player[0].stable.size = 0;
+  player[0].hand.num_cards = 0;
 }
 
-void DisplayCardWindow(HDC *hdcMem, HDC *hdcSprite) {
+void DisplayCardWindow(HDC *hdcMem, HDC *hdcSprite, int pagenum, int *tabsize, int tabnum) {
   // use pages to view the card window in lieu of scroll bars :)
 
-  static int pagenum = 1;
-  static int tabsize;
-  static int tabnum = UNICORN_TAB;
   HGDIOBJ oldSprite;
 
   // start is the starting point for the display, of course, with the scroll bar it could go to 0
@@ -654,91 +670,111 @@ void DisplayCardWindow(HDC *hdcMem, HDC *hdcSprite) {
 
   int distance = stablePadding + bm.bmWidth;
 
-
-  tabsize = player[0].stable.size;
-  for (int i = (pagenum - 1) * 7; i < player[0].stable.size && i < ((pagenum - 1) * 7) + 7; i++) {
-    // for now, this cycles through hBitmapCard which only has the super neigh card and the back design
-    // in the future, hBitmapCard could be replaced/assimilated by an updated Unicorn or Deck structure featuring the file name and the loaded hBitmap
-      oldSprite = SelectObject(*hdcSprite, hBitmapCard[i & 1]);
-      BitBlt(*hdcMem, start.x + (distance * i), start.y, bm.bmWidth, bm.bmHeight, *hdcSprite, 0, 0, SRCCOPY);
-      SelectObject(*hdcSprite, oldSprite);
-  }
-
-  /*
   // cards are just rectangles, so transparentblt isn't necessary
+  // this relies on an accurate unicorn/stable/card count; the pages will bork otherwise
+  int index_start = (pagenum - 1) * 7;
+
   switch (tabnum) {
   case UNICORN_TAB:
-    tabsize = 0;
-    for (int i = 0; i < player[0].stable.size; i++) {
+  {
+    *tabsize = player[0].stable.num_unicorns;
+    // TODO: using the original index_start wouldn't account for skipped upgrade/downgrade cards,
+    // but adding an extra array to check for offset cards within extra pages seems extremely overkill...
+    // 
+    // in any case, filtering is still necessary for specific deck functions, and fixing this one by
+    // grouping the unicorns w/ upgrade/downgrade cards in a stable wouldn't fully solve the problem
+    int j = 0;
+    for (int count = 0; j < player[0].stable.size && count < (pagenum - 1) * 7; j++) {
+      if (checkClass(ANYUNICORN, deck[player[0].stable.unicorns[j]].class))
+        count++;
+    }
+    index_start = j;
+
+    for (int i = index_start, skip = 0; i < player[0].stable.size && skip < 7; i++) {
       // for now, this cycles through hBitmapCard which only has the super neigh card and the back design
       // in the future, hBitmapCard could be replaced/assimilated by an updated Unicorn or Deck structure featuring the file name and the loaded hBitmap
-      if (deck[player[0].stable.unicorns[i]].species != NOSPECIES) {
+      if (checkClass(ANYUNICORN, deck[player[0].stable.unicorns[i]].class)) {
         oldSprite = SelectObject(*hdcSprite, hBitmapCard[i & 1]);
-        BitBlt(*hdcMem, start.x + (distance * i), start.y, bm.bmWidth, bm.bmHeight, *hdcSprite, 0, 0, SRCCOPY);
+        BitBlt(*hdcMem, start.x + (distance * skip), start.y, bm.bmWidth, bm.bmHeight, *hdcSprite, 0, 0, SRCCOPY);
         SelectObject(*hdcSprite, oldSprite);
-        tabsize++;
+        skip++;
       }
     }
     break;
+  }
   case UPGRADE_TAB:
-    tabsize = 0;
-    for (int i = 0; i < player[0].stable.size; i++) {
+  {
+    // TODO: see unicorn_tab for the indexing issues. this is unlikely to happen in a normal game though due to most players having less than 8 up/downgrades
+    *tabsize = player[0].stable.size - player[0].stable.num_unicorns;
+    for (int i = index_start, skip = 0; i < player[0].stable.size && skip < 7; i++) {
       // for now, this cycles through hBitmapCard which only has the super neigh card and the back design
       // in the future, hBitmapCard could be replaced/assimilated by an updated Unicorn or Deck structure featuring the file name and the loaded hBitmap
       if (deck[player[0].stable.unicorns[i]].class == UPGRADE || deck[player[0].stable.unicorns[i]].class == DOWNGRADE) {
         oldSprite = SelectObject(*hdcSprite, hBitmapCard[i % 2]);
-        BitBlt(*hdcMem, start.x + (distance * i), start.y, bm.bmWidth, bm.bmHeight, *hdcSprite, 0, 0, SRCCOPY);
+        BitBlt(*hdcMem, start.x + (distance * skip), start.y, bm.bmWidth, bm.bmHeight, *hdcSprite, 0, 0, SRCCOPY);
         SelectObject(*hdcSprite, oldSprite);
+        skip++;
       }
     }
     break;
+  }
   case HAND_TAB:
-    tabsize = 0;
-    for (int i = 0; i < player[0].hand.num_cards; i++) {
+  {
+    *tabsize = player[0].hand.num_cards;
+    for (int i = index_start; i < player[0].hand.num_cards && i < index_start + 7; i++) {
       // for now, this cycles through hBitmapCard which only has the super neigh card and the back design
       // in the future, hBitmapCard could be replaced/assimilated by an updated Unicorn or Deck structure featuring the file name and the loaded hBitmap
       oldSprite = SelectObject(*hdcSprite, hBitmapCard[i % 2]);
-      BitBlt(*hdcMem, start.x + (distance * i), start.y, bm.bmWidth, bm.bmHeight, *hdcSprite, 0, 0, SRCCOPY);
+      BitBlt(*hdcMem, start.x + (distance * (i % 7)), start.y, bm.bmWidth, bm.bmHeight, *hdcSprite, 0, 0, SRCCOPY);
       SelectObject(*hdcSprite, oldSprite);
     }
     break;
+  }
   case NURSERY_TAB:
-    tabsize = 0;
-    for (int i = nursery_index; i < NURSERY_SIZE; i++) {
+  {
+    *tabsize = NURSERY_SIZE - nursery_index;
+    for (int i = nursery_index + index_start; i < NURSERY_SIZE && i < index_start + 7; i++) {
       // for now, this cycles through hBitmapCard which only has the super neigh card and the back design
       // in the future, hBitmapCard could be replaced/assimilated by an updated Unicorn or Deck structure featuring the file name and the loaded hBitmap
       oldSprite = SelectObject(*hdcSprite, hBitmapCard[i % 2]);
-      BitBlt(*hdcMem, start.x + (distance * i), start.y, bm.bmWidth, bm.bmHeight, *hdcSprite, 0, 0, SRCCOPY);
+      BitBlt(*hdcMem, start.x + (distance * (i % 7)), start.y, bm.bmWidth, bm.bmHeight, *hdcSprite, 0, 0, SRCCOPY);
       SelectObject(*hdcSprite, oldSprite);
     }
     break;
+  }
   case DECK_TAB:
-    tabsize = 0;
-    for (int i = deck_index; i < DECK_SIZE; i++) {
+  {
+    // TODO: include a check for card effects that allow deck viewing, and then include a check for specific cards
+    *tabsize = DECK_SIZE - deck_index;
+    for (int i = deck_index + index_start; i < DECK_SIZE && i < index_start + 7; i++) {
       // for now, this cycles through hBitmapCard which only has the super neigh card and the back design
       // in the future, hBitmapCard could be replaced/assimilated by an updated Unicorn or Deck structure featuring the file name and the loaded hBitmap
       oldSprite = SelectObject(*hdcSprite, hBitmapCard[i % 2]);
-      BitBlt(*hdcMem, start.x + (distance * i), start.y, bm.bmWidth, bm.bmHeight, *hdcSprite, 0, 0, SRCCOPY);
+      BitBlt(*hdcMem, start.x + (distance * (i % 7)), start.y, bm.bmWidth, bm.bmHeight, *hdcSprite, 0, 0, SRCCOPY);
       SelectObject(*hdcSprite, oldSprite);
     }
     break;
+  }
   case DISCARD_TAB:
-    tabsize = 0;
-    for (int i = 0; i < discard_index; i++) {
+  {
+    // TODO: (maybe) include a check for specific cards
+    *tabsize = discard_index;
+    for (int i = index_start; i < discard_index && i < index_start + 7; i++) {
       // for now, this cycles through hBitmapCard which only has the super neigh card and the back design
       // in the future, hBitmapCard could be replaced/assimilated by an updated Unicorn or Deck structure featuring the file name and the loaded hBitmap
       oldSprite = SelectObject(*hdcSprite, hBitmapCard[i % 2]);
-      BitBlt(*hdcMem, start.x + (distance * i), start.y, bm.bmWidth, bm.bmHeight, *hdcSprite, 0, 0, SRCCOPY);
+      BitBlt(*hdcMem, start.x + (distance * (i % 7)), start.y, bm.bmWidth, bm.bmHeight, *hdcSprite, 0, 0, SRCCOPY);
       SelectObject(*hdcSprite, oldSprite);
     }
     break;
+  }
   default:
     // what happened???
     break;
   }
-  */
 
-  if (tabsize > pagenum * 7) {
+  // show the page arrow icons if applicable
+  if (*tabsize > pagenum * 7) {
     oldSprite = SelectObject(*hdcSprite, hBitmapIcon[4]);
     TransparentBlt(*hdcMem, pageright.x, pageright.y, pageright.width, pageright.height, *hdcSprite, 0, 0, pageright.width, pageright.height, RGB(0, 255, 0));
     SelectObject(*hdcSprite, oldSprite);
@@ -773,6 +809,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
   HDC hdcSprite;
   HBITMAP hbmSprite;
   MSG msg;
+
+  static int pagenum = 1;
+  static int tabsize;
+  static int tabnum;
 
   switch (message)
   {
@@ -864,6 +904,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
       if (pnt.x >= 0 && pnt.x <= 50 && pnt.y >= 0 && pnt.y <= 50) {
         if (GetAsyncKeyState(VK_LBUTTON) < 0 && is_active) {
           menustate = DEBUGMODE;
+          tabnum = UNICORN_TAB;
           InitDebugMode(); // for card testing purposes
         }
       }
@@ -907,6 +948,36 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         if (GetAsyncKeyState(VK_LBUTTON) < 0 && is_active) {
           menustate = TITLEBLANK;
           ResetDebugMode(); // for card testing purposes
+          tabnum = UNICORN_TAB;
+          pagenum = 1;
+        }
+      }
+      else if (GetAsyncKeyState(VK_LBUTTON) < 0 && is_active && pnt.y >= 463 && pnt.y <= 491) {
+        if (pnt.x <= 232) {
+          tabnum = UNICORN_TAB;
+          pagenum = 1;
+        }
+        else if (pnt.x <= 505) {
+          tabnum = UPGRADE_TAB;
+          pagenum = 1;
+        }
+        else if (pnt.x <= 777) {
+          tabnum = HAND_TAB;
+          pagenum = 1;
+        }
+      }
+      else if (pnt.x >= pageright.x && pnt.x <= pageright.x + pageright.width &&
+        pnt.y >= pageright.y && pnt.y <= pageright.y + pageright.height &&
+        GetAsyncKeyState(VK_LBUTTON) < 0 && is_active) {
+        if (tabsize > pagenum * 7) {
+          pagenum++;
+        }
+      }
+      else if (pnt.x >= pageleft.x && pnt.x <= pageleft.x + pageleft.width &&
+        pnt.y >= pageleft.y && pnt.y <= pageleft.y + pageleft.height &&
+        GetAsyncKeyState(VK_LBUTTON) < 0 && is_active) {
+        if (pagenum > 1) {
+          pagenum--;
         }
       }
     default:
@@ -996,7 +1067,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
       }
 
-      DisplayCardWindow(&hdcMem, &hdcSprite);
+      DisplayCardWindow(&hdcMem, &hdcSprite, pagenum, &tabsize, tabnum);
       DeleteDC(hdcSprite);
     }
 
