@@ -624,7 +624,7 @@ int serverInit(short portno) {
     }
 
     // this should only activate once per action, so toggle the var again at the end
-    // theoretically only one flag should be active at a time
+    // TODO: theoretically only one flag should be active at a time, but sometimes 1 & 2 are applied at the same time???
     if (networktoggle & 1) {
       // clicked the leave button; udpfd was already closed in the main thread
       closesocket(sockfd);

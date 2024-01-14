@@ -228,9 +228,9 @@ extern int puppicorn_index;
 extern unsigned char deck_flag;            // toggles whether deck is printed out or not
 extern unsigned char discard_flag;
 extern unsigned char nursery_flag;
-extern int deck_ref[DECK_SIZE];
-extern int discard_ref[DECK_SIZE];
-extern int nursery_ref[NURSERY_SIZE];
+extern unsigned int deck_ref[DECK_SIZE];
+extern unsigned int discard_ref[DECK_SIZE];
+extern unsigned int nursery_ref[NURSERY_SIZE];
 
 // ******************** Pretty Color Functions ********************
 

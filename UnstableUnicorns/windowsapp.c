@@ -51,7 +51,7 @@ BOOL babytoggle[13] = { FALSE };
 unsigned char networktoggle = 0;
 
 // global variables for this source file only
-HWND gamethread, networkthread, textNameHwnd, portHwnd, codeHwnd, scrollHwnd;
+HWND gamethread, networkthread, textNameHwnd, portHwnd, codeHwnd;
 DWORD tId, tIdweb;
 WNDCLASSEX wcexHost;
 WNDCLASSEX wcexJoin;
@@ -60,9 +60,10 @@ BOOL windowOpen[2] = { FALSE };
 BOOL childWindow[2] = { FALSE };
 HFONT oldfont, chonkyfont;
 
-int stablePadding = 20; // arbitrary number of pixels to pad between the displayed list of cards in their respective stables/hands/decks
+int stablePadding = 15; // arbitrary number of pixels to pad between the displayed list of cards in their respective stables/hands/decks
 
 enum BabySelection {BABYRED, BABYPINK, BABYORANGE, BABYYELLOW, BABYGREEN, BABYBLUE, BABYPURPLE, BABYBLACK, BABYWHITE, BABYBROWN, BABYRAINBOW, BABYDEATH, BABYNARWHAL};
+enum tab {UNICORN_TAB, UPGRADE_TAB, HAND_TAB, NURSERY_TAB, DECK_TAB, DISCARD_TAB};
 
 // left, top, right, bottom
 const RECT babies[] = {
@@ -82,6 +83,9 @@ const RECT babies[] = {
   {  899,  473,  988,  562 },   // BABYDEATH
   { 1019,  473, 1108,  562 },   // BABYNARWHAL
 };
+
+const struct Button pageleft = { 3, 636, 80, 59 };
+const struct Button pageright = { 1196, 636, 80, 59 };
 
 #define BORDERWIDTH 97
 
@@ -193,90 +197,6 @@ void CreateJoinWindow(HWND hwnd) {
   }
 
   ShowWindow(hWndJoin, SW_NORMAL);
-}
-
-// this is basically a copy of host/join, may delete later and implement the scrolling under a switch statement
-void CreateCardWindow(HWND hwnd) {
-  ZeroMemory(&wcexJoin, sizeof(WNDCLASSEX)); // TODO: figure out what this does
-  wcexJoin.cbSize = sizeof(WNDCLASSEX);
-  wcexJoin.cbClsExtra = 0;
-  wcexJoin.cbWndExtra = 0;
-  wcexJoin.style = CS_HREDRAW | CS_VREDRAW;
-  wcexJoin.hInstance = hInstanceGlob;
-  wcexJoin.hCursor = LoadCursor(NULL, IDC_ARROW);
-  wcexJoin.hbrBackground = GetSysColorBrush(COLOR_3DFACE);
-  wcexJoin.lpszMenuName = NULL;
-  wcexJoin.lpszClassName = _T("CardSt00f");
-  wcexJoin.lpfnWndProc = ScrollingCardWndProc;
-  wcexJoin.hIcon = NULL;
-  wcexJoin.hIconSm = NULL;
-
-  if (!RegisterClassEx(&wcexJoin))
-  {
-    MessageBox(NULL,
-      _T("Call to RegisterClassEx failed!"),
-      _T("Windows Desktop Guided Tour"),
-      NULL);
-    return;
-  }
-
-  // TODO: i tested WS_EX_LAYERED in the host window and it was completely transparent instead of semi-transparent :(
-  HWND hWndCard = CreateWindowEx(
-    WS_EX_LAYERED,
-    wcexJoin.lpszClassName,
-    (PTSTR) NULL,
-    WS_HSCROLL | WS_VISIBLE,
-    0, 497,
-    1280, 222,
-    hwnd, // parent/owner window; using the WS_CHILD flag w/ WS_OVERLAPPEDWINDOW or SetParent function makes the window bound to the dimensions of the game window
-    NULL,
-    hInstanceGlob,
-    NULL
-  );
-
-  if (!hWndCard)
-  {
-    MessageBox(NULL,
-      _T("Join window creation failed!"),
-      _T("Windows Desktop Guided Tour"),
-      NULL);
-    return;
-  }
-
-  ShowWindow(hWndCard, SW_NORMAL);
-}
-
-// Description:
-//   Creates a horizontal scroll bar along the bottom of the parent 
-//   window's area.
-// Parameters:
-//   hwndParent - handle to the parent window.
-//   sbHeight - height, in pixels, of the scroll bar.
-// Returns:
-//   The handle to the scroll bar.
-HWND CreateScrollBar(HWND hwndParent, int sbHeight) {
-  RECT rect;
-
-  // Get the dimensions of the parent window's client area;
-  if (!GetClientRect(hwndParent, &rect))
-    return NULL;
-
-  // Create the scroll bar.
-  return (CreateWindowEx(
-    0,                      // no extended styles 
-    L"SCROLLBAR",           // scroll bar control class 
-    (PTSTR)NULL,            // no window text 
-    WS_CHILD | WS_VISIBLE   // window styles  
-    | SBS_HORZ,             // horizontal scroll bar style 
-    rect.left,              // horizontal position 
-    rect.bottom - sbHeight, // vertical position 
-    rect.right,             // width of the scroll bar 
-    sbHeight,               // height of the scroll bar
-    hwndParent,             // handle to main window 
-    (HMENU)NULL,            // no menu 
-    hInstanceGlob,          // instance owning this window 
-    (PVOID)NULL             // pointer not needed 
-  ));
 }
 
 // TODO: reorganize WM_PAINT or whichever future function since this is currently not in use
@@ -576,6 +496,18 @@ void LoadImages(HWND hWnd) {
     issuccess = FALSE;
     strcat_s(errors, sizeof errors, "stable1.bmp ");
   }
+  hBitmapIcon[3] = (HBITMAP)LoadImage(NULL, "Assets\\pageleft.bmp",
+    IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+  if (hBitmapIcon[3] == NULL) {
+    issuccess = FALSE;
+    strcat_s(errors, sizeof errors, "pageleft.bmp ");
+  }
+  hBitmapIcon[4] = (HBITMAP)LoadImage(NULL, "Assets\\pageright.bmp",
+    IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+  if (hBitmapIcon[4] == NULL) {
+    issuccess = FALSE;
+    strcat_s(errors, sizeof errors, "pageright.bmp ");
+  }
 
   // same for card bitmaps being placed inside their own structures
   hBitmapCard[0] = (HBITMAP)LoadImage(NULL, "Assets\\back.bmp",
@@ -601,14 +533,9 @@ void LoadImages(HWND hWnd) {
 
 volatile DWORD whatever;
 
-void GUIstuff(HWND hWnd) {
-  POINT pnt;
+void GUIlobby(POINT pnt) {
   int ret;
   DWORD waitResult;
-
-  // gets mouse click for baby unicorn picker
-  GetCursorPos(&pnt);
-  ScreenToClient(hWnd, &pnt);
 
   // TODO: (maybe) change the structure of RECTs [babies] into a general button structure tying into the whole GetAsyncKeyState if statement w/ the start/leave buttons
   // TODO: implement this with R-trees (specifically because the selectbabyunicorn function
@@ -673,7 +600,7 @@ void GUIstuff(HWND hWnd) {
         // user clicked the start button; only the host can properly start the game
         if (!isclient && current_players >= 2) {
           networktoggle ^= 4;
-          closesocket(udpfd);
+          // closesocket(udpfd); // ??? why did i close the socket here o.O ?? testing purposes?
         }
         return;
       }
@@ -692,12 +619,12 @@ void GUIstuff(HWND hWnd) {
   }
 }
 
-void InitDebugMode(HWND hWnd) {
+void InitDebugMode() {
   // add some arbitrary number of cards to the player's stable for testing purposes
   // TODO: if I want to quickly edit future tests, then I can read text files for easier input and testing
 
-  for (int i = 0; i < 4; i++) {
-    player[0].stable.unicorns[i] = (i & 1) ? 128 : 129; 
+  for (int i = 0; i < 12; i++) {
+    player[0].stable.unicorns[i] = (i & 1) ? 128 : 30; 
     player[0].stable.num_unicorns++;
     player[0].stable.size++;
   }
@@ -711,70 +638,116 @@ void ResetDebugMode() {
   player[0].stable.size = 0;
 }
 
-// this is basically a copy of WS_PAINT; will either delete later or repurpose this function to only focus on the background bitmap rendering
-void CardWindow(HWND hWnd) {
-  // create the visual bitmap for the card display at the bottom of the game screen
+void DisplayCardWindow(HDC *hdcMem, HDC *hdcSprite) {
+  // use pages to view the card window in lieu of scroll bars :)
 
-  HDC hdc;
-  HDC hdcMem;
-  HBITMAP hBitmapBuffer;
-  HGDIOBJ oldBitmap;
-
-  HDC hdcSprite;
-  HBITMAP hbmSprite;
+  static int pagenum = 1;
+  static int tabsize;
+  static int tabnum = UNICORN_TAB;
   HGDIOBJ oldSprite;
 
-  PAINTSTRUCT ps;
-  POINT pnt;
-  RECT rc;
-
-  const int pntpi = 72; // points-per-inch
-  int pxpi, points, pxheight;
-
-
-  // validate that HWND
-  hdc = BeginPaint(hWnd, &ps);
-
-  // for clicking purposes
-  GetCursorPos(&pnt);
-  ScreenToClient(hWnd, &pnt);
-
-  // get window's client rectangle. We need this for bitmap creation.
-  GetClientRect(hWnd, &rc);
-
-  // create memory DC and memory bitmap where we shall do our drawing
-  hdcMem = CreateCompatibleDC(hdc);
-  // create a deep copy so that the original image doesn't get updated when bitblt'ing the extra info to the memory bitmap
-  hBitmapBuffer = (HBITMAP)CopyImage(hBitmapTitle[menustate], IMAGE_BITMAP, BWIDTH, BHEIGHT, LR_COPYRETURNORG);
-  oldBitmap = SelectObject(hdcMem, hBitmapBuffer);
-
-  hdcSprite = CreateCompatibleDC(hdc);
-
   // start is the starting point for the display, of course, with the scroll bar it could go to 0
-  POINT start = { 60, 507 };
+  POINT start = { 87, 507 };
+  RECT windowTab = { 0, 463, 1279, 491 };
   BITMAP bm;
   GetObject(hBitmapCard[0], (int)sizeof bm, &bm); // fetches width/height; all cards have the same w/h
 
   int distance = stablePadding + bm.bmWidth;
 
-  for (int i = 0; i < player[0].stable.size; i++) {
+
+  tabsize = player[0].stable.size;
+  for (int i = (pagenum - 1) * 7; i < player[0].stable.size && i < ((pagenum - 1) * 7) + 7; i++) {
     // for now, this cycles through hBitmapCard which only has the super neigh card and the back design
     // in the future, hBitmapCard could be replaced/assimilated by an updated Unicorn or Deck structure featuring the file name and the loaded hBitmap
-    oldSprite = SelectObject(hdcSprite, hBitmapCard[i % 2]);
-    TransparentBlt(hdcMem, start.x + (distance * i), start.y, bm.bmWidth, bm.bmHeight, hdcSprite, 0, 0, bm.bmWidth, bm.bmHeight, RGB(0, 255, 0));
-    SelectObject(hdcSprite, oldSprite);
+      oldSprite = SelectObject(*hdcSprite, hBitmapCard[i & 1]);
+      BitBlt(*hdcMem, start.x + (distance * i), start.y, bm.bmWidth, bm.bmHeight, *hdcSprite, 0, 0, SRCCOPY);
+      SelectObject(*hdcSprite, oldSprite);
   }
-  DeleteDC(hdcSprite);
 
+  /*
+  // cards are just rectangles, so transparentblt isn't necessary
+  switch (tabnum) {
+  case UNICORN_TAB:
+    tabsize = 0;
+    for (int i = 0; i < player[0].stable.size; i++) {
+      // for now, this cycles through hBitmapCard which only has the super neigh card and the back design
+      // in the future, hBitmapCard could be replaced/assimilated by an updated Unicorn or Deck structure featuring the file name and the loaded hBitmap
+      if (deck[player[0].stable.unicorns[i]].species != NOSPECIES) {
+        oldSprite = SelectObject(*hdcSprite, hBitmapCard[i & 1]);
+        BitBlt(*hdcMem, start.x + (distance * i), start.y, bm.bmWidth, bm.bmHeight, *hdcSprite, 0, 0, SRCCOPY);
+        SelectObject(*hdcSprite, oldSprite);
+        tabsize++;
+      }
+    }
+    break;
+  case UPGRADE_TAB:
+    tabsize = 0;
+    for (int i = 0; i < player[0].stable.size; i++) {
+      // for now, this cycles through hBitmapCard which only has the super neigh card and the back design
+      // in the future, hBitmapCard could be replaced/assimilated by an updated Unicorn or Deck structure featuring the file name and the loaded hBitmap
+      if (deck[player[0].stable.unicorns[i]].class == UPGRADE || deck[player[0].stable.unicorns[i]].class == DOWNGRADE) {
+        oldSprite = SelectObject(*hdcSprite, hBitmapCard[i % 2]);
+        BitBlt(*hdcMem, start.x + (distance * i), start.y, bm.bmWidth, bm.bmHeight, *hdcSprite, 0, 0, SRCCOPY);
+        SelectObject(*hdcSprite, oldSprite);
+      }
+    }
+    break;
+  case HAND_TAB:
+    tabsize = 0;
+    for (int i = 0; i < player[0].hand.num_cards; i++) {
+      // for now, this cycles through hBitmapCard which only has the super neigh card and the back design
+      // in the future, hBitmapCard could be replaced/assimilated by an updated Unicorn or Deck structure featuring the file name and the loaded hBitmap
+      oldSprite = SelectObject(*hdcSprite, hBitmapCard[i % 2]);
+      BitBlt(*hdcMem, start.x + (distance * i), start.y, bm.bmWidth, bm.bmHeight, *hdcSprite, 0, 0, SRCCOPY);
+      SelectObject(*hdcSprite, oldSprite);
+    }
+    break;
+  case NURSERY_TAB:
+    tabsize = 0;
+    for (int i = nursery_index; i < NURSERY_SIZE; i++) {
+      // for now, this cycles through hBitmapCard which only has the super neigh card and the back design
+      // in the future, hBitmapCard could be replaced/assimilated by an updated Unicorn or Deck structure featuring the file name and the loaded hBitmap
+      oldSprite = SelectObject(*hdcSprite, hBitmapCard[i % 2]);
+      BitBlt(*hdcMem, start.x + (distance * i), start.y, bm.bmWidth, bm.bmHeight, *hdcSprite, 0, 0, SRCCOPY);
+      SelectObject(*hdcSprite, oldSprite);
+    }
+    break;
+  case DECK_TAB:
+    tabsize = 0;
+    for (int i = deck_index; i < DECK_SIZE; i++) {
+      // for now, this cycles through hBitmapCard which only has the super neigh card and the back design
+      // in the future, hBitmapCard could be replaced/assimilated by an updated Unicorn or Deck structure featuring the file name and the loaded hBitmap
+      oldSprite = SelectObject(*hdcSprite, hBitmapCard[i % 2]);
+      BitBlt(*hdcMem, start.x + (distance * i), start.y, bm.bmWidth, bm.bmHeight, *hdcSprite, 0, 0, SRCCOPY);
+      SelectObject(*hdcSprite, oldSprite);
+    }
+    break;
+  case DISCARD_TAB:
+    tabsize = 0;
+    for (int i = 0; i < discard_index; i++) {
+      // for now, this cycles through hBitmapCard which only has the super neigh card and the back design
+      // in the future, hBitmapCard could be replaced/assimilated by an updated Unicorn or Deck structure featuring the file name and the loaded hBitmap
+      oldSprite = SelectObject(*hdcSprite, hBitmapCard[i % 2]);
+      BitBlt(*hdcMem, start.x + (distance * i), start.y, bm.bmWidth, bm.bmHeight, *hdcSprite, 0, 0, SRCCOPY);
+      SelectObject(*hdcSprite, oldSprite);
+    }
+    break;
+  default:
+    // what happened???
+    break;
+  }
+  */
 
-  // render memory buffer to on-screen DC
-  BitBlt(hdc, 0, 0, BWIDTH, BHEIGHT, hdcMem, 0, 0, SRCCOPY);
-
-  // cleanup, be aware of memory leaks >.<
-  SelectObject(hdcMem, oldBitmap);
-  DeleteDC(hdcMem);
-  DeleteObject(hBitmapBuffer);
-  EndPaint(hWnd, &ps);
+  if (tabsize > pagenum * 7) {
+    oldSprite = SelectObject(*hdcSprite, hBitmapIcon[4]);
+    TransparentBlt(*hdcMem, pageright.x, pageright.y, pageright.width, pageright.height, *hdcSprite, 0, 0, pageright.width, pageright.height, RGB(0, 255, 0));
+    SelectObject(*hdcSprite, oldSprite);
+  }
+  if (pagenum > 1) {
+    oldSprite = SelectObject(*hdcSprite, hBitmapIcon[3]);
+    TransparentBlt(*hdcMem, pageleft.x, pageright.y, pageleft.width, pageleft.height, *hdcSprite, 0, 0, pageleft.width, pageleft.height, RGB(0, 255, 0));
+    SelectObject(*hdcSprite, oldSprite);
+  }
 }
 
 //  FUNCTION: WndProc(HWND, UINT, WPARAM, LPARAM)
@@ -824,18 +797,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     break;
   case WM_ERASEBKGND:
     return (LRESULT)1; // Say we handled it.
+  case WM_MOUSEMOVE: // check mousemove for assets that update through hovering
   case WM_LBUTTONDOWN:
-    if (menustate == LOBBY) {
-      GUIstuff(hWnd);
-    }
-    break;
-  case WM_PAINT:
-    // TODO: use UpdateLayeredWindow() instead of WM_PAINT????
-    // https://stackoverflow.com/questions/67689087/correct-way-to-handle-and-redraw-a-layered-window-with-a-bitmap
-
-    // validate that HWND
-    hdc = BeginPaint(hWnd, &ps);
-
+  {
     // for clicking purposes
     GetCursorPos(&pnt);
     ScreenToClient(hWnd, &pnt);
@@ -884,8 +848,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         else if (pnt.y >= 572 && pnt.y <= 659) {
           // Rules Button
           menustate = TITLERULES;
-          // use Async instead of GetKeyState because this loop doesn't process messages ig
-          // https://stackoverflow.com/questions/59923765/getkeystate-function-not-working-when-checking-if-left-mouse-button-is-clicked
           if (GetAsyncKeyState(VK_LBUTTON) < 0 && is_active) {
             menustate = RULESONE;
           }
@@ -900,13 +862,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
       // TOOD: write a proper ifdef
       if (pnt.x >= 0 && pnt.x <= 50 && pnt.y >= 0 && pnt.y <= 50) {
-        // use Async instead of GetKeyState because this loop doesn't process messages ig
-        // https://stackoverflow.com/questions/59923765/getkeystate-function-not-working-when-checking-if-left-mouse-button-is-clicked
         if (GetAsyncKeyState(VK_LBUTTON) < 0 && is_active) {
           menustate = DEBUGMODE;
-          scrollHwnd = CreateScrollBar(hWnd, 15);
-          ShowWindow(scrollHwnd, SW_NORMAL);
-          InitDebugMode(scrollHwnd); // for card testing purposes
+          InitDebugMode(); // for card testing purposes
         }
       }
       break;
@@ -939,6 +897,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
       //if (pnt.x >= 120 && pnt.x <= 309 && pnt.y >= 590 && pnt.y <= 639 && GetAsyncKeyState(VK_LBUTTON) < 0 && is_active) {
       //  // start game
       //}
+      GUIlobby(pnt);
       break;
     case DEBUGMODE:
       // TOOD: write a proper ifdef
@@ -947,13 +906,22 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         // https://stackoverflow.com/questions/59923765/getkeystate-function-not-working-when-checking-if-left-mouse-button-is-clicked
         if (GetAsyncKeyState(VK_LBUTTON) < 0 && is_active) {
           menustate = TITLEBLANK;
-          DestroyWindow(scrollHwnd);
           ResetDebugMode(); // for card testing purposes
         }
       }
     default:
       break;
     }
+
+    break;
+  }
+  case WM_PAINT:
+  {
+    // TODO: use UpdateLayeredWindow() instead of WM_PAINT????
+    // https://stackoverflow.com/questions/67689087/correct-way-to-handle-and-redraw-a-layered-window-with-a-bitmap
+
+    // validate that HWND
+    hdc = BeginPaint(hWnd, &ps);
 
     // get window's client rectangle. We need this for bitmap creation.
     GetClientRect(hWnd, &rc);
@@ -964,9 +932,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     hBitmapBuffer = (HBITMAP)CopyImage(hBitmapTitle[menustate], IMAGE_BITMAP, BWIDTH, BHEIGHT, LR_COPYRETURNORG);
     oldBitmap = SelectObject(hdcMem, hBitmapBuffer);
 
-    // TODO cleanup: decide whether or not this should be moved to inside of the switch statement while
-    // the lines "GetClientRect(hWnd, &rc)" -> "oldBitmap =" are moved before the switch. there would be
-    // a slight delay because the buffer would only update on the next cycle
     if (menustate == LOBBY) {
       // initialize custom font
       // create larger font because default is teeny tiny
@@ -1017,8 +982,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
       }
       DeleteDC(hdcSprite);
     }
-
-    if (menustate == DEBUGMODE) {
+    else if (menustate == DEBUGMODE) {
       // draw player Narwhal!!
       hdcSprite = CreateCompatibleDC(hdc);
       // TODO: this one actually has to be based off of current players, so it is capped at 1 for now
@@ -1032,21 +996,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
       }
 
-
-      // start is the starting point for the display, of course, with the scroll bar it could go to 0
-      POINT start = { 60, 507 };
-      BITMAP bm;
-      GetObject(hBitmapCard[0], (int)sizeof bm, &bm); // fetches width/height; all cards have the same w/h
-
-      int distance = stablePadding + bm.bmWidth;
-
-      for (int i = 0; i < player[0].stable.size; i++) {
-        // for now, this cycles through hBitmapCard which only has the super neigh card and the back design
-        // in the future, hBitmapCard could be replaced/assimilated by an updated Unicorn or Deck structure featuring the file name and the loaded hBitmap
-        oldSprite = SelectObject(hdcSprite, hBitmapCard[i % 2]);
-        TransparentBlt(hdcMem, start.x + (distance * i), start.y, bm.bmWidth, bm.bmHeight, hdcSprite, 0, 0, bm.bmWidth, bm.bmHeight, RGB(0, 255, 0));
-        SelectObject(hdcSprite, oldSprite);
-      }
+      DisplayCardWindow(&hdcMem, &hdcSprite);
       DeleteDC(hdcSprite);
     }
 
@@ -1059,6 +1009,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     DeleteObject(hBitmapBuffer);
     EndPaint(hWnd, &ps);
     break;
+  }
   case WM_DESTROY:
     windowOpen[0] = FALSE;
     for (int i = 0; i < sizeof hBitmapTitle / sizeof hBitmapTitle[0]; i++) {
@@ -1119,13 +1070,12 @@ LRESULT CALLBACK WndProcHost(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
       GetWindowText(portHwnd, portstr, NAME_SIZE);
 
       // TODO: put this under some ifdef so that it doesn't affect future deployment
-      // TODO: (bug) entering an "empty" name erroneously counts as a valid username
-      if (player[0].username == '\0') strcpy_s(player[0].username, 5, "host");
+      if (player[0].username[0] == '\0') strcpy_s(player[0].username, 5, "host");
       if (portstr[0] == '\0') strcpy_s(portstr, 5, "1234");
       portno = atoi(portstr);
 
       // input check for username and port #
-      if (player[0].username != NULL && portno >= 1024 && portno <= 65535) {
+      if (player[0].username[0] != '\0' && portno >= 1024 && portno <= 65535) {
         // close this window and switch to lobby window
         getIPreq(ip);
         char localIPcode[16];
@@ -1213,8 +1163,7 @@ LRESULT CALLBACK WndProcJoin(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
 
       // TODO: add support for inserting ip codestr's directly instead of just some "obfuscated" hex value
       // input check for username and port #
-      // TODO: (bug) entering an "empty" name erroneously counts as a valid username
-      if (player[0].username != NULL && portno >= 1024 && portno <= 65535 && strlen(codestr) == 8) {
+      if (player[0].username[0] != '\0' && portno >= 1024 && portno <= 65535 && strlen(codestr) == 8) {
         // local ip 127.0.0.1: 142B8F0B
         HexCodetoIP(codestr, ip);
 
@@ -1250,200 +1199,4 @@ LRESULT CALLBACK WndProcJoin(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
   }
 
   return DefWindowProc(hWnd, message, wParam, lParam);
-}
-
-// glorious microsoft
-// https://learn.microsoft.com/en-us/windows/win32/controls/scroll-a-bitmap-in-scroll-bars
-LRESULT CALLBACK ScrollingCardWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
-{
-  HDC hdc;
-  PAINTSTRUCT ps;
-  SCROLLINFO si;
-
-  // These variables are required by BitBlt. 
-  static HDC hdcWin;           // window DC 
-  static HDC hdcScreen;        // DC for entire screen 
-  static HDC hdcScreenCompat;  // memory DC for screen 
-  static HBITMAP hbmpCompat;   // bitmap handle to old DC 
-  static BITMAP bmp;           // bitmap data structure 
-  static BOOL fBlt;            // TRUE if BitBlt occurred 
-  static BOOL fScroll;         // TRUE if scrolling occurred 
-
-  // These variables are required for horizontal scrolling. 
-  static int xMinScroll;       // minimum horizontal scroll value 
-  static int xCurrentScroll;   // current horizontal scroll value 
-  static int xMaxScroll;       // maximum horizontal scroll value 
-
-  switch (message)
-  {
-  case WM_CREATE:
-  {
-    // Create a normal DC and a memory DC for the entire 
-    // screen. The normal DC provides a snapshot of the 
-    // screen contents. The memory DC keeps a copy of this 
-    // snapshot in the associated bitmap. 
-    hdcScreen = CreateDC(L"DISPLAY", (PCTSTR)NULL,
-      (PCTSTR)NULL, (CONST DEVMODE*) NULL);
-    hdcScreenCompat = CreateCompatibleDC(hdcScreen);
-
-    // Retrieve the metrics for the bitmap associated with the 
-    // regular device context. 
-    bmp.bmBitsPixel = (BYTE)GetDeviceCaps(hdcScreen, BITSPIXEL);
-    bmp.bmPlanes = (BYTE)GetDeviceCaps(hdcScreen, PLANES);
-    bmp.bmWidth = GetDeviceCaps(hdcScreen, HORZRES);
-    bmp.bmHeight = GetDeviceCaps(hdcScreen, VERTRES);
-
-    // The width must be byte-aligned. 
-    bmp.bmWidthBytes = ((bmp.bmWidth + 15) & ~15) / 8;
-
-    // Create a bitmap for the compatible DC. 
-    hbmpCompat = CreateBitmap(bmp.bmWidth, bmp.bmHeight,
-      bmp.bmPlanes, bmp.bmBitsPixel, (CONST VOID*) NULL);
-
-    // Select the bitmap for the compatible DC. 
-    SelectObject(hdcScreenCompat, hbmpCompat);
-
-    // Initialize the flags. 
-    fBlt = FALSE;
-    fScroll = FALSE;
-
-    // Initialize the horizontal scrolling variables. 
-    xMinScroll = 0;
-    xCurrentScroll = 0;
-    xMaxScroll = 0;
-    break;
-  }
-  case WM_PAINT:
-  {
-    PRECT prect;
-
-    hdc = BeginPaint(hwnd, &ps);
-
-    // If scrolling has occurred, use the following call to 
-    // BitBlt to paint the invalid rectangle. 
-    // 
-    // The coordinates of this rectangle are specified in the 
-    // RECT structure to which prect points. 
-    // 
-    // Note that it is necessary to increment the seventh 
-    // argument (prect->left) by xCurrentScroll and the 
-    // eighth argument (prect->top) by yCurrentScroll in 
-    // order to map the correct pixels from the source bitmap. 
-    if (fScroll)
-    {
-      prect = &ps.rcPaint;
-
-      BitBlt(ps.hdc,
-        prect->left, prect->top,
-        (prect->right - prect->left),
-        (prect->bottom - prect->top),
-        hdcScreenCompat,
-        prect->left + xCurrentScroll,
-        prect->top,
-        SRCCOPY);
-
-      fScroll = FALSE;
-    }
-
-    EndPaint(hwnd, &ps);
-    break;
-  }
-  case WM_HSCROLL:
-  {
-    int xDelta;     // xDelta = new_pos - current_pos  
-    int xNewPos;    // new position 
-    int yDelta = 0;
-
-    switch (LOWORD(wParam)) {
-    // User clicked the scroll bar shaft left of the scroll box. 
-    case SB_PAGEUP:
-      xNewPos = xCurrentScroll - 50;
-      break;
-
-    // User clicked the scroll bar shaft right of the scroll box. 
-    case SB_PAGEDOWN:
-      xNewPos = xCurrentScroll + 50;
-      break;
-
-    // User clicked the left arrow. 
-    case SB_LINEUP:
-      xNewPos = xCurrentScroll - 5;
-      break;
-
-    // User clicked the right arrow. 
-    case SB_LINEDOWN:
-      xNewPos = xCurrentScroll + 5;
-      break;
-
-    // User dragged the scroll box. 
-    case SB_THUMBPOSITION:
-      xNewPos = HIWORD(wParam);
-      break;
-
-    default:
-      xNewPos = xCurrentScroll;
-    }
-
-    // New position must be between 0 and the screen width. 
-    xNewPos = max(0, xNewPos);
-    xNewPos = min(xMaxScroll, xNewPos);
-
-    // If the current position does not change, do not scroll.
-    if (xNewPos == xCurrentScroll)
-      break;
-
-    // Set the scroll flag to TRUE. 
-    fScroll = TRUE;
-
-    // Determine the amount scrolled (in pixels). 
-    xDelta = xNewPos - xCurrentScroll;
-
-    // Reset the current scroll position. 
-    xCurrentScroll = xNewPos;
-
-    // Scroll the window. (The system repaints most of the 
-    // client area when ScrollWindowEx is called; however, it is 
-    // necessary to call UpdateWindow in order to repaint the 
-    // rectangle of pixels that were invalidated.) 
-    ScrollWindowEx(hwnd, -xDelta, -yDelta, (CONST RECT*) NULL,
-      (CONST RECT*) NULL, (HRGN)NULL, (PRECT)NULL,
-      SW_INVALIDATE);
-    UpdateWindow(hwnd);
-
-    // Reset the scroll bar. 
-    si.cbSize = sizeof(si);
-    si.fMask = SIF_POS;
-    si.nPos = xCurrentScroll;
-    SetScrollInfo(hwnd, SB_HORZ, &si, TRUE);
-    break;
-  }
-
-  case WM_RBUTTONDOWN:
-  {
-    // Get the compatible DC of the client area. 
-    hdcWin = GetDC(hwnd);
-
-    // Fill the client area to remove any existing contents. 
-    RECT rect;
-    GetClientRect(hwnd, &rect);
-    FillRect(hdcWin, &rect, (HBRUSH)(COLOR_WINDOW + 1));
-
-    // Copy the contents of the current screen 
-    // into the compatible DC. 
-    BitBlt(hdcScreenCompat, 0, 0, bmp.bmWidth,
-      bmp.bmHeight, hdcScreen, 0, 0, SRCCOPY);
-
-    // Copy the compatible DC to the client area.
-    BitBlt(hdcWin, 0, 0, bmp.bmWidth, bmp.bmHeight,
-      hdcScreenCompat, 0, 0, SRCCOPY);
-
-    ReleaseDC(hwnd, hdcWin);
-    fBlt = TRUE;
-    break;
-  }
-  case WM_DESTROY:
-    PostQuitMessage(0);
-    return 0;
-  }
-  return DefWindowProc(hwnd, message, wParam, lParam);
 }

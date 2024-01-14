@@ -29,21 +29,28 @@ extern unsigned char networktoggle; // 00000000 nothing
 																		// 00000010 selectbabyunicorn
 POINT clientPnt;
 
+// x, y, width, height
+struct Button {
+	short x;
+	short y;
+	short width;
+	short height;
+};
+
 // callback functions
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 LRESULT CALLBACK WndProcHost(HWND, UINT, WPARAM, LPARAM);
 LRESULT CALLBACK WndProcJoin(HWND, UINT, WPARAM, LPARAM);
-LRESULT CALLBACK ScrollingCardWndProc(HWND, UINT, WPARAM, LPARAM);
 
 // window/UI creation
 HWND CreateScrollBar(HWND, int);
 void CreateHostWindow(HWND);
 void CreateJoinWindow(HWND);
-void CreateCardWindow(HWND);
-void CardWindow(HWND);
+void DisplayCardWindow(HDC*, HDC*);
 
 // helper functions
 void GameLoop(HWND);
+void GUIlobby(POINT);
 int SelectBabyUnicorn(int, POINT);
-void InitDebugMode(HWND);
+void InitDebugMode();
 void ResetDebugMode();
