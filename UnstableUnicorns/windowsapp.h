@@ -3,18 +3,11 @@
 #include <tchar.h>
 #include "globals.h"
 
-#define TITLEBLANK 0
-#define TITLEHOST 1
-#define TITLEJOIN 2
-#define TITLERULES 3
-#define RULESONE 4
-#define RULESTWO 5
-#define LOBBY 6
-#define GAMESTART 7
-#define DEBUGMODE 8
 #define BWIDTH 1280
 #define BHEIGHT 720
 #define PARTYSTRSIZE 296
+
+enum game_state { TITLEBLANK, TITLEHOST, TITLEJOIN, TITLERULES, RULESONE, RULESTWO, LOBBY, GAMESTART, DEBUGMODE };
 
 extern HINSTANCE hInstanceGlob;
 extern char ip[16], hexcode[43];
@@ -35,6 +28,32 @@ struct Button {
 	short y;
 	short width;
 	short height;
+	char	filename[64];
+	HBITMAP bitmap;
+};
+
+// potential joint structure for the baby unicorn icon + player number
+struct PlayerIcon {
+	short x;
+	short y;
+	short width;
+	short height;
+	char icon_filename[64];
+	char player_filename[64];
+	HBITMAP icon_bitmap;
+	HBITMAP player_bitmap;
+};
+
+struct ToolTip {
+	char title[128];
+	char msg[512];
+	int x;
+	int y;
+	int width;
+	int height;
+	BOOL ishover;
+	int fonttxt;
+	int fonttitle;
 };
 
 // callback functions
@@ -43,10 +62,15 @@ LRESULT CALLBACK WndProcHost(HWND, UINT, WPARAM, LPARAM);
 LRESULT CALLBACK WndProcJoin(HWND, UINT, WPARAM, LPARAM);
 
 // window/UI creation
-HWND CreateScrollBar(HWND, int);
 void CreateHostWindow(HWND);
 void CreateJoinWindow(HWND);
 void DisplayCardWindow(HDC*, HDC*, int, int*, int);
+void CreateCustomToolTip(HDC*);
+struct ToolTip ReturnCardHoverTip(char*, char*, int, int);
+struct ToolTip ReturnPlayerHoverTip(int, int, int);
+
+void InitFonts(HDC);
+void DestroyFonts();
 
 // helper functions
 void GameLoop(HWND);

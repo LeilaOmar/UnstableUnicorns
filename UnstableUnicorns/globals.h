@@ -19,19 +19,7 @@
 #define STABLE_SIZE 25
 #define NURSERY_SIZE 13
 
-#define BABYUNICORN 0
-#define BASICUNICORN 1
-#define MAGICUNICORN 2
-#define UPGRADE 3
-#define DOWNGRADE 4
-#define MAGIC 5
-#define INSTANT 6
-#define ANYUNICORN 7
-#define UNICORN 8
-#define NARWHAL 9
-#define NOSPECIES 10
-
-#define ANY -1
+enum UnicornDatatypes {ANY = -1, BABYUNICORN, BASICUNICORN, MAGICUNICORN, UPGRADE, DOWNGRADE, MAGIC, INSTANT, ANYUNICORN, UNICORN, NARWHAL, NOSPECIES};
 
 enum flag {broken_stable = 1, slowdown = 2, yay = 4, rainbow_aura = 8,
            nanny_cam = 16, queen_bee_unicorn = 32, ginormous_unicorn = 64,

@@ -5,36 +5,6 @@
 
 #pragma comment(lib,"msimg32.lib") // Transparent blt
 
-struct BMPHeader {
-  short header; // hex value is 4D42 even though "BM" is 424D??
-  int filesize;
-  int rservd;
-  int pixeloffset;
-
-  // DIB Header
-  int headersize;
-  int width;
-  int height;
-  short planes;
-  short bpp;
-  int compression;
-  int datasize;
-  int hres;
-  int vres;
-  int colorused;
-  int colorimportant;
-  int rbmask;
-  int gbmask;
-  int bbmask;
-  int abmask;
-  int wcolorspace;
-  int cspaceendpts[9];
-  int rgamma;
-  int ggamma;
-  int bgamma;
-  int filler[4];
-} h;
-
 // super global variables TM
 HINSTANCE hInstanceGlob;
 char ip[16], hexcode[43];
@@ -55,15 +25,18 @@ HWND gamethread, networkthread, textNameHwnd, portHwnd, codeHwnd;
 DWORD tId, tIdweb;
 WNDCLASSEX wcexHost;
 WNDCLASSEX wcexJoin;
-HBITMAP hBitmapTitle[9], hBitmapBorder[8], hBitmapIcon[13], hBitmapCard[2];
+HBITMAP hBitmapTitle[9], hBitmapBorder[8], hBitmapCard[2];
 BOOL windowOpen[2] = { FALSE };
 BOOL childWindow[2] = { FALSE };
-HFONT oldfont, chonkyfont;
+HFONT fonts[4] = { NULL };
 
 int stablePadding = 15; // arbitrary number of pixels to pad between the displayed list of cards in their respective stables/hands/decks
 
 enum BabySelection {BABYRED, BABYPINK, BABYORANGE, BABYYELLOW, BABYGREEN, BABYBLUE, BABYPURPLE, BABYBLACK, BABYWHITE, BABYBROWN, BABYRAINBOW, BABYDEATH, BABYNARWHAL};
 enum tab {UNICORN_TAB, UPGRADE_TAB, HAND_TAB, NURSERY_TAB, DECK_TAB, DISCARD_TAB};
+enum butindex { PAGE_LEFT, PAGE_RIGHT };
+enum fonts { OLDFONT, CHONKYFONT, BOLDFONT, FANCYFONT };
+
 
 // left, top, right, bottom
 const RECT babies[] = {
@@ -84,8 +57,43 @@ const RECT babies[] = {
   { 1019,  473, 1108,  562 },   // BABYNARWHAL
 };
 
-const struct Button pageleft = { 3, 636, 80, 59 };
-const struct Button pageright = { 1196, 636, 80, 59 };
+// struct Button pageleft = { 3, 636, 80, 59 };
+// struct Button pageright = { 1196, 636, 80, 59 };
+
+// TODO: could split UI elements by game state, so the title screen, rules, and etc would have their own
+struct Button buttons[] = {
+  { 3, 636, 80, 59 , "Assets\\pageleft.bmp", NULL }, 
+  { 1196, 636, 80, 59 , "Assets\\pageright.bmp", NULL }
+};
+
+// TODO: potentially rename these to icon[1-13]?
+struct Button icons[] = {
+  { 1064, 28, 95, 81, "Assets\\icon_red.bmp", NULL },
+  { 1064, 28, 95, 81, "Assets\\icon_pink.bmp", NULL },
+  { 1064, 28, 95, 81, "Assets\\icon_orange.bmp", NULL },
+  { 1064, 28, 95, 81, "Assets\\icon_yellow.bmp", NULL },
+  { 1064, 28, 95, 81, "Assets\\icon_green.bmp", NULL },
+  { 1064, 28, 95, 81, "Assets\\icon_blue.bmp", NULL },
+  { 1064, 28, 95, 81, "Assets\\icon_purple.bmp", NULL },
+  { 1064, 28, 95, 81, "Assets\\icon_black.bmp", NULL },
+  { 1064, 28, 95, 81, "Assets\\icon_white.bmp", NULL },
+  { 1064, 28, 95, 81, "Assets\\icon_brown.bmp", NULL },
+  { 1064, 28, 95, 81, "Assets\\icon_rainbow.bmp", NULL },
+  { 1064, 28, 95, 81, "Assets\\icon_death.bmp", NULL },
+  { 1064, 28, 95, 81, "Assets\\icon_narwhal.bmp", NULL }
+};
+
+struct Button player_nums[] = {
+  { 1064, 28,  95, 81, "Assets\\player1.bmp", NULL },
+  { 1175, 28,  95, 81, "Assets\\player2.bmp", NULL },
+  { 1064, 118, 95, 81, "Assets\\player3.bmp", NULL },
+  { 1175, 118, 95, 81, "Assets\\player4.bmp", NULL },
+  { 1064, 208, 95, 81, "Assets\\player5.bmp", NULL },
+  { 1175, 208, 95, 81, "Assets\\player6.bmp", NULL },
+  { 1064, 298, 95, 81, "Assets\\player7.bmp", NULL },
+  { 1175, 298, 95, 81, "Assets\\player8.bmp", NULL }
+};
+struct Button stable_nums[8];
 
 #define BORDERWIDTH 97
 
@@ -197,6 +205,88 @@ void CreateJoinWindow(HWND hwnd) {
   }
 
   ShowWindow(hWndJoin, SW_NORMAL);
+}
+
+struct ToolTip ReturnCardHoverTip(char *title, char *msg, int x, int y) {
+  struct ToolTip tippy;
+
+  int width = 250;
+  int height = 150;
+
+  strcpy_s(tippy.title, sizeof tippy.title, title);
+  strcpy_s(tippy.msg, sizeof tippy.msg, msg);
+  tippy.fonttitle = FANCYFONT;
+  tippy.fonttxt   = OLDFONT;
+
+  tippy.x = x + 45;
+  tippy.y = y - height - 25;
+  tippy.width   = width;
+  tippy.height  = height;
+  tippy.ishover = TRUE;
+
+  return tippy;
+}
+
+struct ToolTip ReturnPlayerHoverTip(int pnum, int x, int y) {
+  struct ToolTip tippy;
+
+  int width = 200;
+  int height = 60;
+
+  strcpy_s(tippy.title, sizeof tippy.title, player[pnum].username);
+  snprintf(tippy.msg, sizeof tippy.msg, "# of cards in hand: %d\n# of unicorns in stable: %d",
+    player[pnum].hand.num_cards, player[pnum].stable.num_unicorns);
+  tippy.fonttitle = BOLDFONT;
+  tippy.fonttxt   = OLDFONT;
+
+  tippy.x = x - width - 20;
+  tippy.y = y - 10;
+  tippy.width   = width;
+  tippy.height  = height;
+  tippy.ishover = TRUE;
+
+  return tippy;
+}
+
+void CreateCustomToolTip(HDC *hdcMem, struct ToolTip hoverTip) {
+  RECT rc;
+  int padding = 8;
+
+  // TODO: mess around with colors later to make it look prettier :3
+
+  // draw the outer box
+  HBRUSH brush = CreateSolidBrush(RGB(255, 0, 150));
+  HBRUSH old_brush = (HBRUSH) SelectObject(*hdcMem, brush);
+
+  // add some padding to the rectangle area instead of applying it to the text
+  RoundRect(*hdcMem, hoverTip.x - padding, hoverTip.y - padding, hoverTip.x + hoverTip.width + (padding * 2), hoverTip.y + hoverTip.height + (padding * 2), 15, 15);
+
+  SelectObject(*hdcMem, old_brush);
+  DeleteObject(brush);
+
+  // prepare the message text :)
+
+  SetBkMode(*hdcMem, TRANSPARENT); // box surrounding text is transparent instead of white
+
+  int title_offset = 0;
+  // type out title if applicable
+  if (hoverTip.title[0] != '\0') {
+    SetRect(&rc, hoverTip.x, hoverTip.y, hoverTip.x + hoverTip.width, hoverTip.y + hoverTip.width);
+    SetTextColor(*hdcMem, RGB(255, 255, 255));
+    SelectObject(*hdcMem, fonts[hoverTip.fonttitle]);
+    DrawText(*hdcMem, hoverTip.title, strlen(hoverTip.title), &rc, DT_LEFT | DT_WORDBREAK);
+
+    // calculate the vertical space taken by the title
+    SIZE size;
+    GetTextExtentPoint(*hdcMem, hoverTip.title, strlen(hoverTip.title), &size);
+    title_offset = size.cy + (padding / 2);
+  }
+
+  // type out message
+  SetRect(&rc, hoverTip.x, hoverTip.y + title_offset, hoverTip.x + hoverTip.width, hoverTip.y + hoverTip.width + title_offset);
+  SetTextColor(*hdcMem, RGB(255, 255, 255));
+  SelectObject(*hdcMem, fonts[hoverTip.fonttxt]);
+  DrawText(*hdcMem, hoverTip.msg, strlen(hoverTip.msg), &rc, DT_LEFT | DT_WORDBREAK);
 }
 
 // TODO: reorganize WM_PAINT or whichever future function since this is currently not in use
@@ -476,37 +566,46 @@ void LoadImages(HWND hWnd) {
     strcat_s(errors, sizeof errors, "border8.bmp ");
   }
 
-  // these three should ideally all fall under the same structure because they
-  // have the same default size
-  hBitmapIcon[0] = (HBITMAP)LoadImage(NULL, "Assets\\icon_narwhal.bmp",
-    IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-  if (hBitmapIcon[0] == NULL) {
-    issuccess = FALSE;
-    strcat_s(errors, sizeof errors, "icon_narwhal.bmp ");
+  for (int i = 0; i < sizeof icons / sizeof icons[0]; i++) {
+    icons[i].bitmap = (HBITMAP)LoadImage(NULL, icons[i].filename,
+      IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+    if (icons[i].bitmap == NULL) {
+      issuccess = FALSE;
+      strcat_s(errors, sizeof errors, icons[i].filename);
+      strcat_s(errors, sizeof errors, " ");
+    }
   }
-  hBitmapIcon[1] = (HBITMAP)LoadImage(NULL, "Assets\\player1.bmp",
-    IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-  if (hBitmapIcon[1] == NULL) {
-    issuccess = FALSE;
-    strcat_s(errors, sizeof errors, "player1.bmp ");
+
+  for (int i = 0; i < sizeof player_nums / sizeof player_nums[0]; i++) {
+    player_nums[i].bitmap = (HBITMAP)LoadImage(NULL, player_nums[i].filename,
+      IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+    if (player_nums[i].bitmap == NULL) {
+      issuccess = FALSE;
+      strcat_s(errors, sizeof errors, player_nums[i].filename);
+      strcat_s(errors, sizeof errors, " ");
+    }
   }
-  hBitmapIcon[2] = (HBITMAP)LoadImage(NULL, "Assets\\stable1.bmp",
-    IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-  if (hBitmapIcon[2] == NULL) {
-    issuccess = FALSE;
-    strcat_s(errors, sizeof errors, "stable1.bmp ");
+
+  // stable count goes up to 7
+  for (int i = 0; i < 8; i++) {
+    snprintf(stable_nums[i].filename, 19, "Assets\\stable%d.bmp", i);
+    stable_nums[i].bitmap = (HBITMAP)LoadImage(NULL, stable_nums[i].filename,
+      IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+    if (stable_nums[i].bitmap == NULL) {
+      issuccess = FALSE;
+      strcat_s(errors, sizeof errors, stable_nums[i].filename);
+      strcat_s(errors, sizeof errors, " ");
+    }
   }
-  hBitmapIcon[3] = (HBITMAP)LoadImage(NULL, "Assets\\pageleft.bmp",
-    IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-  if (hBitmapIcon[3] == NULL) {
-    issuccess = FALSE;
-    strcat_s(errors, sizeof errors, "pageleft.bmp ");
-  }
-  hBitmapIcon[4] = (HBITMAP)LoadImage(NULL, "Assets\\pageright.bmp",
-    IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-  if (hBitmapIcon[4] == NULL) {
-    issuccess = FALSE;
-    strcat_s(errors, sizeof errors, "pageright.bmp ");
+
+  for (int i = 0; i < sizeof buttons / sizeof buttons[0]; i++) {
+    buttons[i].bitmap = (HBITMAP)LoadImage(NULL, buttons[i].filename,
+      IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+    if (buttons[i].bitmap == NULL) {
+      issuccess = FALSE;
+      strcat_s(errors, sizeof errors, buttons[i].filename);
+      strcat_s(errors, sizeof errors, " ");
+    }
   }
 
   // same for card bitmaps being placed inside their own structures
@@ -619,6 +718,67 @@ void GUIlobby(POINT pnt) {
   }
 }
 
+void InitFonts(HWND hWnd) {
+  RECT rc;
+  const int pntpi = 72; // points-per-inch
+  int pxpi, points, pxheight;
+
+  HDC hdc = GetDC(hWnd);
+
+  fonts[OLDFONT] = GetCurrentObject(hdc, OBJ_FONT); // save old font
+
+  pxpi = GetDeviceCaps(hdc, LOGPIXELSY); // pixels-per-inch
+  points = 30;
+  pxheight = -(points * pxpi / pntpi);
+
+  fonts[CHONKYFONT] = CreateFontA(pxheight, 0, // size
+    0, 0,               // normal orientation
+    FW_BOLD,            // normal weight--e.g., bold would be FW_BOLD
+    NULL, NULL, NULL,   // not italic, underlined or strike out
+    DEFAULT_CHARSET,
+    OUT_OUTLINE_PRECIS, // select only outline (not bitmap) fonts
+    CLIP_DEFAULT_PRECIS,
+    CLEARTYPE_QUALITY,
+    VARIABLE_PITCH | FF_SWISS,
+    "Arial");
+
+  points = 16;
+  pxheight = -(points * pxpi / pntpi);
+  fonts[BOLDFONT] = CreateFontA(pxheight, 0, // size
+    0, 0,               // normal orientation
+    FW_BOLD,            // normal weight--e.g., bold would be FW_BOLD
+    NULL, NULL, NULL,   // not italic, underlined or strike out
+    DEFAULT_CHARSET,
+    OUT_OUTLINE_PRECIS, // select only outline (not bitmap) fonts
+    CLIP_DEFAULT_PRECIS,
+    CLEARTYPE_QUALITY,
+    VARIABLE_PITCH | FF_SWISS,
+    "Arial");
+
+  LPCWSTR font_resource = L"Assets\\runescape_large.ttf";
+  AddFontResource(font_resource);
+
+  points = 24;
+  pxheight = -(points * pxpi / pntpi);
+  fonts[FANCYFONT] = CreateFontA(pxheight, 0, // size
+    0, 0,                 // normal orientation
+    FW_NORMAL,            // normal weight--e.g., bold would be FW_BOLD
+    NULL, NULL, NULL,     // not italic, underlined or strike out
+    DEFAULT_CHARSET,
+    OUT_OUTLINE_PRECIS,   // select only outline (not bitmap) fonts
+    CLIP_DEFAULT_PRECIS,
+    CLEARTYPE_QUALITY,
+    VARIABLE_PITCH | FF_SWISS,
+    "RuneScape Large");
+}
+
+void DestroyFonts() {
+  for (int i = 1; i < sizeof fonts / sizeof fonts[0]; i++) {
+    DeleteObject(fonts[i]);
+  }
+  RemoveFontResource(L"Assets\\runescape_large.ttf");
+}
+
 void InitDebugMode() {
   // add some arbitrary number of cards to the player's stable for testing purposes
   // TODO: if I want to quickly edit future tests, then I can read text files for easier input and testing
@@ -633,28 +793,48 @@ void InitDebugMode() {
   //   player[0].stable.size++;
   // }
 
+  // player 1: host
   // this should output 7 unicorns in the first page and 1 in the 2nd page
+  strcpy_s(player[0].username, sizeof player[0].username, "host");
   for (int i = 0; i < 15; i++) {
     player[0].stable.unicorns[i] = (i & 1) ? 128 : 30;
     if (checkClass(ANYUNICORN, deck[player[0].stable.unicorns[i]].class))
       player[0].stable.num_unicorns++;
     player[0].stable.size++;
   }
-
   for (int i = 0; i < 5; i++) {
     player[0].hand.cards[i] = 60;
     player[0].hand.num_cards++;
   }
+
+  // player 2: noob
+  strcpy_s(player[1].username, sizeof player[1].username, "nooblet");
+  for (int i = 0; i < 5; i++) {
+    player[1].stable.unicorns[i] = (i & 1) ? 50 : 40;
+    if (checkClass(ANYUNICORN, deck[player[1].stable.unicorns[i]].class))
+      player[1].stable.num_unicorns++;
+    player[1].stable.size++;
+  }
+  for (int i = 0; i < 5; i++) {
+    player[1].hand.cards[i] = 42 + i;
+    player[1].hand.num_cards++;
+  }
+
+  current_players = 2;
 }
 
 void ResetDebugMode() {
   // reset player's cards/stable/etc. to 0;
   // TODO: this should be implemented as a hard reset when you join the game, but for now this will close off the init function
-  memset(player[0].stable.unicorns, 0, sizeof player[0].stable.unicorns);
-  memset(player[0].hand.cards, 0, sizeof player[0].hand.cards);
-  player[0].stable.num_unicorns = 0;
-  player[0].stable.size = 0;
-  player[0].hand.num_cards = 0;
+  for (int i = 0; i < MAX_PLAYERS; i++) {
+    memset(player[i].stable.unicorns, 0, sizeof player[i].stable.unicorns[0]);
+    memset(player[i].hand.cards, 0, sizeof player[i].hand.cards[0]);
+    memset(player[i].username, 0, sizeof player[i].username[0]);
+    player[i].stable.num_unicorns = 0;
+    player[i].stable.size = 0;
+    player[i].hand.num_cards = 0;
+  }
+  current_players = 1;
 }
 
 void DisplayCardWindow(HDC *hdcMem, HDC *hdcSprite, int pagenum, int *tabsize, int tabnum) {
@@ -775,13 +955,13 @@ void DisplayCardWindow(HDC *hdcMem, HDC *hdcSprite, int pagenum, int *tabsize, i
 
   // show the page arrow icons if applicable
   if (*tabsize > pagenum * 7) {
-    oldSprite = SelectObject(*hdcSprite, hBitmapIcon[4]);
-    TransparentBlt(*hdcMem, pageright.x, pageright.y, pageright.width, pageright.height, *hdcSprite, 0, 0, pageright.width, pageright.height, RGB(0, 255, 0));
+    oldSprite = SelectObject(*hdcSprite, buttons[PAGE_RIGHT].bitmap);
+    TransparentBlt(*hdcMem, buttons[PAGE_RIGHT].x, buttons[PAGE_RIGHT].y, buttons[PAGE_RIGHT].width, buttons[PAGE_RIGHT].height, *hdcSprite, 0, 0, buttons[PAGE_RIGHT].width, buttons[PAGE_RIGHT].height, RGB(0, 255, 0));
     SelectObject(*hdcSprite, oldSprite);
   }
   if (pagenum > 1) {
-    oldSprite = SelectObject(*hdcSprite, hBitmapIcon[3]);
-    TransparentBlt(*hdcMem, pageleft.x, pageright.y, pageleft.width, pageleft.height, *hdcSprite, 0, 0, pageleft.width, pageleft.height, RGB(0, 255, 0));
+    oldSprite = SelectObject(*hdcSprite, buttons[PAGE_LEFT].bitmap);
+    TransparentBlt(*hdcMem, buttons[PAGE_LEFT].x, buttons[PAGE_LEFT].y, buttons[PAGE_LEFT].width, buttons[PAGE_LEFT].height, *hdcSprite, 0, 0, buttons[PAGE_LEFT].width, buttons[PAGE_LEFT].height, RGB(0, 255, 0));
     SelectObject(*hdcSprite, oldSprite);
   }
 }
@@ -814,10 +994,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
   static int tabsize;
   static int tabnum;
 
+  static struct ToolTip hoverTip;
+
   switch (message)
   {
   case WM_CREATE:
     LoadImages(hWnd);
+    InitFonts(hWnd);
     windowOpen[0] = TRUE;
     webhwnd = hWnd; // for server and client to access in the wsapoll lobby loop
 
@@ -846,6 +1029,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
     // TODO: get rid of these magic numbers and add new constants or pre-defined variables to globals.c
     // this is sickening :/
+    // TODO: use function pointers for buttons? unsure if there would be too much overhead, but at least
+    // it would be easier to modify; 1 function for hover and 1 for left click
     switch (menustate) {
     case TITLEBLANK:
     case TITLEHOST:
@@ -935,22 +1120,16 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
       break;
     }
     case LOBBY:
-      //if (pnt.x >= 120 && pnt.x <= 309 && pnt.y >= 590 && pnt.y <= 639 && GetAsyncKeyState(VK_LBUTTON) < 0 && is_active) {
-      //  // start game
-      //}
       GUIlobby(pnt);
       break;
     case DEBUGMODE:
       // TOOD: write a proper ifdef
-      if (pnt.x >= 0 && pnt.x <= 50 && pnt.y >= 0 && pnt.y <= 50) {
-        // use Async instead of GetKeyState because this loop doesn't process messages ig
-        // https://stackoverflow.com/questions/59923765/getkeystate-function-not-working-when-checking-if-left-mouse-button-is-clicked
-        if (GetAsyncKeyState(VK_LBUTTON) < 0 && is_active) {
-          menustate = TITLEBLANK;
-          ResetDebugMode(); // for card testing purposes
-          tabnum = UNICORN_TAB;
-          pagenum = 1;
-        }
+      if (pnt.x >= 0 && pnt.x <= 50 && pnt.y >= 0 && pnt.y <= 50 &&
+          GetAsyncKeyState(VK_LBUTTON) < 0 && is_active) {
+        menustate = TITLEBLANK;
+        ResetDebugMode(); // for card testing purposes
+        tabnum = UNICORN_TAB;
+        pagenum = 1;
       }
       else if (GetAsyncKeyState(VK_LBUTTON) < 0 && is_active && pnt.y >= 463 && pnt.y <= 491) {
         if (pnt.x <= 232) {
@@ -966,18 +1145,33 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
           pagenum = 1;
         }
       }
-      else if (pnt.x >= pageright.x && pnt.x <= pageright.x + pageright.width &&
-        pnt.y >= pageright.y && pnt.y <= pageright.y + pageright.height &&
+      else if (pnt.x >= buttons[PAGE_RIGHT].x && pnt.x <= buttons[PAGE_RIGHT].x + buttons[PAGE_RIGHT].width &&
+        pnt.y >= buttons[PAGE_RIGHT].y && pnt.y <= buttons[PAGE_RIGHT].y + buttons[PAGE_RIGHT].height &&
         GetAsyncKeyState(VK_LBUTTON) < 0 && is_active) {
         if (tabsize > pagenum * 7) {
           pagenum++;
         }
       }
-      else if (pnt.x >= pageleft.x && pnt.x <= pageleft.x + pageleft.width &&
-        pnt.y >= pageleft.y && pnt.y <= pageleft.y + pageleft.height &&
+      else if (pnt.x >= buttons[PAGE_LEFT].x && pnt.x <= buttons[PAGE_LEFT].x + buttons[PAGE_LEFT].width &&
+        pnt.y >= buttons[PAGE_LEFT].y && pnt.y <= buttons[PAGE_LEFT].y + buttons[PAGE_LEFT].height &&
         GetAsyncKeyState(VK_LBUTTON) < 0 && is_active) {
         if (pagenum > 1) {
           pagenum--;
+        }
+      }
+
+      hoverTip.ishover = 0;
+      if (pnt.x >= 87 && pnt.x <= 237 && pnt.y >= 507 && pnt.y <= 707) {
+        if (tabnum == UNICORN_TAB)
+          hoverTip = ReturnCardHoverTip(deck[player[0].stable.unicorns[0]].name, deck[player[0].stable.unicorns[0]].description, 87, 507);
+        if (tabnum == HAND_TAB)
+          hoverTip = ReturnCardHoverTip(deck[player[0].hand.cards[0]].name, deck[player[0].hand.cards[0]].description, 87, 507 );
+      }
+
+      for (int i = 0; i < current_players; i++) {
+        if (pnt.x >= player_nums[i].x && pnt.x <= player_nums[i].x + player_nums[i].width &&
+          pnt.y >= player_nums[i].y && pnt.y <= player_nums[i].y + player_nums[i].width) {
+          hoverTip = ReturnPlayerHoverTip(i, player_nums[i].x, player_nums[i].y);
         }
       }
     default:
@@ -1004,36 +1198,18 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     oldBitmap = SelectObject(hdcMem, hBitmapBuffer);
 
     if (menustate == LOBBY) {
-      // initialize custom font
-      // create larger font because default is teeny tiny
-      pxpi = GetDeviceCaps(hdcMem, LOGPIXELSY); // pixels-per-inch
-      points = 30;
-      pxheight = -(points * pxpi / pntpi);
-      oldfont = GetCurrentObject(hdcMem, OBJ_FONT); // save old font
-
-      chonkyfont = CreateFontA(pxheight, 0, // size
-        0, 0,               // normal orientation
-        FW_BOLD,            // normal weight--e.g., bold would be FW_BOLD
-        NULL, NULL, NULL,   // not italic, underlined or strike out
-        DEFAULT_CHARSET,
-        OUT_OUTLINE_PRECIS, // select only outline (not bitmap) fonts
-        CLIP_DEFAULT_PRECIS,
-        CLEARTYPE_QUALITY,
-        VARIABLE_PITCH | FF_SWISS,
-        "Arial");
 
       SetBkMode(hdcMem, TRANSPARENT); // box surrounding text is transparent instead of white
 
       // type out lobby code
       SetRect(&rc, 78, 180, 1202, 225);
       SetTextColor(hdcMem, RGB(255, 255, 255));
-      SelectObject(hdcMem, chonkyfont);
+      SelectObject(hdcMem, fonts[CHONKYFONT]);
       DrawText(hdcMem, hexcode, strlen(hexcode), &rc, DT_CENTER);
 
       // type out party members
       SetRect(&rc, 115, 260, 800, 625);
-      SelectObject(hdcMem, oldfont);
-      DeleteObject(chonkyfont);
+      SelectObject(hdcMem, fonts[OLDFONT]);
       DrawText(hdcMem, partymems, strlen(partymems), &rc, DT_LEFT);
 
       // draw border for chosen baby unicorns (ughhhh)
@@ -1057,18 +1233,33 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
       // draw player Narwhal!!
       hdcSprite = CreateCompatibleDC(hdc);
       // TODO: this one actually has to be based off of current players, so it is capped at 1 for now
-      for (int i = 0; i < 1; i++) {
-        // TODO: replace magic numbers later :) this for loop will get deleted once variables are better organized in the next 1 or 2 updates!
-        // 95 x 81 = width x height; 1064 is the left coordinate on the plane and 28 is the top coordinate
-        for (int j = 0; j < 3; j++) {
-          oldSprite = SelectObject(hdcSprite, hBitmapIcon[j]);
-          TransparentBlt(hdcMem, 1064, 28, 95, 81, hdcSprite, 0, 0, 95, 81, RGB(0, 255, 0));
-          SelectObject(hdcSprite, oldSprite);
+      for (int i = 0; i < current_players; i++) {
+        oldSprite = SelectObject(hdcSprite, icons[BABYNARWHAL - i].bitmap);
+        TransparentBlt(hdcMem, player_nums[i].x, player_nums[i].y, player_nums[i].width, player_nums[i].height, hdcSprite, 0, 0, player_nums[i].width, player_nums[i].height, RGB(0, 255, 0));
+        SelectObject(hdcSprite, oldSprite);
+
+        // player number
+        oldSprite = SelectObject(hdcSprite, player_nums[i].bitmap);
+        TransparentBlt(hdcMem, player_nums[i].x, player_nums[i].y, player_nums[i].width, player_nums[i].height, hdcSprite, 0, 0, player_nums[i].width, player_nums[i].height, RGB(0, 255, 0));
+        SelectObject(hdcSprite, oldSprite);
+
+        // number of unicorns in stable
+        if (player[i].stable.num_unicorns <= 7) {
+          oldSprite = SelectObject(hdcSprite, stable_nums[player[i].stable.num_unicorns].bitmap);
         }
+        else {
+          oldSprite = SelectObject(hdcSprite, stable_nums[7].bitmap);
+        }
+        TransparentBlt(hdcMem, player_nums[i].x, player_nums[i].y, player_nums[i].width, player_nums[i].height, hdcSprite, 0, 0, player_nums[i].width, player_nums[i].height, RGB(0, 255, 0));
+        SelectObject(hdcSprite, oldSprite);
       }
 
       DisplayCardWindow(&hdcMem, &hdcSprite, pagenum, &tabsize, tabnum);
       DeleteDC(hdcSprite);
+
+      if (hoverTip.ishover) {
+        CreateCustomToolTip(&hdcMem, hoverTip);
+      }
     }
 
     // render memory buffer to on-screen DC
@@ -1089,12 +1280,22 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     for (int i = 0; i < sizeof hBitmapBorder / sizeof hBitmapBorder[0]; i++) {
       DeleteObject(hBitmapBorder[i]);
     }
-    for (int i = 0; i < sizeof hBitmapIcon / sizeof hBitmapIcon[0]; i++) {
-      DeleteObject(hBitmapIcon[i]);
+    for (int i = 0; i < sizeof icons / sizeof icons[0]; i++) {
+      DeleteObject(icons[i].bitmap);
+    }
+    for (int i = 0; i < sizeof player_nums / sizeof player_nums[0]; i++) {
+      DeleteObject(player_nums[i].bitmap);
+    }
+    for (int i = 0; i < sizeof stable_nums / sizeof stable_nums[0]; i++) {
+      DeleteObject(stable_nums[i].bitmap);
+    }
+    for (int i = 0; i < sizeof buttons / sizeof buttons[0]; i++) {
+      DeleteObject(buttons[i].bitmap);
     }
     for (int i = 0; i < sizeof hBitmapCard / sizeof hBitmapCard[0]; i++) {
       DeleteObject(hBitmapCard[i]);
     }
+    DestroyFonts();
     PostQuitMessage(0);
     CloseHandle(mutex);
     WSACleanup();
