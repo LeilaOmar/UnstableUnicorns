@@ -7,11 +7,11 @@
 #define BHEIGHT 720
 #define PARTYSTRSIZE 296
 
-enum game_state { TITLEBLANK, TITLEHOST, TITLEJOIN, TITLERULES, RULESONE, RULESTWO, LOBBY, GAMESTART, DEBUGMODE };
+enum GameState { TITLEBLANK, TITLEHOST, TITLEJOIN, TITLERULES, RULESONE, RULESTWO, LOBBY, GAMESTART, DEBUGMODE } ;
 
 extern HINSTANCE hInstanceGlob;
 extern char ip[16], hexcode[43];
-extern short menustate;
+extern enum GameState menustate;
 extern char partymems[PARTYSTRSIZE];
 extern HWND webhwnd;
 extern BOOL is_active;
@@ -22,26 +22,16 @@ extern unsigned char networktoggle; // 00000000 nothing
 																		// 00000010 selectbabyunicorn
 POINT clientPnt;
 
-// x, y, width, height
 struct Button {
-	short x;
-	short y;
-	short width;
-	short height;
-	char	filename[64];
-	HBITMAP bitmap;
-};
-
-// potential joint structure for the baby unicorn icon + player number
-struct PlayerIcon {
-	short x;
-	short y;
-	short width;
-	short height;
-	char icon_filename[64];
-	char player_filename[64];
-	HBITMAP icon_bitmap;
-	HBITMAP player_bitmap;
+	int x;									// left coordinate
+	int y;									// top coordinate
+	int width;							// length
+	int height;							// height
+	char	filename[64];			// filename of bitmap source
+	HBITMAP bitmap;					// bitmap for button asset
+	void* source;						// void variable to use as a reference for functions
+	void (*onHover)(struct Button*, void*);	// function that triggers on mouse hover
+	void (*onClick)(void*);	// function that triggers on left mouse click
 };
 
 struct ToolTip {
@@ -69,12 +59,32 @@ void CreateCustomToolTip(HDC*);
 struct ToolTip ReturnCardHoverTip(char*, char*, int, int);
 struct ToolTip ReturnPlayerHoverTip(int, int, int);
 
+// button management
+void HoverTitle(struct Button*, BOOL*);
+void InitTitleButtons(struct Button, HWND);
+void InitRuleButtons(struct Button);
+void InitLobbyButtons(struct Button);
+void InitPlayerIcons();
+void InitButtonManager(HWND);
+
+// initializing/deinitializing data
+void LoadImages(HWND);
 void InitFonts(HDC);
 void DestroyFonts();
+void InitDebugMode();
+void ResetDebugMode();
+
+// state functions
+void NothingBurger();
+int StateButtonMap(int);
+void SwitchState(int);
+void HostGeneration(HWND);
+void JoinGeneration(HWND);
+void StartGame();
+void LeaveLobby();
+void ClickBabyUnicorn(POINT);
+void GUIlobby(POINT);
 
 // helper functions
 void GameLoop(HWND);
-void GUIlobby(POINT);
 int SelectBabyUnicorn(int, POINT);
-void InitDebugMode();
-void ResetDebugMode();

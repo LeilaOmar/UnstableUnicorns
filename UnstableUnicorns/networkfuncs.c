@@ -288,6 +288,7 @@ int receiveLobbyPacket(int *num_players, int *clientpnum, int fd) {
   *clientpnum = deserialize_int(data + 4);
   int strcount = count - (2 * sizeof(int)) - (2 * sizeof(long) * MAX_PLAYERS);
 
+  // TODO: take care of these buffer overrun warnings before more out of range errors occur <_<
   for (int i = 0; i < strcount; i++) {
     partymems[i] = data[offset];
     offset++;

@@ -5,10 +5,12 @@
 
 #pragma comment(lib,"msimg32.lib") // Transparent blt
 
-// super global variables TM
+// ********************************************************************************
+// ************************** super global variables TM ***************************
+// ********************************************************************************
 HINSTANCE hInstanceGlob;
 char ip[16], hexcode[43];
-short menustate = 0;
+enum GameState menustate = 0;
 char partymems[PARTYSTRSIZE] = { 0 };
 HWND webhwnd;
 // toggle for if window is currently active; 0 = no, 1 = yes :)
@@ -20,7 +22,9 @@ BOOL babytoggle[13] = { FALSE };
 // this is super ugly :/
 unsigned char networktoggle = 0;
 
-// global variables for this source file only
+// ********************************************************************************
+// ****************** global variables for this source file only ******************
+// ********************************************************************************
 HWND gamethread, networkthread, textNameHwnd, portHwnd, codeHwnd;
 DWORD tId, tIdweb;
 WNDCLASSEX wcexHost;
@@ -96,6 +100,185 @@ struct Button player_nums[] = {
 struct Button stable_nums[8];
 
 #define BORDERWIDTH 97
+
+// ********************************************************************************
+// ****************************** button management *******************************
+// ********************************************************************************
+
+enum buttontypes { titlebuttons, rulebuttons, lobbybuttons, debugbuttons, numsubsets };
+
+struct Button** buttonManager;
+struct Button buttonManager2D[numsubsets - 1][5];
+struct Button hornbutton;
+
+// calculates the position for the horn select bitmap that centers around the hovered button
+void HoverTitle(struct Button *self, BOOL *hover) {
+  HGDIOBJ oldSprite;
+
+  int xdiff = -93;
+  int ydiff = 17;
+
+  hornbutton.x = self->x + xdiff;
+  hornbutton.y = self->y + ydiff;
+  *hover = TRUE;
+}
+
+void InitTitleButtons(struct Button *b, HWND hWnd) {
+  int size = 3;
+  // *b = (struct Button*)calloc(size, sizeof(struct Button));
+
+  // horn is at point 435, 402 for the first button
+  for (int i = 0; i < size; i++) {
+    b[i].x = 528;
+    b[i].y = 385 + (i * 100);
+    b[i].width = 230;
+    b[i].height = 75;
+    b[i].onHover = HoverTitle;
+  }
+
+  b[0].source = hWnd;
+  b[1].source = hWnd;
+  b[2].source = RULESONE;
+  b[0].onClick = HostGeneration;
+  b[1].onClick = JoinGeneration;
+  b[2].onClick = SwitchState;
+
+  // horn select
+  hornbutton.width = 416;
+  hornbutton.height = 40;
+  hornbutton.bitmap = (HBITMAP)LoadImage(NULL, "Assets\\horn_select.bmp",
+    IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+}
+
+void InitRuleButtons(struct Button *b) {
+  int size = 3;
+  // b = (struct Button*)malloc(size * sizeof(struct Button));
+
+  for (int i = 0; i < size; i++) {
+    b[i].y = 619;
+    b[i].width = 32;
+    b[i].height = 32;
+    b[i].onHover = NothingBurger;
+    b[i].onClick = SwitchState;
+  }
+
+  b[0].width = 100;
+  b[0].x = 975;
+  b[1].x = 1087;
+  b[2].x = 1129;
+
+  // source is just storing the triggered game state that should occur when clicking the button
+  b[0].source = TITLEBLANK;
+  b[1].source = RULESONE;
+  b[2].source = RULESTWO;
+}
+
+void InitLobbyButtons(struct Button *b) {
+  int size = 2;
+  // b = (struct Button*)malloc(size * sizeof(struct Button));
+
+  // start game
+  b[0].x = 120;
+  b[0].y = 590;
+  b[0].width = 190;
+  b[0].height = 50;
+  b[0].source = GAMESTART;
+  b[0].onHover = NothingBurger;
+  b[0].onClick = StartGame;
+
+  // leave lobby
+  b[1].x = 360;
+  b[1].y = 590;
+  b[1].width = 190;
+  b[1].height = 50;
+  b[0].source = TITLEBLANK;
+  b[1].onHover = NothingBurger;
+  b[1].onClick = LeaveLobby;
+}
+
+void InitPlayerIcons() {
+  char errors[1024] = "";
+  BOOL issuccess = TRUE;
+
+  for (int i = 0; i < sizeof icons / sizeof icons[0]; i++) {
+    icons[i].bitmap = (HBITMAP)LoadImage(NULL, icons[i].filename,
+      IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+    if (icons[i].bitmap == NULL) {
+      issuccess = FALSE;
+      strcat_s(errors, sizeof errors, icons[i].filename);
+      strcat_s(errors, sizeof errors, " ");
+    }
+  }
+
+  for (int i = 0; i < sizeof player_nums / sizeof player_nums[0]; i++) {
+    player_nums[i].bitmap = (HBITMAP)LoadImage(NULL, player_nums[i].filename,
+      IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+    if (player_nums[i].bitmap == NULL) {
+      issuccess = FALSE;
+      strcat_s(errors, sizeof errors, player_nums[i].filename);
+      strcat_s(errors, sizeof errors, " ");
+    }
+    player_nums[i].source = &player[i];
+    player_nums[i].onHover = ReturnPlayerHoverTip;
+  }
+
+  // stable count goes up to 7
+  for (int i = 0; i < 8; i++) {
+    snprintf(stable_nums[i].filename, 19, "Assets\\stable%d.bmp", i);
+    stable_nums[i].bitmap = (HBITMAP)LoadImage(NULL, stable_nums[i].filename,
+      IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+    if (stable_nums[i].bitmap == NULL) {
+      issuccess = FALSE;
+      strcat_s(errors, sizeof errors, stable_nums[i].filename);
+      strcat_s(errors, sizeof errors, " ");
+    }
+  }
+}
+
+void malloctest(struct Button** b) {
+  int size = 3;
+  *b = (struct Button*)calloc(size, sizeof(struct Button));
+}
+
+void InitButtonManager(HWND hWnd) {
+  // buttonManager = (struct Button**)calloc((numsubsets - 1), sizeof(struct Button*));
+
+  // InitTitleButtons(&buttonManager[titlebuttons]);
+
+  // int size = 3;
+  // malloctest(&buttonManager[titlebuttons]);
+  // 
+  // // horn is at point 435, 402 for the first button
+  // for (int i = 0; i < size; i++) {
+  //   buttonManager[titlebuttons][i].x = 528;
+  //   buttonManager[titlebuttons][i].y = 385 + (i * 100);
+  //   buttonManager[titlebuttons][i].width = 230;
+  //   buttonManager[titlebuttons][i].height = 75;
+  //   // b[i]->onHover = HoverTitle;
+  //   // b[i]->onClick = SwitchState;
+  // }
+  // 
+  // 
+  // // source is just storing the triggered game state that should occur when clicking the button
+  // buttonManager[titlebuttons][0].source = TITLEHOST;
+  // buttonManager[titlebuttons][1].source = TITLEJOIN;
+  // buttonManager[titlebuttons][2].source = RULESONE;
+  // 
+  // // horn select
+  // hornbutton.width = 416;
+  // hornbutton.height = 40;
+  // hornbutton.bitmap = (HBITMAP)LoadImage(NULL, "Assets\\horn_select.bmp",
+  //   IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+
+  InitTitleButtons(buttonManager2D[titlebuttons], hWnd);
+  InitRuleButtons(buttonManager2D[rulebuttons]);
+  InitLobbyButtons(buttonManager2D[lobbybuttons]);
+
+}
+
+// ********************************************************************************
+// ************************ window and general UI creation ************************
+// ********************************************************************************
 
 enum { ID_BUTTON, ID_TEXT };
 
@@ -207,6 +390,135 @@ void CreateJoinWindow(HWND hwnd) {
   ShowWindow(hWndJoin, SW_NORMAL);
 }
 
+void DisplayCardWindow(HDC* hdcMem, HDC* hdcSprite, int pagenum, int* tabsize, int tabnum) {
+  // use pages to view the card window in lieu of scroll bars :)
+
+  HGDIOBJ oldSprite;
+
+  // start is the starting point for the display, of course, with the scroll bar it could go to 0
+  POINT start = { 87, 507 };
+  RECT windowTab = { 0, 463, 1279, 491 };
+  BITMAP bm;
+  GetObject(hBitmapCard[0], (int)sizeof bm, &bm); // fetches width/height; all cards have the same w/h
+
+  int distance = stablePadding + bm.bmWidth;
+
+  // cards are just rectangles, so transparentblt isn't necessary
+  // this relies on an accurate unicorn/stable/card count; the pages will bork otherwise
+  int index_start = (pagenum - 1) * 7;
+
+  switch (tabnum) {
+  case UNICORN_TAB:
+  {
+    *tabsize = player[0].stable.num_unicorns;
+    // TODO: using the original index_start wouldn't account for skipped upgrade/downgrade cards,
+    // but adding an extra array to check for offset cards within extra pages seems extremely overkill...
+    // 
+    // in any case, filtering is still necessary for specific deck functions, and fixing this one by
+    // grouping the unicorns w/ upgrade/downgrade cards in a stable wouldn't fully solve the problem
+    int j = 0;
+    for (int count = 0; j < player[0].stable.size && count < (pagenum - 1) * 7; j++) {
+      if (checkClass(ANYUNICORN, deck[player[0].stable.unicorns[j]].class))
+        count++;
+    }
+    index_start = j;
+
+    for (int i = index_start, skip = 0; i < player[0].stable.size && skip < 7; i++) {
+      // for now, this cycles through hBitmapCard which only has the super neigh card and the back design
+      // in the future, hBitmapCard could be replaced/assimilated by an updated Unicorn or Deck structure featuring the file name and the loaded hBitmap
+      if (checkClass(ANYUNICORN, deck[player[0].stable.unicorns[i]].class)) {
+        oldSprite = SelectObject(*hdcSprite, hBitmapCard[i & 1]);
+        BitBlt(*hdcMem, start.x + (distance * skip), start.y, bm.bmWidth, bm.bmHeight, *hdcSprite, 0, 0, SRCCOPY);
+        SelectObject(*hdcSprite, oldSprite);
+        skip++;
+      }
+    }
+    break;
+  }
+  case UPGRADE_TAB:
+  {
+    // TODO: see unicorn_tab for the indexing issues. this is unlikely to happen in a normal game though due to most players having less than 8 up/downgrades
+    *tabsize = player[0].stable.size - player[0].stable.num_unicorns;
+    for (int i = index_start, skip = 0; i < player[0].stable.size && skip < 7; i++) {
+      // for now, this cycles through hBitmapCard which only has the super neigh card and the back design
+      // in the future, hBitmapCard could be replaced/assimilated by an updated Unicorn or Deck structure featuring the file name and the loaded hBitmap
+      if (deck[player[0].stable.unicorns[i]].class == UPGRADE || deck[player[0].stable.unicorns[i]].class == DOWNGRADE) {
+        oldSprite = SelectObject(*hdcSprite, hBitmapCard[i % 2]);
+        BitBlt(*hdcMem, start.x + (distance * skip), start.y, bm.bmWidth, bm.bmHeight, *hdcSprite, 0, 0, SRCCOPY);
+        SelectObject(*hdcSprite, oldSprite);
+        skip++;
+      }
+    }
+    break;
+  }
+  case HAND_TAB:
+  {
+    *tabsize = player[0].hand.num_cards;
+    for (int i = index_start; i < player[0].hand.num_cards && i < index_start + 7; i++) {
+      // for now, this cycles through hBitmapCard which only has the super neigh card and the back design
+      // in the future, hBitmapCard could be replaced/assimilated by an updated Unicorn or Deck structure featuring the file name and the loaded hBitmap
+      oldSprite = SelectObject(*hdcSprite, hBitmapCard[i % 2]);
+      BitBlt(*hdcMem, start.x + (distance * (i % 7)), start.y, bm.bmWidth, bm.bmHeight, *hdcSprite, 0, 0, SRCCOPY);
+      SelectObject(*hdcSprite, oldSprite);
+    }
+    break;
+  }
+  case NURSERY_TAB:
+  {
+    *tabsize = NURSERY_SIZE - nursery_index;
+    for (int i = nursery_index + index_start; i < NURSERY_SIZE && i < index_start + 7; i++) {
+      // for now, this cycles through hBitmapCard which only has the super neigh card and the back design
+      // in the future, hBitmapCard could be replaced/assimilated by an updated Unicorn or Deck structure featuring the file name and the loaded hBitmap
+      oldSprite = SelectObject(*hdcSprite, hBitmapCard[i % 2]);
+      BitBlt(*hdcMem, start.x + (distance * (i % 7)), start.y, bm.bmWidth, bm.bmHeight, *hdcSprite, 0, 0, SRCCOPY);
+      SelectObject(*hdcSprite, oldSprite);
+    }
+    break;
+  }
+  case DECK_TAB:
+  {
+    // TODO: include a check for card effects that allow deck viewing, and then include a check for specific cards
+    *tabsize = DECK_SIZE - deck_index;
+    for (int i = deck_index + index_start; i < DECK_SIZE && i < index_start + 7; i++) {
+      // for now, this cycles through hBitmapCard which only has the super neigh card and the back design
+      // in the future, hBitmapCard could be replaced/assimilated by an updated Unicorn or Deck structure featuring the file name and the loaded hBitmap
+      oldSprite = SelectObject(*hdcSprite, hBitmapCard[i % 2]);
+      BitBlt(*hdcMem, start.x + (distance * (i % 7)), start.y, bm.bmWidth, bm.bmHeight, *hdcSprite, 0, 0, SRCCOPY);
+      SelectObject(*hdcSprite, oldSprite);
+    }
+    break;
+  }
+  case DISCARD_TAB:
+  {
+    // TODO: (maybe) include a check for specific cards
+    *tabsize = discard_index;
+    for (int i = index_start; i < discard_index && i < index_start + 7; i++) {
+      // for now, this cycles through hBitmapCard which only has the super neigh card and the back design
+      // in the future, hBitmapCard could be replaced/assimilated by an updated Unicorn or Deck structure featuring the file name and the loaded hBitmap
+      oldSprite = SelectObject(*hdcSprite, hBitmapCard[i % 2]);
+      BitBlt(*hdcMem, start.x + (distance * (i % 7)), start.y, bm.bmWidth, bm.bmHeight, *hdcSprite, 0, 0, SRCCOPY);
+      SelectObject(*hdcSprite, oldSprite);
+    }
+    break;
+  }
+  default:
+    // what happened???
+    break;
+  }
+
+  // show the page arrow icons if applicable
+  if (*tabsize > pagenum * 7) {
+    oldSprite = SelectObject(*hdcSprite, buttons[PAGE_RIGHT].bitmap);
+    TransparentBlt(*hdcMem, buttons[PAGE_RIGHT].x, buttons[PAGE_RIGHT].y, buttons[PAGE_RIGHT].width, buttons[PAGE_RIGHT].height, *hdcSprite, 0, 0, buttons[PAGE_RIGHT].width, buttons[PAGE_RIGHT].height, RGB(0, 255, 0));
+    SelectObject(*hdcSprite, oldSprite);
+  }
+  if (pagenum > 1) {
+    oldSprite = SelectObject(*hdcSprite, buttons[PAGE_LEFT].bitmap);
+    TransparentBlt(*hdcMem, buttons[PAGE_LEFT].x, buttons[PAGE_LEFT].y, buttons[PAGE_LEFT].width, buttons[PAGE_LEFT].height, *hdcSprite, 0, 0, buttons[PAGE_LEFT].width, buttons[PAGE_LEFT].height, RGB(0, 255, 0));
+    SelectObject(*hdcSprite, oldSprite);
+  }
+}
+
 struct ToolTip ReturnCardHoverTip(char *title, char *msg, int x, int y) {
   struct ToolTip tippy;
 
@@ -288,6 +600,302 @@ void CreateCustomToolTip(HDC *hdcMem, struct ToolTip hoverTip) {
   SelectObject(*hdcMem, fonts[hoverTip.fonttxt]);
   DrawText(*hdcMem, hoverTip.msg, strlen(hoverTip.msg), &rc, DT_LEFT | DT_WORDBREAK);
 }
+
+// ********************************************************************************
+// *************************** initializing misc. data ****************************
+// ********************************************************************************
+
+void LoadImages(HWND hWnd) {
+  int msg[8] = { 0 };
+  int bordermsg[8] = { 0 };
+  char errors[1024] = "";
+  BOOL issuccess = TRUE;
+
+  // TODO: make this a loop by using a c-string array for the image file names. this is too unsightly...
+
+  hBitmapTitle[TITLEBLANK] = (HBITMAP)LoadImage(NULL, "Assets\\titleblank.bmp",
+    IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+  if (hBitmapTitle[TITLEBLANK] == NULL) {
+    issuccess = FALSE;
+    strcat_s(errors, sizeof errors, "titleblank.bmp ");
+  }
+
+  hBitmapTitle[TITLEHOST] = hBitmapTitle[TITLEBLANK];
+  hBitmapTitle[TITLEJOIN] = hBitmapTitle[TITLEBLANK];
+  hBitmapTitle[TITLERULES] = hBitmapTitle[TITLEBLANK];
+
+  hBitmapTitle[RULESONE] = (HBITMAP)LoadImage(NULL, "Assets\\rules1.bmp",
+    IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+  if (hBitmapTitle[RULESONE] == NULL) {
+    issuccess = FALSE;
+    strcat_s(errors, sizeof errors, "rules1.bmp ");
+  }
+
+  hBitmapTitle[RULESTWO] = (HBITMAP)LoadImage(NULL, "Assets\\rules2.bmp",
+    IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+  if (hBitmapTitle[RULESTWO] == NULL) {
+    issuccess = FALSE;
+    strcat_s(errors, sizeof errors, "rules2.bmp ");
+  }
+
+  hBitmapTitle[LOBBY] = (HBITMAP)LoadImage(NULL, "Assets\\lobby.bmp",
+    IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+  if (hBitmapTitle[LOBBY] == NULL) {
+    issuccess = FALSE;
+    strcat_s(errors, sizeof errors, "lobby.bmp ");
+  }
+
+  hBitmapTitle[GAMESTART] = (HBITMAP)LoadImage(NULL, "Assets\\game.bmp",
+    IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+  if (hBitmapTitle[GAMESTART] == NULL) {
+    issuccess = FALSE;
+    strcat_s(errors, sizeof errors, "game.bmp ");
+  }
+  hBitmapTitle[DEBUGMODE] = hBitmapTitle[GAMESTART];
+
+  hBitmapBorder[0] = (HBITMAP)LoadImage(NULL, "Assets\\border1.bmp",
+    IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+  if (hBitmapBorder[0] == NULL) {
+    issuccess = FALSE;
+    strcat_s(errors, sizeof errors, "border1.bmp ");
+  }
+
+  hBitmapBorder[1] = (HBITMAP)LoadImage(NULL, "Assets\\border2.bmp",
+    IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+  if (hBitmapBorder[1] == NULL) {
+    issuccess = FALSE;
+    strcat_s(errors, sizeof errors, "border2.bmp ");
+  }
+
+  hBitmapBorder[2] = (HBITMAP)LoadImage(NULL, "Assets\\border3.bmp",
+    IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+  if (hBitmapBorder[2] == NULL) {
+    issuccess = FALSE;
+    strcat_s(errors, sizeof errors, "border3.bmp ");
+  }
+
+  hBitmapBorder[3] = (HBITMAP)LoadImage(NULL, "Assets\\border4.bmp",
+    IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+  if (hBitmapBorder[3] == NULL) {
+    issuccess = FALSE;
+    strcat_s(errors, sizeof errors, "border4.bmp ");
+  }
+
+  hBitmapBorder[4] = (HBITMAP)LoadImage(NULL, "Assets\\border5.bmp",
+    IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+  if (hBitmapBorder[4] == NULL) {
+    issuccess = FALSE;
+    strcat_s(errors, sizeof errors, "border5.bmp ");
+  }
+
+  hBitmapBorder[5] = (HBITMAP)LoadImage(NULL, "Assets\\border6.bmp",
+    IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+  if (hBitmapBorder[5] == NULL) {
+    issuccess = FALSE;
+    strcat_s(errors, sizeof errors, "border6.bmp ");
+  }
+
+  hBitmapBorder[6] = (HBITMAP)LoadImage(NULL, "Assets\\border7.bmp",
+    IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+  if (hBitmapBorder[6] == NULL) {
+    issuccess = FALSE;
+    strcat_s(errors, sizeof errors, "border7.bmp ");
+  }
+
+  hBitmapBorder[7] = (HBITMAP)LoadImage(NULL, "Assets\\border8.bmp",
+    IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+  if (hBitmapBorder[7] == NULL) {
+    issuccess = FALSE;
+    strcat_s(errors, sizeof errors, "border8.bmp ");
+  }
+
+  for (int i = 0; i < sizeof icons / sizeof icons[0]; i++) {
+    icons[i].bitmap = (HBITMAP)LoadImage(NULL, icons[i].filename,
+      IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+    if (icons[i].bitmap == NULL) {
+      issuccess = FALSE;
+      strcat_s(errors, sizeof errors, icons[i].filename);
+      strcat_s(errors, sizeof errors, " ");
+    }
+  }
+
+  for (int i = 0; i < sizeof player_nums / sizeof player_nums[0]; i++) {
+    player_nums[i].bitmap = (HBITMAP)LoadImage(NULL, player_nums[i].filename,
+      IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+    if (player_nums[i].bitmap == NULL) {
+      issuccess = FALSE;
+      strcat_s(errors, sizeof errors, player_nums[i].filename);
+      strcat_s(errors, sizeof errors, " ");
+    }
+  }
+
+  // stable count goes up to 7
+  for (int i = 0; i < 8; i++) {
+    snprintf(stable_nums[i].filename, 19, "Assets\\stable%d.bmp", i);
+    stable_nums[i].bitmap = (HBITMAP)LoadImage(NULL, stable_nums[i].filename,
+      IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+    if (stable_nums[i].bitmap == NULL) {
+      issuccess = FALSE;
+      strcat_s(errors, sizeof errors, stable_nums[i].filename);
+      strcat_s(errors, sizeof errors, " ");
+    }
+  }
+
+  for (int i = 0; i < sizeof buttons / sizeof buttons[0]; i++) {
+    buttons[i].bitmap = (HBITMAP)LoadImage(NULL, buttons[i].filename,
+      IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+    if (buttons[i].bitmap == NULL) {
+      issuccess = FALSE;
+      strcat_s(errors, sizeof errors, buttons[i].filename);
+      strcat_s(errors, sizeof errors, " ");
+    }
+  }
+
+  // same for card bitmaps being placed inside their own structures
+  hBitmapCard[0] = (HBITMAP)LoadImage(NULL, "Assets\\back.bmp",
+    IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+  if (hBitmapCard[0] == NULL) {
+    issuccess = FALSE;
+    strcat_s(errors, sizeof errors, "back.bmp ");
+  }
+  hBitmapCard[1] = (HBITMAP)LoadImage(NULL, "Assets\\default_superneigh.bmp",
+    IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+  if (hBitmapCard[1] == NULL) {
+    issuccess = FALSE;
+    strcat_s(errors, sizeof errors, "default_superneigh.bmp ");
+  }
+
+  if (issuccess == 0) {
+    char errormsg[1024] = "Failed to load image(s) ";
+    strcat_s(errormsg, sizeof errormsg, errors);
+
+    MessageBox(hWnd, errormsg, "Error", MB_OK);
+  }
+}
+
+void InitFonts(HWND hWnd) {
+  RECT rc;
+  const int pntpi = 72; // points-per-inch
+  int pxpi, points, pxheight;
+
+  HDC hdc = GetDC(hWnd);
+
+  fonts[OLDFONT] = GetCurrentObject(hdc, OBJ_FONT); // save old font
+
+  pxpi = GetDeviceCaps(hdc, LOGPIXELSY); // pixels-per-inch
+  points = 30;
+  pxheight = -(points * pxpi / pntpi);
+
+  fonts[CHONKYFONT] = CreateFontA(pxheight, 0, // size
+    0, 0,               // normal orientation
+    FW_BOLD,            // normal weight--e.g., bold would be FW_BOLD
+    NULL, NULL, NULL,   // not italic, underlined or strike out
+    DEFAULT_CHARSET,
+    OUT_OUTLINE_PRECIS, // select only outline (not bitmap) fonts
+    CLIP_DEFAULT_PRECIS,
+    CLEARTYPE_QUALITY,
+    VARIABLE_PITCH | FF_SWISS,
+    "Arial");
+
+  points = 16;
+  pxheight = -(points * pxpi / pntpi);
+  fonts[BOLDFONT] = CreateFontA(pxheight, 0, // size
+    0, 0,               // normal orientation
+    FW_BOLD,            // normal weight--e.g., bold would be FW_BOLD
+    NULL, NULL, NULL,   // not italic, underlined or strike out
+    DEFAULT_CHARSET,
+    OUT_OUTLINE_PRECIS, // select only outline (not bitmap) fonts
+    CLIP_DEFAULT_PRECIS,
+    CLEARTYPE_QUALITY,
+    VARIABLE_PITCH | FF_SWISS,
+    "Arial");
+
+  LPCWSTR font_resource = L"Assets\\runescape_large.ttf";
+  AddFontResource(font_resource);
+
+  points = 24;
+  pxheight = -(points * pxpi / pntpi);
+  fonts[FANCYFONT] = CreateFontA(pxheight, 0, // size
+    0, 0,                 // normal orientation
+    FW_NORMAL,            // normal weight--e.g., bold would be FW_BOLD
+    NULL, NULL, NULL,     // not italic, underlined or strike out
+    DEFAULT_CHARSET,
+    OUT_OUTLINE_PRECIS,   // select only outline (not bitmap) fonts
+    CLIP_DEFAULT_PRECIS,
+    CLEARTYPE_QUALITY,
+    VARIABLE_PITCH | FF_SWISS,
+    "RuneScape Large");
+}
+
+void DestroyFonts() {
+  for (int i = 1; i < sizeof fonts / sizeof fonts[0]; i++) {
+    DeleteObject(fonts[i]);
+  }
+  RemoveFontResource(L"Assets\\runescape_large.ttf");
+}
+
+void InitDebugMode() {
+  // add some arbitrary number of cards to the player's stable for testing purposes
+  // TODO: if I want to quickly edit future tests, then I can read text files for easier input and testing
+
+  // // this should output 7 unicorns in the first page and 1 in the 2nd page
+  // // WILL BUG OUT if i keep the stable_size at 25 instead of 100+, so use
+  // // this test specifically for the deck later on
+  // for (int i = 0; i < 80; i++) {
+  //   player[0].stable.unicorns[i] = (i % 10) ? 128 : 30;
+  //   if (checkClass(ANYUNICORN, deck[player[0].stable.unicorns[i]].class))
+  //     player[0].stable.num_unicorns++;
+  //   player[0].stable.size++;
+  // }
+
+  // player 1: host
+  // this should output 7 unicorns in the first page and 1 in the 2nd page
+  strcpy_s(player[0].username, sizeof player[0].username, "host");
+  for (int i = 0; i < 15; i++) {
+    player[0].stable.unicorns[i] = (i & 1) ? 128 : 30;
+    if (checkClass(ANYUNICORN, deck[player[0].stable.unicorns[i]].class))
+      player[0].stable.num_unicorns++;
+    player[0].stable.size++;
+  }
+  for (int i = 0; i < 5; i++) {
+    player[0].hand.cards[i] = 60;
+    player[0].hand.num_cards++;
+  }
+
+  // player 2: noob
+  strcpy_s(player[1].username, sizeof player[1].username, "nooblet");
+  for (int i = 0; i < 5; i++) {
+    player[1].stable.unicorns[i] = (i & 1) ? 50 : 40;
+    if (checkClass(ANYUNICORN, deck[player[1].stable.unicorns[i]].class))
+      player[1].stable.num_unicorns++;
+    player[1].stable.size++;
+  }
+  for (int i = 0; i < 5; i++) {
+    player[1].hand.cards[i] = 42 + i;
+    player[1].hand.num_cards++;
+  }
+
+  current_players = 2;
+}
+
+void ResetDebugMode() {
+  // reset player's cards/stable/etc. to 0;
+  // TODO: this should be implemented as a hard reset when you join the game, but for now this will close off the init function
+  for (int i = 0; i < MAX_PLAYERS; i++) {
+    memset(player[i].stable.unicorns, 0, sizeof player[i].stable.unicorns[0]);
+    memset(player[i].hand.cards, 0, sizeof player[i].hand.cards[0]);
+    memset(player[i].username, 0, sizeof player[i].username[0]);
+    player[i].stable.num_unicorns = 0;
+    player[i].stable.size = 0;
+    player[i].hand.num_cards = 0;
+  }
+  current_players = 1;
+}
+
+
+// ********************************************************************************
+// ********************* general game logic helper functions **********************
+// ********************************************************************************
 
 // TODO: reorganize WM_PAINT or whichever future function since this is currently not in use
 void GameLoop(HWND hwnd) {
@@ -445,188 +1053,110 @@ int SelectBabyUnicorn(int pnum, POINT pnt) {
   return 0;
 }
 
-void LoadImages(HWND hWnd) {
-  int msg[8] = { 0 };
-  int bordermsg[8] = { 0 };
-  char errors[1024] = "";
-  BOOL issuccess = TRUE;
+// ********************************************************************************
+// ************************* game state helper functions **************************
+// ********************************************************************************
 
-  // TODO: make this a loop by using a c-string array for the image file names. this is too unsightly...
+void NothingBurger() {
+  return NULL;
+}
 
-  hBitmapTitle[TITLEBLANK] = (HBITMAP)LoadImage(NULL, "Assets\\titleblank.bmp",
-    IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-  if (hBitmapTitle[TITLEBLANK] == NULL) {
-    issuccess = FALSE;
-    strcat_s(errors, sizeof errors, "titleblank.bmp ");
+// hacky fix for mapping the game state with the button manager array; a giant array may not be the answer if it requires stuff like this and NothingBurger...
+int StateButtonMap(int state) {
+  switch (state) {
+  case TITLEBLANK:
+    return titlebuttons;
+  case TITLEHOST:
+    return titlebuttons;
+  case TITLEJOIN:
+    return titlebuttons;
+  case TITLERULES:
+    return titlebuttons;
+  case RULESONE:
+    return rulebuttons;
+  case RULESTWO:
+    return rulebuttons;
+  case LOBBY:
+    return lobbybuttons;
+  case DEBUGMODE:
+    return debugbuttons;
+  default:
+    // ???
+    return NULL;
   }
+}
 
-  hBitmapTitle[TITLEHOST] = (HBITMAP)LoadImage(NULL, "Assets\\titlehost.bmp",
-    IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-  if (hBitmapTitle[TITLEHOST] == NULL) {
-    issuccess = FALSE;
-    strcat_s(errors, sizeof errors, "titlehost.bmp ");
-  }
+void SwitchState(int statenum) {
+  menustate = statenum;
+}
 
-  hBitmapTitle[TITLEJOIN] = (HBITMAP)LoadImage(NULL, "Assets\\titlejoin.bmp",
-    IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-  if (hBitmapTitle[TITLEJOIN] == NULL) {
-    issuccess = FALSE;
-    strcat_s(errors, sizeof errors, "titlejoin.bmp ");
-  }
+void HostGeneration(HWND hWnd) {
+  MSG msg;
 
-  hBitmapTitle[TITLERULES] = (HBITMAP)LoadImage(NULL, "Assets\\titlerules.bmp",
-    IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-  if (hBitmapTitle[TITLERULES] == NULL) {
-    issuccess = FALSE;
-    strcat_s(errors, sizeof errors, "titlerules.bmp ");
-  }
+  menustate = TITLEBLANK;
 
-  hBitmapTitle[RULESONE] = (HBITMAP)LoadImage(NULL, "Assets\\rules1.bmp",
-    IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-  if (hBitmapTitle[RULESONE] == NULL) {
-    issuccess = FALSE;
-    strcat_s(errors, sizeof errors, "rules1.bmp ");
-  }
+  // https://stackoverflow.com/questions/17202377/c-creating-a-window-in-a-new-thread
+  // this won't work in a thread unless there's a message loop, but that would create bliting issues
+  CreateHostWindow(hWnd);
 
-  hBitmapTitle[RULESTWO] = (HBITMAP)LoadImage(NULL, "Assets\\rules2.bmp",
-    IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-  if (hBitmapTitle[RULESTWO] == NULL) {
-    issuccess = FALSE;
-    strcat_s(errors, sizeof errors, "rules2.bmp ");
-  }
-
-  hBitmapTitle[LOBBY] = (HBITMAP)LoadImage(NULL, "Assets\\lobby.bmp",
-    IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-  if (hBitmapTitle[LOBBY] == NULL) {
-    issuccess = FALSE;
-    strcat_s(errors, sizeof errors, "lobby.bmp ");
-  }
-
-  hBitmapTitle[GAMESTART] = (HBITMAP)LoadImage(NULL, "Assets\\game.bmp",
-    IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-  if (hBitmapTitle[GAMESTART] == NULL) {
-    issuccess = FALSE;
-    strcat_s(errors, sizeof errors, "game.bmp ");
-  }
-  hBitmapTitle[DEBUGMODE] = hBitmapTitle[GAMESTART];
-
-  hBitmapBorder[0] = (HBITMAP)LoadImage(NULL, "Assets\\border1.bmp",
-    IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-  if (hBitmapBorder[0] == NULL) {
-    issuccess = FALSE;
-    strcat_s(errors, sizeof errors, "border1.bmp ");
-  }
-
-  hBitmapBorder[1] = (HBITMAP)LoadImage(NULL, "Assets\\border2.bmp",
-    IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-  if (hBitmapBorder[1] == NULL) {
-    issuccess = FALSE;
-    strcat_s(errors, sizeof errors, "border2.bmp ");
-  }
-
-  hBitmapBorder[2] = (HBITMAP)LoadImage(NULL, "Assets\\border3.bmp",
-    IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-  if (hBitmapBorder[2] == NULL) {
-    issuccess = FALSE;
-    strcat_s(errors, sizeof errors, "border3.bmp ");
-  }
-
-  hBitmapBorder[3] = (HBITMAP)LoadImage(NULL, "Assets\\border4.bmp",
-    IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-  if (hBitmapBorder[3] == NULL) {
-    issuccess = FALSE;
-    strcat_s(errors, sizeof errors, "border4.bmp ");
-  }
-
-  hBitmapBorder[4] = (HBITMAP)LoadImage(NULL, "Assets\\border5.bmp",
-    IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-  if (hBitmapBorder[4] == NULL) {
-    issuccess = FALSE;
-    strcat_s(errors, sizeof errors, "border5.bmp ");
-  }
-
-  hBitmapBorder[5] = (HBITMAP)LoadImage(NULL, "Assets\\border6.bmp",
-    IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-  if (hBitmapBorder[5] == NULL) {
-    issuccess = FALSE;
-    strcat_s(errors, sizeof errors, "border6.bmp ");
-  }
-
-  hBitmapBorder[6] = (HBITMAP)LoadImage(NULL, "Assets\\border7.bmp",
-    IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-  if (hBitmapBorder[6] == NULL) {
-    issuccess = FALSE;
-    strcat_s(errors, sizeof errors, "border7.bmp ");
-  }
-
-  hBitmapBorder[7] = (HBITMAP)LoadImage(NULL, "Assets\\border8.bmp",
-    IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-  if (hBitmapBorder[7] == NULL) {
-    issuccess = FALSE;
-    strcat_s(errors, sizeof errors, "border8.bmp ");
-  }
-
-  for (int i = 0; i < sizeof icons / sizeof icons[0]; i++) {
-    icons[i].bitmap = (HBITMAP)LoadImage(NULL, icons[i].filename,
-      IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-    if (icons[i].bitmap == NULL) {
-      issuccess = FALSE;
-      strcat_s(errors, sizeof errors, icons[i].filename);
-      strcat_s(errors, sizeof errors, " ");
+  while (windowOpen[1]) {
+    if (GetMessage(&msg, NULL, 0, 0)) {
+      TranslateMessage(&msg);
+      DispatchMessage(&msg);
     }
   }
+}
 
-  for (int i = 0; i < sizeof player_nums / sizeof player_nums[0]; i++) {
-    player_nums[i].bitmap = (HBITMAP)LoadImage(NULL, player_nums[i].filename,
-      IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-    if (player_nums[i].bitmap == NULL) {
-      issuccess = FALSE;
-      strcat_s(errors, sizeof errors, player_nums[i].filename);
-      strcat_s(errors, sizeof errors, " ");
+void JoinGeneration(HWND hWnd) {
+  MSG msg;
+
+  menustate = TITLEBLANK;
+
+  // https://stackoverflow.com/questions/17202377/c-creating-a-window-in-a-new-thread
+  // this won't work in a thread unless there's a message loop, but that would create bliting issues
+  CreateJoinWindow(hWnd);
+
+  while (windowOpen[1]) {
+    if (GetMessage(&msg, NULL, 0, 0)) {
+      TranslateMessage(&msg);
+      DispatchMessage(&msg);
     }
   }
+}
 
-  // stable count goes up to 7
-  for (int i = 0; i < 8; i++) {
-    snprintf(stable_nums[i].filename, 19, "Assets\\stable%d.bmp", i);
-    stable_nums[i].bitmap = (HBITMAP)LoadImage(NULL, stable_nums[i].filename,
-      IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-    if (stable_nums[i].bitmap == NULL) {
-      issuccess = FALSE;
-      strcat_s(errors, sizeof errors, stable_nums[i].filename);
-      strcat_s(errors, sizeof errors, " ");
+void LeaveLobby() {
+  // user clicked the leave button
+  networktoggle ^= 1;
+  if (!isclient) {
+    closesocket(udpfd);
+  }
+
+  menustate = TITLEBLANK;
+}
+
+void StartGame() {
+  // user clicked the start button; only the host can properly start the game
+  if (!isclient && current_players >= 2) {
+    networktoggle ^= 4;
+    // closesocket(udpfd); // ??? why did i close the socket here o.O ?? testing purposes?
+  }
+
+  // // TBC: don't do anything just yet
+  // menustate = GAMESTART;
+}
+
+void ClickBabyUnicorn(POINT pnt) {
+  int ret;
+
+  if (isclient) {
+    clientPnt = pnt;
+    networktoggle ^= 2;
+  }
+  else {
+    ret = SelectBabyUnicorn(0, pnt); // server is always player index 0
+    if (ret) {
+      networktoggle ^= 2;
     }
-  }
-
-  for (int i = 0; i < sizeof buttons / sizeof buttons[0]; i++) {
-    buttons[i].bitmap = (HBITMAP)LoadImage(NULL, buttons[i].filename,
-      IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-    if (buttons[i].bitmap == NULL) {
-      issuccess = FALSE;
-      strcat_s(errors, sizeof errors, buttons[i].filename);
-      strcat_s(errors, sizeof errors, " ");
-    }
-  }
-
-  // same for card bitmaps being placed inside their own structures
-  hBitmapCard[0] = (HBITMAP)LoadImage(NULL, "Assets\\back.bmp",
-    IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-  if (hBitmapCard[0] == NULL) {
-    issuccess = FALSE;
-    strcat_s(errors, sizeof errors, "back.bmp ");
-  }
-  hBitmapCard[1] = (HBITMAP)LoadImage(NULL, "Assets\\default_superneigh.bmp",
-    IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-  if (hBitmapCard[1] == NULL) {
-    issuccess = FALSE;
-    strcat_s(errors, sizeof errors, "default_superneigh.bmp ");
-  }
-
-  if (issuccess == 0) {
-    char errormsg[1024] = "Failed to load image(s) ";
-    strcat_s(errormsg, sizeof errormsg, errors);
-
-    MessageBox(hWnd, errormsg, "Error", MB_OK);
   }
 }
 
@@ -704,267 +1234,25 @@ void GUIlobby(POINT pnt) {
         return;
       }
     }
-    
+
     if (isclient) {
       clientPnt = pnt;
       networktoggle ^= 2;
     }
     else {
       ret = SelectBabyUnicorn(0, pnt); // server is always player index 0
-      if (ret) {
+      if (ret && current_players >= 2) {
+        // only toggle it when there are actual players or else it won't untoggle on its own
         networktoggle ^= 2;
       }
     }
   }
 }
 
-void InitFonts(HWND hWnd) {
-  RECT rc;
-  const int pntpi = 72; // points-per-inch
-  int pxpi, points, pxheight;
+// ********************************************************************************
+// ****************************** callback functions ******************************
+// ********************************************************************************
 
-  HDC hdc = GetDC(hWnd);
-
-  fonts[OLDFONT] = GetCurrentObject(hdc, OBJ_FONT); // save old font
-
-  pxpi = GetDeviceCaps(hdc, LOGPIXELSY); // pixels-per-inch
-  points = 30;
-  pxheight = -(points * pxpi / pntpi);
-
-  fonts[CHONKYFONT] = CreateFontA(pxheight, 0, // size
-    0, 0,               // normal orientation
-    FW_BOLD,            // normal weight--e.g., bold would be FW_BOLD
-    NULL, NULL, NULL,   // not italic, underlined or strike out
-    DEFAULT_CHARSET,
-    OUT_OUTLINE_PRECIS, // select only outline (not bitmap) fonts
-    CLIP_DEFAULT_PRECIS,
-    CLEARTYPE_QUALITY,
-    VARIABLE_PITCH | FF_SWISS,
-    "Arial");
-
-  points = 16;
-  pxheight = -(points * pxpi / pntpi);
-  fonts[BOLDFONT] = CreateFontA(pxheight, 0, // size
-    0, 0,               // normal orientation
-    FW_BOLD,            // normal weight--e.g., bold would be FW_BOLD
-    NULL, NULL, NULL,   // not italic, underlined or strike out
-    DEFAULT_CHARSET,
-    OUT_OUTLINE_PRECIS, // select only outline (not bitmap) fonts
-    CLIP_DEFAULT_PRECIS,
-    CLEARTYPE_QUALITY,
-    VARIABLE_PITCH | FF_SWISS,
-    "Arial");
-
-  LPCWSTR font_resource = L"Assets\\runescape_large.ttf";
-  AddFontResource(font_resource);
-
-  points = 24;
-  pxheight = -(points * pxpi / pntpi);
-  fonts[FANCYFONT] = CreateFontA(pxheight, 0, // size
-    0, 0,                 // normal orientation
-    FW_NORMAL,            // normal weight--e.g., bold would be FW_BOLD
-    NULL, NULL, NULL,     // not italic, underlined or strike out
-    DEFAULT_CHARSET,
-    OUT_OUTLINE_PRECIS,   // select only outline (not bitmap) fonts
-    CLIP_DEFAULT_PRECIS,
-    CLEARTYPE_QUALITY,
-    VARIABLE_PITCH | FF_SWISS,
-    "RuneScape Large");
-}
-
-void DestroyFonts() {
-  for (int i = 1; i < sizeof fonts / sizeof fonts[0]; i++) {
-    DeleteObject(fonts[i]);
-  }
-  RemoveFontResource(L"Assets\\runescape_large.ttf");
-}
-
-void InitDebugMode() {
-  // add some arbitrary number of cards to the player's stable for testing purposes
-  // TODO: if I want to quickly edit future tests, then I can read text files for easier input and testing
-
-  // // this should output 7 unicorns in the first page and 1 in the 2nd page
-  // // WILL BUG OUT if i keep the stable_size at 25 instead of 100+, so use
-  // // this test specifically for the deck later on
-  // for (int i = 0; i < 80; i++) {
-  //   player[0].stable.unicorns[i] = (i % 10) ? 128 : 30;
-  //   if (checkClass(ANYUNICORN, deck[player[0].stable.unicorns[i]].class))
-  //     player[0].stable.num_unicorns++;
-  //   player[0].stable.size++;
-  // }
-
-  // player 1: host
-  // this should output 7 unicorns in the first page and 1 in the 2nd page
-  strcpy_s(player[0].username, sizeof player[0].username, "host");
-  for (int i = 0; i < 15; i++) {
-    player[0].stable.unicorns[i] = (i & 1) ? 128 : 30;
-    if (checkClass(ANYUNICORN, deck[player[0].stable.unicorns[i]].class))
-      player[0].stable.num_unicorns++;
-    player[0].stable.size++;
-  }
-  for (int i = 0; i < 5; i++) {
-    player[0].hand.cards[i] = 60;
-    player[0].hand.num_cards++;
-  }
-
-  // player 2: noob
-  strcpy_s(player[1].username, sizeof player[1].username, "nooblet");
-  for (int i = 0; i < 5; i++) {
-    player[1].stable.unicorns[i] = (i & 1) ? 50 : 40;
-    if (checkClass(ANYUNICORN, deck[player[1].stable.unicorns[i]].class))
-      player[1].stable.num_unicorns++;
-    player[1].stable.size++;
-  }
-  for (int i = 0; i < 5; i++) {
-    player[1].hand.cards[i] = 42 + i;
-    player[1].hand.num_cards++;
-  }
-
-  current_players = 2;
-}
-
-void ResetDebugMode() {
-  // reset player's cards/stable/etc. to 0;
-  // TODO: this should be implemented as a hard reset when you join the game, but for now this will close off the init function
-  for (int i = 0; i < MAX_PLAYERS; i++) {
-    memset(player[i].stable.unicorns, 0, sizeof player[i].stable.unicorns[0]);
-    memset(player[i].hand.cards, 0, sizeof player[i].hand.cards[0]);
-    memset(player[i].username, 0, sizeof player[i].username[0]);
-    player[i].stable.num_unicorns = 0;
-    player[i].stable.size = 0;
-    player[i].hand.num_cards = 0;
-  }
-  current_players = 1;
-}
-
-void DisplayCardWindow(HDC *hdcMem, HDC *hdcSprite, int pagenum, int *tabsize, int tabnum) {
-  // use pages to view the card window in lieu of scroll bars :)
-
-  HGDIOBJ oldSprite;
-
-  // start is the starting point for the display, of course, with the scroll bar it could go to 0
-  POINT start = { 87, 507 };
-  RECT windowTab = { 0, 463, 1279, 491 };
-  BITMAP bm;
-  GetObject(hBitmapCard[0], (int)sizeof bm, &bm); // fetches width/height; all cards have the same w/h
-
-  int distance = stablePadding + bm.bmWidth;
-
-  // cards are just rectangles, so transparentblt isn't necessary
-  // this relies on an accurate unicorn/stable/card count; the pages will bork otherwise
-  int index_start = (pagenum - 1) * 7;
-
-  switch (tabnum) {
-  case UNICORN_TAB:
-  {
-    *tabsize = player[0].stable.num_unicorns;
-    // TODO: using the original index_start wouldn't account for skipped upgrade/downgrade cards,
-    // but adding an extra array to check for offset cards within extra pages seems extremely overkill...
-    // 
-    // in any case, filtering is still necessary for specific deck functions, and fixing this one by
-    // grouping the unicorns w/ upgrade/downgrade cards in a stable wouldn't fully solve the problem
-    int j = 0;
-    for (int count = 0; j < player[0].stable.size && count < (pagenum - 1) * 7; j++) {
-      if (checkClass(ANYUNICORN, deck[player[0].stable.unicorns[j]].class))
-        count++;
-    }
-    index_start = j;
-
-    for (int i = index_start, skip = 0; i < player[0].stable.size && skip < 7; i++) {
-      // for now, this cycles through hBitmapCard which only has the super neigh card and the back design
-      // in the future, hBitmapCard could be replaced/assimilated by an updated Unicorn or Deck structure featuring the file name and the loaded hBitmap
-      if (checkClass(ANYUNICORN, deck[player[0].stable.unicorns[i]].class)) {
-        oldSprite = SelectObject(*hdcSprite, hBitmapCard[i & 1]);
-        BitBlt(*hdcMem, start.x + (distance * skip), start.y, bm.bmWidth, bm.bmHeight, *hdcSprite, 0, 0, SRCCOPY);
-        SelectObject(*hdcSprite, oldSprite);
-        skip++;
-      }
-    }
-    break;
-  }
-  case UPGRADE_TAB:
-  {
-    // TODO: see unicorn_tab for the indexing issues. this is unlikely to happen in a normal game though due to most players having less than 8 up/downgrades
-    *tabsize = player[0].stable.size - player[0].stable.num_unicorns;
-    for (int i = index_start, skip = 0; i < player[0].stable.size && skip < 7; i++) {
-      // for now, this cycles through hBitmapCard which only has the super neigh card and the back design
-      // in the future, hBitmapCard could be replaced/assimilated by an updated Unicorn or Deck structure featuring the file name and the loaded hBitmap
-      if (deck[player[0].stable.unicorns[i]].class == UPGRADE || deck[player[0].stable.unicorns[i]].class == DOWNGRADE) {
-        oldSprite = SelectObject(*hdcSprite, hBitmapCard[i % 2]);
-        BitBlt(*hdcMem, start.x + (distance * skip), start.y, bm.bmWidth, bm.bmHeight, *hdcSprite, 0, 0, SRCCOPY);
-        SelectObject(*hdcSprite, oldSprite);
-        skip++;
-      }
-    }
-    break;
-  }
-  case HAND_TAB:
-  {
-    *tabsize = player[0].hand.num_cards;
-    for (int i = index_start; i < player[0].hand.num_cards && i < index_start + 7; i++) {
-      // for now, this cycles through hBitmapCard which only has the super neigh card and the back design
-      // in the future, hBitmapCard could be replaced/assimilated by an updated Unicorn or Deck structure featuring the file name and the loaded hBitmap
-      oldSprite = SelectObject(*hdcSprite, hBitmapCard[i % 2]);
-      BitBlt(*hdcMem, start.x + (distance * (i % 7)), start.y, bm.bmWidth, bm.bmHeight, *hdcSprite, 0, 0, SRCCOPY);
-      SelectObject(*hdcSprite, oldSprite);
-    }
-    break;
-  }
-  case NURSERY_TAB:
-  {
-    *tabsize = NURSERY_SIZE - nursery_index;
-    for (int i = nursery_index + index_start; i < NURSERY_SIZE && i < index_start + 7; i++) {
-      // for now, this cycles through hBitmapCard which only has the super neigh card and the back design
-      // in the future, hBitmapCard could be replaced/assimilated by an updated Unicorn or Deck structure featuring the file name and the loaded hBitmap
-      oldSprite = SelectObject(*hdcSprite, hBitmapCard[i % 2]);
-      BitBlt(*hdcMem, start.x + (distance * (i % 7)), start.y, bm.bmWidth, bm.bmHeight, *hdcSprite, 0, 0, SRCCOPY);
-      SelectObject(*hdcSprite, oldSprite);
-    }
-    break;
-  }
-  case DECK_TAB:
-  {
-    // TODO: include a check for card effects that allow deck viewing, and then include a check for specific cards
-    *tabsize = DECK_SIZE - deck_index;
-    for (int i = deck_index + index_start; i < DECK_SIZE && i < index_start + 7; i++) {
-      // for now, this cycles through hBitmapCard which only has the super neigh card and the back design
-      // in the future, hBitmapCard could be replaced/assimilated by an updated Unicorn or Deck structure featuring the file name and the loaded hBitmap
-      oldSprite = SelectObject(*hdcSprite, hBitmapCard[i % 2]);
-      BitBlt(*hdcMem, start.x + (distance * (i % 7)), start.y, bm.bmWidth, bm.bmHeight, *hdcSprite, 0, 0, SRCCOPY);
-      SelectObject(*hdcSprite, oldSprite);
-    }
-    break;
-  }
-  case DISCARD_TAB:
-  {
-    // TODO: (maybe) include a check for specific cards
-    *tabsize = discard_index;
-    for (int i = index_start; i < discard_index && i < index_start + 7; i++) {
-      // for now, this cycles through hBitmapCard which only has the super neigh card and the back design
-      // in the future, hBitmapCard could be replaced/assimilated by an updated Unicorn or Deck structure featuring the file name and the loaded hBitmap
-      oldSprite = SelectObject(*hdcSprite, hBitmapCard[i % 2]);
-      BitBlt(*hdcMem, start.x + (distance * (i % 7)), start.y, bm.bmWidth, bm.bmHeight, *hdcSprite, 0, 0, SRCCOPY);
-      SelectObject(*hdcSprite, oldSprite);
-    }
-    break;
-  }
-  default:
-    // what happened???
-    break;
-  }
-
-  // show the page arrow icons if applicable
-  if (*tabsize > pagenum * 7) {
-    oldSprite = SelectObject(*hdcSprite, buttons[PAGE_RIGHT].bitmap);
-    TransparentBlt(*hdcMem, buttons[PAGE_RIGHT].x, buttons[PAGE_RIGHT].y, buttons[PAGE_RIGHT].width, buttons[PAGE_RIGHT].height, *hdcSprite, 0, 0, buttons[PAGE_RIGHT].width, buttons[PAGE_RIGHT].height, RGB(0, 255, 0));
-    SelectObject(*hdcSprite, oldSprite);
-  }
-  if (pagenum > 1) {
-    oldSprite = SelectObject(*hdcSprite, buttons[PAGE_LEFT].bitmap);
-    TransparentBlt(*hdcMem, buttons[PAGE_LEFT].x, buttons[PAGE_LEFT].y, buttons[PAGE_LEFT].width, buttons[PAGE_LEFT].height, *hdcSprite, 0, 0, buttons[PAGE_LEFT].width, buttons[PAGE_LEFT].height, RGB(0, 255, 0));
-    SelectObject(*hdcSprite, oldSprite);
-  }
-}
 
 //  FUNCTION: WndProc(HWND, UINT, WPARAM, LPARAM)
 //
@@ -993,7 +1281,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
   static int pagenum = 1;
   static int tabsize;
   static int tabnum;
-
+  static BOOL istitleHover; // TODO: maybe combine istitleHover w/ hoverTip.ishover into a single hover boolean check; or combine istitleHover w/ the struct Button "hornbutton"
   static struct ToolTip hoverTip;
 
   switch (message)
@@ -1001,6 +1289,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
   case WM_CREATE:
     LoadImages(hWnd);
     InitFonts(hWnd);
+    InitButtonManager(hWnd);
     windowOpen[0] = TRUE;
     webhwnd = hWnd; // for server and client to access in the wsapoll lobby loop
 
@@ -1020,112 +1309,78 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     break;
   case WM_ERASEBKGND:
     return (LRESULT)1; // Say we handled it.
-  case WM_MOUSEMOVE: // check mousemove for assets that update through hovering
+  case WM_MOUSEMOVE: 
+  {
+    // check mousemove for assets that update through hovering
+    GetCursorPos(&pnt);
+    ScreenToClient(hWnd, &pnt);
+
+    if (menustate == DEBUGMODE) {
+      hoverTip.ishover = 0;
+      if (pnt.x >= 87 && pnt.x <= 237 && pnt.y >= 507 && pnt.y <= 707) {
+        if (tabnum == UNICORN_TAB)
+          hoverTip = ReturnCardHoverTip(deck[player[0].stable.unicorns[0]].name, deck[player[0].stable.unicorns[0]].description, 87, 507);
+        if (tabnum == HAND_TAB)
+          hoverTip = ReturnCardHoverTip(deck[player[0].hand.cards[0]].name, deck[player[0].hand.cards[0]].description, 87, 507);
+      }
+
+      for (int i = 0; i < current_players; i++) {
+        if (pnt.x >= player_nums[i].x && pnt.x <= player_nums[i].x + player_nums[i].width &&
+          pnt.y >= player_nums[i].y && pnt.y <= player_nums[i].y + player_nums[i].width) {
+          hoverTip = ReturnPlayerHoverTip(i, player_nums[i].x, player_nums[i].y);
+        }
+      }
+      break;
+    }
+
+    int state = StateButtonMap(menustate);
+    istitleHover = FALSE;
+
+    // TODO: potentially just skip the button manager stuff and create a separate one specifically for hovered items
+    // this will avoid having to create a dummy function that does nothing
+    for (int i = 0; i < numsubsets - 1; i++) {
+      if (pnt.x >= buttonManager2D[state][i].x && pnt.x <= buttonManager2D[state][i].x + buttonManager2D[state][i].width &&
+        pnt.y >= buttonManager2D[state][i].y && pnt.y <= buttonManager2D[state][i].y + buttonManager2D[state][i].height) {
+        // hover action
+        buttonManager2D[state][i].onHover(&buttonManager2D[state][i], &istitleHover);
+      }
+    }
+
+    break;
+  }
   case WM_LBUTTONDOWN:
   {
     // for clicking purposes
     GetCursorPos(&pnt);
     ScreenToClient(hWnd, &pnt);
 
-    // TODO: get rid of these magic numbers and add new constants or pre-defined variables to globals.c
-    // this is sickening :/
-    // TODO: use function pointers for buttons? unsure if there would be too much overhead, but at least
-    // it would be easier to modify; 1 function for hover and 1 for left click
-    switch (menustate) {
-    case TITLEBLANK:
-    case TITLEHOST:
-    case TITLEJOIN:
-    case TITLERULES:
-    {
-      if (pnt.x >= 528 && pnt.x <= 757) {
-        if (pnt.y >= 385 && pnt.y < 472) {
-          // Host Button
-          menustate = TITLEHOST;
-          if (GetAsyncKeyState(VK_LBUTTON) < 0 && is_active && windowOpen[1] == FALSE) {
-            // https://stackoverflow.com/questions/17202377/c-creating-a-window-in-a-new-thread
-            // this won't work in a thread unless there's a message loop, but that would create bliting issues
-            CreateHostWindow(hWnd);
+    int state = StateButtonMap(menustate);
 
-            while (windowOpen[1]) {
-              if (GetMessage(&msg, NULL, 0, 0)) {
-                TranslateMessage(&msg);
-                DispatchMessage(&msg);
-              }
-            }
-          }
-        }
-        else if (pnt.y >= 472 && pnt.y < 572) {
-          // Join Button
-          menustate = TITLEJOIN;
-          if (GetAsyncKeyState(VK_LBUTTON) < 0 && is_active && windowOpen[1] == FALSE) {
-            // https://stackoverflow.com/questions/17202377/c-creating-a-window-in-a-new-thread
-            // this won't work in a thread unless there's a message loop, but that would create bliting issues
-            CreateJoinWindow(hWnd);
-
-            while (windowOpen[1]) {
-              if (GetMessage(&msg, NULL, 0, 0)) {
-                TranslateMessage(&msg);
-                DispatchMessage(&msg);
-              }
-            }
-          }
-        }
-        else if (pnt.y >= 572 && pnt.y <= 659) {
-          // Rules Button
-          menustate = TITLERULES;
-          if (GetAsyncKeyState(VK_LBUTTON) < 0 && is_active) {
-            menustate = RULESONE;
-          }
-        }
-        else {
-          menustate = TITLEBLANK;
-        }
-      }
-      else {
-        menustate = TITLEBLANK;
-      }
-
-      // TOOD: write a proper ifdef
-      if (pnt.x >= 0 && pnt.x <= 50 && pnt.y >= 0 && pnt.y <= 50) {
-        if (GetAsyncKeyState(VK_LBUTTON) < 0 && is_active) {
-          menustate = DEBUGMODE;
-          tabnum = UNICORN_TAB;
-          InitDebugMode(); // for card testing purposes
-        }
-      }
-      break;
-    }
-    case RULESONE:
-    {
-      if (pnt.y >= 619 && pnt.y <= 650 && GetAsyncKeyState(VK_LBUTTON) < 0 && is_active) {
-        if (pnt.x >= 975 && pnt.x <= 1074) {
-          menustate = TITLEBLANK;
-        }
-        else if (pnt.x >= 1129 && pnt.x <= 1160) {
-          menustate = RULESTWO;
-        }
-      }
-      break;
-    }
-    case RULESTWO:
-    {
-      if (pnt.y >= 619 && pnt.y <= 650 && GetAsyncKeyState(VK_LBUTTON) < 0 && is_active) {
-        if (pnt.x >= 975 && pnt.x <= 1074) {
-          menustate = TITLEBLANK;
-        }
-        else if (pnt.x >= 1087 && pnt.x <= 1118) {
-          menustate = RULESONE;
-        }
-      }
-      break;
-    }
-    case LOBBY:
+    if (menustate == LOBBY) {
       GUIlobby(pnt);
       break;
-    case DEBUGMODE:
-      // TOOD: write a proper ifdef
-      if (pnt.x >= 0 && pnt.x <= 50 && pnt.y >= 0 && pnt.y <= 50 &&
-          GetAsyncKeyState(VK_LBUTTON) < 0 && is_active) {
+    }
+
+    for (int i = 0; i < numsubsets - 1; i++) {
+      if (pnt.x >= buttonManager2D[state][i].x && pnt.x <= buttonManager2D[state][i].x + buttonManager2D[state][i].width &&
+        pnt.y >= buttonManager2D[state][i].y && pnt.y <= buttonManager2D[state][i].y + buttonManager2D[state][i].height) {
+        // left click action
+        if (is_active && windowOpen[1] == FALSE) {
+          buttonManager2D[state][i].onClick(buttonManager2D[state][i].source);
+        }
+      }
+    }
+
+    // TOOD: write a proper ifdef
+    if (menustate == TITLEBLANK) {
+      if (pnt.x >= 0 && pnt.x <= 50 && pnt.y >= 0 && pnt.y <= 50 && is_active) {
+        menustate = DEBUGMODE;
+        tabnum = UNICORN_TAB;
+        InitDebugMode(); // for card testing purposes
+      }
+    }
+    else if (menustate == DEBUGMODE) {
+      if (pnt.x >= 0 && pnt.x <= 50 && pnt.y >= 0 && pnt.y <= 50 && is_active) {
         menustate = TITLEBLANK;
         ResetDebugMode(); // for card testing purposes
         tabnum = UNICORN_TAB;
@@ -1160,22 +1415,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
       }
 
-      hoverTip.ishover = 0;
-      if (pnt.x >= 87 && pnt.x <= 237 && pnt.y >= 507 && pnt.y <= 707) {
-        if (tabnum == UNICORN_TAB)
-          hoverTip = ReturnCardHoverTip(deck[player[0].stable.unicorns[0]].name, deck[player[0].stable.unicorns[0]].description, 87, 507);
-        if (tabnum == HAND_TAB)
-          hoverTip = ReturnCardHoverTip(deck[player[0].hand.cards[0]].name, deck[player[0].hand.cards[0]].description, 87, 507 );
-      }
-
-      for (int i = 0; i < current_players; i++) {
-        if (pnt.x >= player_nums[i].x && pnt.x <= player_nums[i].x + player_nums[i].width &&
-          pnt.y >= player_nums[i].y && pnt.y <= player_nums[i].y + player_nums[i].width) {
-          hoverTip = ReturnPlayerHoverTip(i, player_nums[i].x, player_nums[i].y);
-        }
-      }
-    default:
-      break;
     }
 
     break;
@@ -1187,9 +1426,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
     // validate that HWND
     hdc = BeginPaint(hWnd, &ps);
-
-    // get window's client rectangle. We need this for bitmap creation.
-    GetClientRect(hWnd, &rc);
 
     // create memory DC and memory bitmap where we shall do our drawing
     hdcMem = CreateCompatibleDC(hdc);
@@ -1261,6 +1497,16 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         CreateCustomToolTip(&hdcMem, hoverTip);
       }
     }
+    else if (menustate == TITLEBLANK || menustate == TITLEHOST || menustate == TITLEJOIN || menustate == TITLERULES) {
+      hdcSprite = CreateCompatibleDC(hdc);
+
+      if (istitleHover) {
+        oldSprite = SelectObject(hdcSprite, hornbutton.bitmap);
+        TransparentBlt(hdcMem, hornbutton.x, hornbutton.y, hornbutton.width, hornbutton.height, hdcSprite, 0, 0, hornbutton.width, hornbutton.height, RGB(0, 255, 0));
+        SelectObject(hdcSprite, oldSprite);
+      }
+      DeleteDC(hdcSprite);
+    }
 
     // render memory buffer to on-screen DC
     BitBlt(hdc, 0, 0, BWIDTH, BHEIGHT, hdcMem, 0, 0, SRCCOPY);
@@ -1273,6 +1519,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     break;
   }
   case WM_DESTROY:
+  {
     windowOpen[0] = FALSE;
     for (int i = 0; i < sizeof hBitmapTitle / sizeof hBitmapTitle[0]; i++) {
       DeleteObject(hBitmapTitle[i]);
@@ -1300,6 +1547,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     CloseHandle(mutex);
     WSACleanup();
     break;
+  }
   }
 
   return DefWindowProc(hWnd, message, wParam, lParam);

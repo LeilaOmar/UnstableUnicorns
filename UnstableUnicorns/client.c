@@ -357,6 +357,17 @@ int clientJoin(short portno) {
   //   receiveInt(&nameVerify, sockfd);
   // } while (nameVerify != 0);
 
+
+  // Bug fix (huzzah \o/ keeping this here for reference atm) 
+  // "occassionally will get range check error and the client will auto-close when trying to join???"
+  // Unhandled exception at 0x00369628 in UnstableUnicorns.exe: RangeChecks instrumentation code detected an out of range array access.
+  // 
+  // reason behind it:
+  // the client was receiving the lobby packet before the hexcode due to sync issues with the networktoggle flag. if the host
+  // picked their own baby unicorn, then the server wouldn't actually untoggle the flag, and sometimes it would send the lobby
+  // packet in the "if (networktoggle & 2)" statement rather than through the IO event
+
+
   // success! ^.^
   // using player[0] just for the start; will be overwritten later
   send(sockfd, player[0].username, strlen(player[0].username), 0);
@@ -378,8 +389,7 @@ int clientJoin(short portno) {
   pfd.fd = sockfd;
   pfd.events = POLLIN | POLLOUT;
 
-  // TODO: occassionally will get range check error and the client will auto-close when trying to join???
-  // Unhandled exception at 0x00369628 in UnstableUnicorns.exe: RangeChecks instrumentation code detected an out of range array access.
+  // TODO: add a reset function for whenever the client disconnects; include all global variable resets and the menustate change
   for (;;) {
     // timeout after 150 seconds
     ret = WSAPoll(&pfd, 1, -1);
@@ -391,6 +401,7 @@ int clientJoin(short portno) {
         NULL);
       closesocket(sockfd);
       menustate = TITLEBLANK;
+      memset(pselect, 0, sizeof pselect);
       return 2;
     }
     else if (ret == 0) {
@@ -401,6 +412,7 @@ int clientJoin(short portno) {
         NULL);
       closesocket(sockfd);
       menustate = TITLEBLANK;
+      memset(pselect, 0, sizeof pselect);
       return 2;
     }
 
@@ -422,6 +434,7 @@ int clientJoin(short portno) {
         NULL);
       closesocket(sockfd);
       menustate = TITLEBLANK;
+      memset(pselect, 0, sizeof pselect);
       return 2;
     }
 
@@ -432,6 +445,7 @@ int clientJoin(short portno) {
       closesocket(sockfd);
       menustate = TITLEBLANK;
       networktoggle ^= 1;
+      memset(pselect, 0, sizeof pselect);
       return 1;
     } else if (networktoggle & 2) {
       // client clicked somewhere and must send the point info to the server

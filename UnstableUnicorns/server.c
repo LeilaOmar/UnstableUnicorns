@@ -533,6 +533,22 @@ int serverInit(short portno) {
         pfd[current_players + 1].fd = clientsockfd[current_players - 1];
         pfd[current_players + 1].events = POLLIN | POLLOUT;
         current_players++;
+
+        // // TODO: moving this here just delayed the aforementioned client bug (that has since been hopefully fixed)
+        // // the 2nd client to join was stalled until an IO event happened
+        // 
+        // recv(clientsockfd[current_players - 2], player[current_players - 1].username, NAME_SIZE, 0);
+        // sprintf_s(buf, BUF_SIZE, "\n%d. %s", current_players, player[current_players - 1].username);
+        // strncat_s(partymems, PARTYSTRSIZE, buf, 36); // 36 is NAME_SIZE + 4 for the '\n%d. ' part
+        // 
+        // // send full lobby code to the player that just joined
+        // send(clientsockfd[current_players - 2], hexcode, sizeof(hexcode), 0);
+        // 
+        // // send an update on party size/names/unicorns to every player
+        // for (int j = 0; j < current_players - 2; j++) {
+        //   sendLobbyPacket(current_players, j + 1, clientsockfd[j]);
+        // }
+        // memset(buf, 0, BUF_SIZE); // reset buf
       }
     }
 
@@ -577,7 +593,6 @@ int serverInit(short portno) {
             }
           }
         }
-
       }
 
       // client player disconnected; update existing lobby to boot player
@@ -624,7 +639,7 @@ int serverInit(short portno) {
     }
 
     // this should only activate once per action, so toggle the var again at the end
-    // TODO: theoretically only one flag should be active at a time, but sometimes 1 & 2 are applied at the same time???
+    // theoretically, only one flag should be active at a time; both being active at the same time signifies some serious issues (like the out of range bug)
     if (networktoggle & 1) {
       // clicked the leave button; udpfd was already closed in the main thread
       closesocket(sockfd);
@@ -637,11 +652,11 @@ int serverInit(short portno) {
       }
 
       // wipe all relevant lobby global variables and return to title screen
-      memset(babytoggle, 0, 13);
-      memset(pselect, 0, MAX_PLAYERS);
-      memset(partymems, '\0', PARTYSTRSIZE);
+      memset(babytoggle, 0, sizeof babytoggle);
+      memset(pselect, 0, sizeof pselect);
+      memset(partymems, '\0', sizeof partymems);
       for (int i = 0; i < MAX_PLAYERS; i++) {
-        memset(player[i].username, '\0', NAME_SIZE);
+        memset(player[i].username, '\0', sizeof player[i].username);
       }
       current_players = 1;
       return 1;
@@ -653,12 +668,6 @@ int serverInit(short portno) {
       }
       networktoggle ^= 2;
     }
-
-    // TODO: re out of range bug mentioned in client.c; this will reliably produce the same issue,
-    // presumably because they go out of sync
-    // for (int i = 0; i < current_players - 1; i++) {
-    //   sendLobbyPacket(current_players, i + 1, clientsockfd[i]);
-    // }
 
     Sleep(20);
   }
