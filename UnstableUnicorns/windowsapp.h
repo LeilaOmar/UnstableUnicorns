@@ -65,7 +65,7 @@ void CreateJoinWindow(HWND);
 void DisplayCardWindow(HDC*, HDC*, int, int*, int);
 void CreateCustomToolTip(HDC*);
 void ReturnCardHoverTip(struct Button*, struct ToolTip*);
-struct ToolTip ReturnPlayerHoverTip(int, int, int);
+void ReturnPlayerHoverTip(struct Button*, struct ToolTip*);
 
 // button management
 

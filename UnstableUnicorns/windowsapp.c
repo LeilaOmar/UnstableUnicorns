@@ -64,6 +64,9 @@ const RECT babies[] = {
   { 1019,  473, 1108,  562 },   // BABYNARWHAL
 };
 
+// only used for providing addresses for the sources in the player_nums button array
+int arbitrarypnum[] = { 0, 1, 2, 3, 4, 5, 6, 7 };
+
 // TODO: potentially rename these to icon[1-13]?
 struct Button icons[] = {
   { 1064, 28, 95, 81, "Assets\\icon_red.bmp", NULL },
@@ -81,14 +84,14 @@ struct Button icons[] = {
   { 1064, 28, 95, 81, "Assets\\icon_narwhal.bmp", NULL }
 };
 struct Button player_nums[] = {
-  { 1064, 28,  95, 81, "Assets\\player1.bmp", NULL },
-  { 1175, 28,  95, 81, "Assets\\player2.bmp", NULL },
-  { 1064, 118, 95, 81, "Assets\\player3.bmp", NULL },
-  { 1175, 118, 95, 81, "Assets\\player4.bmp", NULL },
-  { 1064, 208, 95, 81, "Assets\\player5.bmp", NULL },
-  { 1175, 208, 95, 81, "Assets\\player6.bmp", NULL },
-  { 1064, 298, 95, 81, "Assets\\player7.bmp", NULL },
-  { 1175, 298, 95, 81, "Assets\\player8.bmp", NULL }
+  { 1064, 28,  95, 81, "Assets\\player1.bmp", NULL, &arbitrarypnum[0], ReturnPlayerHoverTip, NULL },
+  { 1175, 28,  95, 81, "Assets\\player2.bmp", NULL, &arbitrarypnum[1], ReturnPlayerHoverTip, NULL },
+  { 1064, 118, 95, 81, "Assets\\player3.bmp", NULL, &arbitrarypnum[2], ReturnPlayerHoverTip, NULL },
+  { 1175, 118, 95, 81, "Assets\\player4.bmp", NULL, &arbitrarypnum[3], ReturnPlayerHoverTip, NULL },
+  { 1064, 208, 95, 81, "Assets\\player5.bmp", NULL, &arbitrarypnum[4], ReturnPlayerHoverTip, NULL },
+  { 1175, 208, 95, 81, "Assets\\player6.bmp", NULL, &arbitrarypnum[5], ReturnPlayerHoverTip, NULL },
+  { 1064, 298, 95, 81, "Assets\\player7.bmp", NULL, &arbitrarypnum[6], ReturnPlayerHoverTip, NULL },
+  { 1175, 298, 95, 81, "Assets\\player8.bmp", NULL, &arbitrarypnum[7], ReturnPlayerHoverTip, NULL }
 };
 struct Button stable_nums[8];
 
@@ -254,7 +257,7 @@ void InitCardButtons() {
 
   int distance = stablePadding + bm.bmWidth;
 
-  for (int i = 0; i < 7; i++) {
+  for (int i = 0; i < sizeof cardslots / sizeof cardslots[0]; i++) {
     cardslots[i].x = start.x + (distance * i);
     cardslots[i].y = start.y;
     cardslots[i].width = bm.bmWidth;
@@ -266,12 +269,15 @@ void InitCardButtons() {
   }
 }
 
-void InitDeckButtons(struct Button *b) {
+void InitDeckButtons() {
 
 }
 
-void InitPlayerButtons(struct Button *b) {
-
+void InitPlayerButtons() {
+  for (int i = 0; i < MAX_PLAYERS; i++) {
+    player_nums[i].onClick = NULL;
+    player_nums[i].onHover = ReturnPlayerHoverTip;
+  }
 }
 
 void malloctest(struct Button** b) {
@@ -613,25 +619,24 @@ void ReturnCardHoverTip(struct Button *self, struct ToolTip *tippy) {
   }
 }
 
-struct ToolTip ReturnPlayerHoverTip(int pnum, int x, int y) {
-  struct ToolTip tippy;
+void ReturnPlayerHoverTip(struct Button *self, struct ToolTip *tippy) {
+  // struct ToolTip tippy;
+  int pnum = *(int*)(self->source);
 
   int width = 200;
   int height = 60;
 
-  strcpy_s(tippy.title, sizeof tippy.title, player[pnum].username);
-  snprintf(tippy.msg, sizeof tippy.msg, "# of cards in hand: %d\n# of unicorns in stable: %d",
+  strcpy_s(tippy->title, sizeof tippy->title, player[pnum].username);
+  snprintf(tippy->msg, sizeof tippy->msg, "# of cards in hand: %d\n# of unicorns in stable: %d",
     player[pnum].hand.num_cards, player[pnum].stable.num_unicorns);
-  tippy.fonttitle = BOLDFONT;
-  tippy.fonttxt   = OLDFONT;
+  tippy->fonttitle = BOLDFONT;
+  tippy->fonttxt   = OLDFONT;
 
-  tippy.x = x - width - 20;
-  tippy.y = y - 10;
-  tippy.width   = width;
-  tippy.height  = height;
-  tippy.ishover = TRUE;
-
-  return tippy;
+  tippy->x = self->x - width - 20;
+  tippy->y = self->y - 10;
+  tippy->width   = width;
+  tippy->height  = height;
+  tippy->ishover = TRUE;
 }
 
 void CreateCustomToolTip(HDC *hdcMem, struct ToolTip hoverTip) {
@@ -667,7 +672,12 @@ void CreateCustomToolTip(HDC *hdcMem, struct ToolTip hoverTip) {
     GetTextExtentPoint(*hdcMem, hoverTip.title, strlen(hoverTip.title), &size);
     title_offset = size.cy + (padding / 2);
 
-    // TODO: calculate horizontal space too for the more verbose titles?
+    // double the vertical space if the title is long enough to wrap around the rect border
+    if (strlen(hoverTip.title) >= 24) {
+      title_offset = (title_offset * 2) - (padding / 2);
+    }
+
+    // TODO: (maybe) calculate horizontal space too for the more verbose titles?
     // GetTextExtentPoint only works after the text has been drawn, but then the title and bg rectangle wouldn't be updateable...
     
     // hoverTip.width = (size.cx > hoverTip.width) ? size.cx : hoverTip.width;
@@ -936,9 +946,9 @@ void ResetDebugMode() {
   // reset player's cards/stable/etc. to 0;
   // TODO: this should be implemented as a hard reset when you join the game, but for now this will close off the init function
   for (int i = 0; i < MAX_PLAYERS; i++) {
-    memset(player[i].stable.unicorns, 0, sizeof player[i].stable.unicorns[0]);
-    memset(player[i].hand.cards, 0, sizeof player[i].hand.cards[0]);
-    memset(player[i].username, 0, sizeof player[i].username[0]);
+    memset(player[i].stable.unicorns, 0, sizeof player[i].stable / sizeof player[i].stable.unicorns[0]);
+    memset(player[i].hand.cards, 0, sizeof player[i].hand.cards / sizeof player[i].hand.cards[0]);
+    memset(player[i].username, 0, sizeof player[i].username / sizeof player[i].username[0]);
     player[i].stable.num_unicorns = 0;
     player[i].stable.size = 0;
     player[i].hand.num_cards = 0;
@@ -1010,15 +1020,20 @@ void HoverDebug(POINT pnt) {
   for (int i = 0; i < sizeof cardslots / sizeof cardslots[0]; i++) {
     if (pnt.x >= cardslots[i].x && pnt.x < cardslots[i].x + cardslots[i].width &&
       pnt.y >= cardslots[i].y && pnt.y < cardslots[i].y + cardslots[i].height) {
-      if (cardslots[i].source != NULL)
+      if (cardslots[i].source != NULL) {
         ReturnCardHoverTip(&cardslots[i], &hoverTip);
+        // cardslots[i].onHover(&cardslots[i], &hoverTip);
+        return;
+      }
     }
   }
 
   for (int i = 0; i < current_players; i++) {
     if (pnt.x >= player_nums[i].x && pnt.x < player_nums[i].x + player_nums[i].width &&
       pnt.y >= player_nums[i].y && pnt.y < player_nums[i].y + player_nums[i].height) {
-      hoverTip = ReturnPlayerHoverTip(i, player_nums[i].x, player_nums[i].y);
+      ReturnPlayerHoverTip(&player_nums[i], &hoverTip);
+      // player_nums[i].onHover(&player_nums[i], &hoverTip);
+      return;
     }
   }
 }
@@ -1250,7 +1265,7 @@ void PaintDebug(HDC hdc, HDC *hdcMem) {
 }
 
 // ********************************************************************************
-// ************************* game state helper functions **************************
+// *************************** button function pointers ***************************
 // ********************************************************************************
 
 // hacky fix for mapping the game state with the button manager array; a giant array may not be the answer if it requires stuff like this...
@@ -1386,11 +1401,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
   HDC hdcSprite;
   HBITMAP hbmSprite;
 
-  // RECT rc;
-  // BOOL err;
-  // DWORD err2;
-  // MSG msg;
-
   // static int pagenum = 1;
   // static int tabsize;
   // static int tabnum;
@@ -1406,8 +1416,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     InitStateMachine();
     windowOpen[0] = TRUE;
     webhwnd = hWnd; // for server and client to access in the wsapoll lobby loop
-
-    //gamethread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)GameLoop, hWnd, 0, &tId);
     break;
   case WM_TIMER:
     InvalidateRect(hWnd, NULL, FALSE); // TRUE = bg is erased when BeginPaint is called; FALSE = no
@@ -1423,40 +1431,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     if (stateMach[menustate].stateHover != NULL)
       stateMach[menustate].stateHover(pnt);
 
-    /*
-    if (menustate == DEBUGMODE) {
-      hoverTip.ishover = 0;
-      if (pnt.x >= 87 && pnt.x <= 237 && pnt.y >= 507 && pnt.y <= 707) {
-        if (tabnum == UNICORN_TAB)
-          hoverTip = ReturnCardHoverTip(deck[player[0].stable.unicorns[0]].name, deck[player[0].stable.unicorns[0]].description, 87, 507);
-        if (tabnum == HAND_TAB)
-          hoverTip = ReturnCardHoverTip(deck[player[0].hand.cards[0]].name, deck[player[0].hand.cards[0]].description, 87, 507);
-      }
-
-      for (int i = 0; i < current_players; i++) {
-        if (pnt.x >= player_nums[i].x && pnt.x <= player_nums[i].x + player_nums[i].width &&
-          pnt.y >= player_nums[i].y && pnt.y <= player_nums[i].y + player_nums[i].width) {
-          hoverTip = ReturnPlayerHoverTip(i, player_nums[i].x, player_nums[i].y);
-        }
-      }
-      break;
-    }
-
-    int state = StateButtonMap(menustate);
-    istitleHover = FALSE;
-
-    // TODO: potentially just skip the button manager stuff and create a separate one specifically for hovered items
-    // this will avoid having to create a dummy function that does nothing
-    for (int i = 0; i < 5; i++) {
-      if (pnt.x >= buttonManager2D[state][i].x && pnt.x <= buttonManager2D[state][i].x + buttonManager2D[state][i].width &&
-        pnt.y >= buttonManager2D[state][i].y && pnt.y <= buttonManager2D[state][i].y + buttonManager2D[state][i].height) {
-        // hover action
-        if (buttonManager2D[state][i].onHover != NULL)
-          buttonManager2D[state][i].onHover(&buttonManager2D[state][i], &istitleHover);
-      }
-    }
-    */
-
     break;
   }
   case WM_LBUTTONDOWN:
@@ -1467,71 +1441,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
     // if (wParam == WA_ACTIVE)
     stateMach[menustate].stateClick(pnt);
-
-    /*
-    int state = StateButtonMap(menustate);
-
-    if (menustate == LOBBY) {
-      GUIlobby(pnt);
-      break;
-    }
-
-    for (int i = 0; i < 5; i++) {
-      if (pnt.x >= buttonManager2D[state][i].x && pnt.x <= buttonManager2D[state][i].x + buttonManager2D[state][i].width &&
-        pnt.y >= buttonManager2D[state][i].y && pnt.y <= buttonManager2D[state][i].y + buttonManager2D[state][i].height) {
-        // left click action
-        if (is_active && windowOpen[1] == FALSE) {
-          buttonManager2D[state][i].onClick(buttonManager2D[state][i].source);
-        }
-      }
-    }
-
-    // TOOD: write a proper ifdef
-    if (menustate == TITLEBLANK) {
-      if (pnt.x >= 0 && pnt.x <= 50 && pnt.y >= 0 && pnt.y <= 50 && is_active) {
-        menustate = DEBUGMODE;
-        tabnum = UNICORN_TAB;
-        InitDebugMode(); // for card testing purposes
-      }
-    }
-    else if (menustate == DEBUGMODE) {
-      if (pnt.x >= 0 && pnt.x <= 50 && pnt.y >= 0 && pnt.y <= 50 && is_active) {
-        menustate = TITLEBLANK;
-        ResetDebugMode(); // for card testing purposes
-        tabnum = UNICORN_TAB;
-        pagenum = 1;
-      }
-      else if (GetAsyncKeyState(VK_LBUTTON) < 0 && is_active && pnt.y >= 463 && pnt.y <= 491) {
-        if (pnt.x <= 232) {
-          tabnum = UNICORN_TAB;
-          pagenum = 1;
-        }
-        else if (pnt.x <= 505) {
-          tabnum = UPGRADE_TAB;
-          pagenum = 1;
-        }
-        else if (pnt.x <= 777) {
-          tabnum = HAND_TAB;
-          pagenum = 1;
-        }
-      }
-      else if (pnt.x >= buttons[PAGE_RIGHT].x && pnt.x <= buttons[PAGE_RIGHT].x + buttons[PAGE_RIGHT].width &&
-        pnt.y >= buttons[PAGE_RIGHT].y && pnt.y <= buttons[PAGE_RIGHT].y + buttons[PAGE_RIGHT].height &&
-        GetAsyncKeyState(VK_LBUTTON) < 0 && is_active) {
-        if (tabsize > pagenum * 7) {
-          pagenum++;
-        }
-      }
-      else if (pnt.x >= buttons[PAGE_LEFT].x && pnt.x <= buttons[PAGE_LEFT].x + buttons[PAGE_LEFT].width &&
-        pnt.y >= buttons[PAGE_LEFT].y && pnt.y <= buttons[PAGE_LEFT].y + buttons[PAGE_LEFT].height &&
-        GetAsyncKeyState(VK_LBUTTON) < 0 && is_active) {
-        if (pagenum > 1) {
-          pagenum--;
-        }
-      }
-
-    }
-    */
 
     break;
   }
@@ -1552,81 +1461,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     if (stateMach[menustate].statePaint != NULL) {
       stateMach[menustate].statePaint(hdc, &hdcMem);
     }
-
-    /*
-    if (menustate == LOBBY) {
-
-      SetBkMode(hdcMem, TRANSPARENT); // box surrounding text is transparent instead of white
-
-      // type out lobby code
-      SetRect(&rc, 78, 180, 1202, 225);
-      SetTextColor(hdcMem, RGB(255, 255, 255));
-      SelectObject(hdcMem, fonts[CHONKYFONT]);
-      DrawText(hdcMem, hexcode, strlen(hexcode), &rc, DT_CENTER);
-
-      // type out party members
-      SetRect(&rc, 115, 260, 800, 625);
-      SelectObject(hdcMem, fonts[OLDFONT]);
-      DrawText(hdcMem, partymems, strlen(partymems), &rc, DT_LEFT);
-
-      // draw border for chosen baby unicorns (ughhhh)
-      hdcSprite = CreateCompatibleDC(hdc);
-      for (int i = 0; i < current_players; i++) {
-        if (pselect[i].left != 0) {
-          // // for whatever reason, the original hdcMem is incompatible and will draw the whole
-          // // border (non-alpha included) at the top-left corner
-          // SelectObject(hdcMem, hBitmapBorder[i]);
-          // TransparentBlt(hdcMem, pselect[i].left, pselect[i].top, BORDERWIDTH, BORDERWIDTH, hBitmapBorder[i], 0, 0, BORDERWIDTH, BORDERWIDTH, RGB(0, 255, 0));
-
-          oldSprite = SelectObject(hdcSprite, hBitmapBorder[i]);
-          TransparentBlt(hdcMem, pselect[i].left, pselect[i].top, BORDERWIDTH, BORDERWIDTH, hdcSprite, 0, 0, BORDERWIDTH, BORDERWIDTH, RGB(0, 255, 0));
-          SelectObject(hdcSprite, oldSprite);
-        }
-      }
-      DeleteDC(hdcSprite);
-    }
-    else if (menustate == DEBUGMODE) {
-      hdcSprite = CreateCompatibleDC(hdc);
-      for (int i = 0; i < current_players; i++) {
-        // player icon in-game
-        oldSprite = SelectObject(hdcSprite, icons[player[i].icon].bitmap);
-        TransparentBlt(hdcMem, player_nums[i].x, player_nums[i].y, player_nums[i].width, player_nums[i].height, hdcSprite, 0, 0, player_nums[i].width, player_nums[i].height, RGB(0, 255, 0));
-        SelectObject(hdcSprite, oldSprite);
-
-        // player number
-        oldSprite = SelectObject(hdcSprite, player_nums[i].bitmap);
-        TransparentBlt(hdcMem, player_nums[i].x, player_nums[i].y, player_nums[i].width, player_nums[i].height, hdcSprite, 0, 0, player_nums[i].width, player_nums[i].height, RGB(0, 255, 0));
-        SelectObject(hdcSprite, oldSprite);
-
-        // number of unicorns in stable
-        if (player[i].stable.num_unicorns < 7) {
-          oldSprite = SelectObject(hdcSprite, stable_nums[player[i].stable.num_unicorns].bitmap);
-        }
-        else {
-          oldSprite = SelectObject(hdcSprite, stable_nums[7].bitmap);
-        }
-        TransparentBlt(hdcMem, player_nums[i].x, player_nums[i].y, player_nums[i].width, player_nums[i].height, hdcSprite, 0, 0, player_nums[i].width, player_nums[i].height, RGB(0, 255, 0));
-        SelectObject(hdcSprite, oldSprite);
-      }
-
-      DisplayCardWindow(&hdcMem, &hdcSprite, pagenum, &tabsize, tabnum);
-      DeleteDC(hdcSprite);
-
-      if (hoverTip.ishover) {
-        CreateCustomToolTip(&hdcMem, hoverTip);
-      }
-    }
-    else if (menustate == TITLEBLANK) {
-      hdcSprite = CreateCompatibleDC(hdc);
-
-      if (istitleHover) {
-        oldSprite = SelectObject(hdcSprite, hornbutton.bitmap);
-        TransparentBlt(hdcMem, hornbutton.x, hornbutton.y, hornbutton.width, hornbutton.height, hdcSprite, 0, 0, hornbutton.width, hornbutton.height, RGB(0, 255, 0));
-        SelectObject(hdcSprite, oldSprite);
-      }
-      DeleteDC(hdcSprite);
-    }
-    */
 
     // render memory buffer to on-screen DC
     BitBlt(hdc, 0, 0, BWIDTH, BHEIGHT, hdcMem, 0, 0, SRCCOPY);
