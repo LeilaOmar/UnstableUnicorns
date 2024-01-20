@@ -21,6 +21,8 @@
 
 enum UnicornDatatypes {ANY = -1, BABYUNICORN, BASICUNICORN, MAGICUNICORN, UPGRADE, DOWNGRADE, MAGIC, INSTANT, ANYUNICORN, UNICORN, NARWHAL, NOSPECIES};
 
+enum BabySelection { BABYRED, BABYPINK, BABYORANGE, BABYYELLOW, BABYGREEN, BABYBLUE, BABYPURPLE, BABYBLACK, BABYWHITE, BABYBROWN, BABYRAINBOW, BABYDEATH, BABYNARWHAL };
+
 enum flag {broken_stable = 1, slowdown = 2, yay = 4, rainbow_aura = 8,
            nanny_cam = 16, queen_bee_unicorn = 32, ginormous_unicorn = 64,
            blinding_light = 128, pandamonium = 256, tiny_stable = 512,
@@ -175,6 +177,7 @@ struct Player {
   struct CardsInHand hand;
   struct Stable stable;
   char username[NAME_SIZE];
+  enum BabySelection icon;
   short flags;  // 00000000 00000000 plain cheese
                 // & 1 = cannot play upgrade cards
                 // & 2 = cannot play neigh cards

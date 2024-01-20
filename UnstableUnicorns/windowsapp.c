@@ -8,6 +8,7 @@
 // ********************************************************************************
 // ************************** super global variables TM ***************************
 // ********************************************************************************
+
 HINSTANCE hInstanceGlob;
 char ip[16], hexcode[43];
 enum GameState menustate = 0;
@@ -23,24 +24,29 @@ BOOL babytoggle[13] = { FALSE };
 unsigned char networktoggle = 0;
 
 // ********************************************************************************
-// ****************** global variables for this source file only ******************
+// ************** private global variables for this source file only **************
 // ********************************************************************************
-HWND gamethread, networkthread, textNameHwnd, portHwnd, codeHwnd;
-DWORD tId, tIdweb;
-WNDCLASSEX wcexHost;
-WNDCLASSEX wcexJoin;
-HBITMAP hBitmapTitle[9], hBitmapBorder[8], hBitmapCard[2];
-BOOL windowOpen[2] = { FALSE };
-BOOL childWindow[2] = { FALSE };
-HFONT fonts[4] = { NULL };
 
-int stablePadding = 15; // arbitrary number of pixels to pad between the displayed list of cards in their respective stables/hands/decks
-
-enum BabySelection {BABYRED, BABYPINK, BABYORANGE, BABYYELLOW, BABYGREEN, BABYBLUE, BABYPURPLE, BABYBLACK, BABYWHITE, BABYBROWN, BABYRAINBOW, BABYDEATH, BABYNARWHAL};
 enum tab {UNICORN_TAB, UPGRADE_TAB, HAND_TAB, NURSERY_TAB, DECK_TAB, DISCARD_TAB};
 enum butindex { PAGE_LEFT, PAGE_RIGHT };
 enum fonts { OLDFONT, CHONKYFONT, BOLDFONT, FANCYFONT };
 
+HWND gamethread, networkthread, textNameHwnd, portHwnd, codeHwnd;
+DWORD tId, tIdweb;
+WNDCLASSEX wcexHost;
+WNDCLASSEX wcexJoin;
+HBITMAP hBitmapBG[NUMSTATES], hBitmapBorder[MAX_PLAYERS], hBitmapCard[2];
+BOOL windowOpen[2] = { FALSE };
+BOOL childWindow[2] = { FALSE };
+HFONT fonts[4] = { NULL };
+
+enum tab tabnum;  // the tab number representation of the window to display on the bottom of the in-game screen
+int tabsize;      // number of total cards within the current tab view array (e.g. if you're looking at the deck, then tabsize could be anywhere from 1 to 115)
+int pagenum = 1;  // the page number within the current tab view array
+BOOL istitleHover; // TODO: maybe combine istitleHover w/ hoverTip.ishover into a single hover boolean check; or combine istitleHover w/ the struct Button "hornbutton"
+struct ToolTip hoverTip;
+
+int stablePadding = 15; // arbitrary number of pixels to pad between the displayed list of cards in their respective stables/hands/decks
 
 // left, top, right, bottom
 const RECT babies[] = {
@@ -60,9 +66,6 @@ const RECT babies[] = {
   {  899,  473,  988,  562 },   // BABYDEATH
   { 1019,  473, 1108,  562 },   // BABYNARWHAL
 };
-
-// struct Button pageleft = { 3, 636, 80, 59 };
-// struct Button pageright = { 1196, 636, 80, 59 };
 
 // TODO: could split UI elements by game state, so the title screen, rules, and etc would have their own
 struct Button buttons[] = {
@@ -86,7 +89,6 @@ struct Button icons[] = {
   { 1064, 28, 95, 81, "Assets\\icon_death.bmp", NULL },
   { 1064, 28, 95, 81, "Assets\\icon_narwhal.bmp", NULL }
 };
-
 struct Button player_nums[] = {
   { 1064, 28,  95, 81, "Assets\\player1.bmp", NULL },
   { 1175, 28,  95, 81, "Assets\\player2.bmp", NULL },
@@ -108,11 +110,11 @@ struct Button stable_nums[8];
 enum buttontypes { titlebuttons, rulebuttons, lobbybuttons, debugbuttons, numsubsets };
 
 struct Button** buttonManager;
-struct Button buttonManager2D[numsubsets - 1][5];
+struct Button buttonManager2D[numsubsets][5];
 struct Button hornbutton;
 
 // calculates the position for the horn select bitmap that centers around the hovered button
-void HoverTitle(struct Button *self, BOOL *hover) {
+void HornPosition(struct Button *self, BOOL *hover) {
   HGDIOBJ oldSprite;
 
   int xdiff = -93;
@@ -133,7 +135,7 @@ void InitTitleButtons(struct Button *b, HWND hWnd) {
     b[i].y = 385 + (i * 100);
     b[i].width = 230;
     b[i].height = 75;
-    b[i].onHover = HoverTitle;
+    b[i].onHover = HornPosition;
   }
 
   b[0].source = hWnd;
@@ -158,7 +160,7 @@ void InitRuleButtons(struct Button *b) {
     b[i].y = 619;
     b[i].width = 32;
     b[i].height = 32;
-    b[i].onHover = NothingBurger;
+    b[i].onHover = NULL;
     b[i].onClick = SwitchState;
   }
 
@@ -183,7 +185,7 @@ void InitLobbyButtons(struct Button *b) {
   b[0].width = 190;
   b[0].height = 50;
   b[0].source = GAMESTART;
-  b[0].onHover = NothingBurger;
+  b[0].onHover = NULL;
   b[0].onClick = StartGame;
 
   // leave lobby
@@ -192,47 +194,8 @@ void InitLobbyButtons(struct Button *b) {
   b[1].width = 190;
   b[1].height = 50;
   b[0].source = TITLEBLANK;
-  b[1].onHover = NothingBurger;
+  b[1].onHover = NULL;
   b[1].onClick = LeaveLobby;
-}
-
-void InitPlayerIcons() {
-  char errors[1024] = "";
-  BOOL issuccess = TRUE;
-
-  for (int i = 0; i < sizeof icons / sizeof icons[0]; i++) {
-    icons[i].bitmap = (HBITMAP)LoadImage(NULL, icons[i].filename,
-      IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-    if (icons[i].bitmap == NULL) {
-      issuccess = FALSE;
-      strcat_s(errors, sizeof errors, icons[i].filename);
-      strcat_s(errors, sizeof errors, " ");
-    }
-  }
-
-  for (int i = 0; i < sizeof player_nums / sizeof player_nums[0]; i++) {
-    player_nums[i].bitmap = (HBITMAP)LoadImage(NULL, player_nums[i].filename,
-      IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-    if (player_nums[i].bitmap == NULL) {
-      issuccess = FALSE;
-      strcat_s(errors, sizeof errors, player_nums[i].filename);
-      strcat_s(errors, sizeof errors, " ");
-    }
-    player_nums[i].source = &player[i];
-    player_nums[i].onHover = ReturnPlayerHoverTip;
-  }
-
-  // stable count goes up to 7
-  for (int i = 0; i < 8; i++) {
-    snprintf(stable_nums[i].filename, 19, "Assets\\stable%d.bmp", i);
-    stable_nums[i].bitmap = (HBITMAP)LoadImage(NULL, stable_nums[i].filename,
-      IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-    if (stable_nums[i].bitmap == NULL) {
-      issuccess = FALSE;
-      strcat_s(errors, sizeof errors, stable_nums[i].filename);
-      strcat_s(errors, sizeof errors, " ");
-    }
-  }
 }
 
 void malloctest(struct Button** b) {
@@ -254,7 +217,7 @@ void InitButtonManager(HWND hWnd) {
   //   buttonManager[titlebuttons][i].y = 385 + (i * 100);
   //   buttonManager[titlebuttons][i].width = 230;
   //   buttonManager[titlebuttons][i].height = 75;
-  //   // b[i]->onHover = HoverTitle;
+  //   // b[i]->onHover = HornPosition;
   //   // b[i]->onClick = SwitchState;
   // }
   // 
@@ -592,6 +555,8 @@ void CreateCustomToolTip(HDC *hdcMem, struct ToolTip hoverTip) {
     SIZE size;
     GetTextExtentPoint(*hdcMem, hoverTip.title, strlen(hoverTip.title), &size);
     title_offset = size.cy + (padding / 2);
+
+    // TODO: calculate horizontal space too for the more verbose titles?
   }
 
   // type out message
@@ -606,109 +571,64 @@ void CreateCustomToolTip(HDC *hdcMem, struct ToolTip hoverTip) {
 // ********************************************************************************
 
 void LoadImages(HWND hWnd) {
-  int msg[8] = { 0 };
-  int bordermsg[8] = { 0 };
-  char errors[1024] = "";
+  char errors[1024] = "Failed to load image(s) ";
   BOOL issuccess = TRUE;
 
-  // TODO: make this a loop by using a c-string array for the image file names. this is too unsightly...
+  // TODO: (maybe) use a default error texture for files that couldn't load in the case of missing files
+  // ideally the error texture(s) should just be a resource file tbh
 
-  hBitmapTitle[TITLEBLANK] = (HBITMAP)LoadImage(NULL, "Assets\\titleblank.bmp",
+  // hBitmapBG contains all of the background bitmaps for each gamestate
+  hBitmapBG[TITLEBLANK] = (HBITMAP)LoadImage(NULL, "Assets\\titleblank.bmp",
     IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-  if (hBitmapTitle[TITLEBLANK] == NULL) {
+  if (hBitmapBG[TITLEBLANK] == NULL) {
     issuccess = FALSE;
     strcat_s(errors, sizeof errors, "titleblank.bmp ");
   }
 
-  hBitmapTitle[TITLEHOST] = hBitmapTitle[TITLEBLANK];
-  hBitmapTitle[TITLEJOIN] = hBitmapTitle[TITLEBLANK];
-  hBitmapTitle[TITLERULES] = hBitmapTitle[TITLEBLANK];
-
-  hBitmapTitle[RULESONE] = (HBITMAP)LoadImage(NULL, "Assets\\rules1.bmp",
+  hBitmapBG[RULESONE] = (HBITMAP)LoadImage(NULL, "Assets\\rules1.bmp",
     IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-  if (hBitmapTitle[RULESONE] == NULL) {
+  if (hBitmapBG[RULESONE] == NULL) {
     issuccess = FALSE;
     strcat_s(errors, sizeof errors, "rules1.bmp ");
   }
 
-  hBitmapTitle[RULESTWO] = (HBITMAP)LoadImage(NULL, "Assets\\rules2.bmp",
+  hBitmapBG[RULESTWO] = (HBITMAP)LoadImage(NULL, "Assets\\rules2.bmp",
     IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-  if (hBitmapTitle[RULESTWO] == NULL) {
+  if (hBitmapBG[RULESTWO] == NULL) {
     issuccess = FALSE;
     strcat_s(errors, sizeof errors, "rules2.bmp ");
   }
 
-  hBitmapTitle[LOBBY] = (HBITMAP)LoadImage(NULL, "Assets\\lobby.bmp",
+  hBitmapBG[LOBBY] = (HBITMAP)LoadImage(NULL, "Assets\\lobby.bmp",
     IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-  if (hBitmapTitle[LOBBY] == NULL) {
+  if (hBitmapBG[LOBBY] == NULL) {
     issuccess = FALSE;
     strcat_s(errors, sizeof errors, "lobby.bmp ");
   }
 
-  hBitmapTitle[GAMESTART] = (HBITMAP)LoadImage(NULL, "Assets\\game.bmp",
+  hBitmapBG[GAMESTART] = (HBITMAP)LoadImage(NULL, "Assets\\game.bmp",
     IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-  if (hBitmapTitle[GAMESTART] == NULL) {
+  if (hBitmapBG[GAMESTART] == NULL) {
     issuccess = FALSE;
     strcat_s(errors, sizeof errors, "game.bmp ");
   }
-  hBitmapTitle[DEBUGMODE] = hBitmapTitle[GAMESTART];
+  hBitmapBG[DEBUGMODE] = hBitmapBG[GAMESTART];
 
-  hBitmapBorder[0] = (HBITMAP)LoadImage(NULL, "Assets\\border1.bmp",
-    IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-  if (hBitmapBorder[0] == NULL) {
-    issuccess = FALSE;
-    strcat_s(errors, sizeof errors, "border1.bmp ");
+  // loads the border bitmaps for the baby unicorn selection in the lobby
+  for (int i = 0; i < MAX_PLAYERS; i++) {
+    char borderfn[32] = "";
+
+    snprintf(borderfn, 19, "Assets\\border%d.bmp", i + 1);
+    hBitmapBorder[i] = (HBITMAP)LoadImage(NULL, borderfn,
+      IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+    if (hBitmapBorder[0] == NULL) {
+      issuccess = FALSE;
+      strcat_s(errors, sizeof errors, borderfn);
+      strcat_s(errors, sizeof errors, " ");
+    }
   }
 
-  hBitmapBorder[1] = (HBITMAP)LoadImage(NULL, "Assets\\border2.bmp",
-    IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-  if (hBitmapBorder[1] == NULL) {
-    issuccess = FALSE;
-    strcat_s(errors, sizeof errors, "border2.bmp ");
-  }
-
-  hBitmapBorder[2] = (HBITMAP)LoadImage(NULL, "Assets\\border3.bmp",
-    IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-  if (hBitmapBorder[2] == NULL) {
-    issuccess = FALSE;
-    strcat_s(errors, sizeof errors, "border3.bmp ");
-  }
-
-  hBitmapBorder[3] = (HBITMAP)LoadImage(NULL, "Assets\\border4.bmp",
-    IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-  if (hBitmapBorder[3] == NULL) {
-    issuccess = FALSE;
-    strcat_s(errors, sizeof errors, "border4.bmp ");
-  }
-
-  hBitmapBorder[4] = (HBITMAP)LoadImage(NULL, "Assets\\border5.bmp",
-    IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-  if (hBitmapBorder[4] == NULL) {
-    issuccess = FALSE;
-    strcat_s(errors, sizeof errors, "border5.bmp ");
-  }
-
-  hBitmapBorder[5] = (HBITMAP)LoadImage(NULL, "Assets\\border6.bmp",
-    IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-  if (hBitmapBorder[5] == NULL) {
-    issuccess = FALSE;
-    strcat_s(errors, sizeof errors, "border6.bmp ");
-  }
-
-  hBitmapBorder[6] = (HBITMAP)LoadImage(NULL, "Assets\\border7.bmp",
-    IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-  if (hBitmapBorder[6] == NULL) {
-    issuccess = FALSE;
-    strcat_s(errors, sizeof errors, "border7.bmp ");
-  }
-
-  hBitmapBorder[7] = (HBITMAP)LoadImage(NULL, "Assets\\border8.bmp",
-    IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-  if (hBitmapBorder[7] == NULL) {
-    issuccess = FALSE;
-    strcat_s(errors, sizeof errors, "border8.bmp ");
-  }
-
+  // loads all possible baby unicorn player icons for the in-game distinction between players
   for (int i = 0; i < sizeof icons / sizeof icons[0]; i++) {
     icons[i].bitmap = (HBITMAP)LoadImage(NULL, icons[i].filename,
       IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
@@ -719,6 +639,7 @@ void LoadImages(HWND hWnd) {
     }
   }
 
+  // player_nums are paired with icons at the same coordinates, but the bitmaps should be separate
   for (int i = 0; i < sizeof player_nums / sizeof player_nums[0]; i++) {
     player_nums[i].bitmap = (HBITMAP)LoadImage(NULL, player_nums[i].filename,
       IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
@@ -729,7 +650,7 @@ void LoadImages(HWND hWnd) {
     }
   }
 
-  // stable count goes up to 7
+  // bitmaps displaying the stable count; it goes from 0 to 7, so 8 in total
   for (int i = 0; i < 8; i++) {
     snprintf(stable_nums[i].filename, 19, "Assets\\stable%d.bmp", i);
     stable_nums[i].bitmap = (HBITMAP)LoadImage(NULL, stable_nums[i].filename,
@@ -741,6 +662,7 @@ void LoadImages(HWND hWnd) {
     }
   }
 
+  // loads misc buttons (for now, the page left/right buttons)
   for (int i = 0; i < sizeof buttons / sizeof buttons[0]; i++) {
     buttons[i].bitmap = (HBITMAP)LoadImage(NULL, buttons[i].filename,
       IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
@@ -751,7 +673,7 @@ void LoadImages(HWND hWnd) {
     }
   }
 
-  // same for card bitmaps being placed inside their own structures
+  // TODO: (maybe) use file I/O to read directories and copy the file names to load; could possibly parse XML or csv files too
   hBitmapCard[0] = (HBITMAP)LoadImage(NULL, "Assets\\back.bmp",
     IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
   if (hBitmapCard[0] == NULL) {
@@ -765,11 +687,8 @@ void LoadImages(HWND hWnd) {
     strcat_s(errors, sizeof errors, "default_superneigh.bmp ");
   }
 
-  if (issuccess == 0) {
-    char errormsg[1024] = "Failed to load image(s) ";
-    strcat_s(errormsg, sizeof errormsg, errors);
-
-    MessageBox(hWnd, errormsg, "Error", MB_OK);
+  if (issuccess == FALSE) {
+    MessageBox(hWnd, errors, "Error", MB_OK);
   }
 }
 
@@ -851,6 +770,7 @@ void InitDebugMode() {
   // player 1: host
   // this should output 7 unicorns in the first page and 1 in the 2nd page
   strcpy_s(player[0].username, sizeof player[0].username, "host");
+  player[0].icon = BABYNARWHAL;
   for (int i = 0; i < 15; i++) {
     player[0].stable.unicorns[i] = (i & 1) ? 128 : 30;
     if (checkClass(ANYUNICORN, deck[player[0].stable.unicorns[i]].class))
@@ -864,6 +784,7 @@ void InitDebugMode() {
 
   // player 2: noob
   strcpy_s(player[1].username, sizeof player[1].username, "nooblet");
+  player[1].icon = rand() % 12;
   for (int i = 0; i < 5; i++) {
     player[1].stable.unicorns[i] = (i & 1) ? 50 : 40;
     if (checkClass(ANYUNICORN, deck[player[1].stable.unicorns[i]].class))
@@ -897,138 +818,6 @@ void ResetDebugMode() {
 // ********************* general game logic helper functions **********************
 // ********************************************************************************
 
-// TODO: reorganize WM_PAINT or whichever future function since this is currently not in use
-void GameLoop(HWND hwnd) {
-  HDC hdc, hdcMem;
-  BITMAP bitmap;
-  HGDIOBJ oldBitmap;
-  POINT pnt;
-  MSG msg;
-  RECT rec;
-
-  hdc = GetDC(hwnd);
-  hdcMem = CreateCompatibleDC(hdc);
-
-  for (;;) {
-    GetCursorPos(&pnt);
-    ScreenToClient(hwnd, &pnt);
-
-    switch (menustate) {
-    case TITLEBLANK:
-      if (pnt.x >= 528 && pnt.x <= 757) {
-        if (pnt.y >= 385 && pnt.y < 472) {
-          // Host Button
-          oldBitmap = SelectObject(hdcMem, hBitmapTitle[TITLEHOST]);
-          if (GetAsyncKeyState(VK_LBUTTON) < 0 && is_active && windowOpen[1] == FALSE) {
-            // https://stackoverflow.com/questions/17202377/c-creating-a-window-in-a-new-thread
-            // this won't work in a thread unless there's a message loop, but that would create bliting issues
-            CreateHostWindow(hwnd);
-
-            while (windowOpen[1]) {
-              if (GetMessage(&msg, NULL, 0, 0)) {
-                TranslateMessage(&msg);
-                DispatchMessage(&msg);
-              }
-            }
-          }
-        }
-        else if (pnt.y >= 472 && pnt.y < 572) {
-          // Join Button
-          oldBitmap = SelectObject(hdcMem, hBitmapTitle[TITLEJOIN]);
-          if (GetAsyncKeyState(VK_LBUTTON) < 0 && is_active && windowOpen[1] == FALSE) {
-            // https://stackoverflow.com/questions/17202377/c-creating-a-window-in-a-new-thread
-            // this won't work in a thread unless there's a message loop, but that would create bliting issues
-            CreateJoinWindow(hwnd);
-
-            while (windowOpen[1]) {
-              if (GetMessage(&msg, NULL, 0, 0)) {
-                TranslateMessage(&msg);
-                DispatchMessage(&msg);
-              }
-            }
-          }
-        }
-        else if (pnt.y >= 572 && pnt.y <= 659) {
-          // Rules Button
-          oldBitmap = SelectObject(hdcMem, hBitmapTitle[TITLERULES]);
-          // use Async instead of GetKeyState because this loop doesn't process messages ig
-          // https://stackoverflow.com/questions/59923765/getkeystate-function-not-working-when-checking-if-left-mouse-button-is-clicked
-          if (GetAsyncKeyState(VK_LBUTTON) < 0 && is_active) {
-            oldBitmap = SelectObject(hdcMem, hBitmapTitle[RULESONE]);
-            menustate = RULESONE;
-          }
-        }
-        else {
-          oldBitmap = SelectObject(hdcMem, hBitmapTitle[TITLEBLANK]);
-        }
-      }
-      else {
-        oldBitmap = SelectObject(hdcMem, hBitmapTitle[TITLEBLANK]);
-      }
-      break;
-    case RULESONE:
-      if (pnt.y >= 619 && pnt.y <= 650 && GetAsyncKeyState(VK_LBUTTON) < 0 && is_active) {
-        if (pnt.x >= 975 && pnt.x <= 1074) {
-          oldBitmap = SelectObject(hdcMem, hBitmapTitle[TITLEBLANK]);
-          menustate = TITLEBLANK;
-        }
-        else if (pnt.x >= 1129 && pnt.x <= 1160) {
-          oldBitmap = SelectObject(hdcMem, hBitmapTitle[RULESTWO]);
-          menustate = RULESTWO;
-        }
-        else {
-          oldBitmap = SelectObject(hdcMem, hBitmapTitle[RULESONE]);
-        }
-      }
-      else {
-        oldBitmap = SelectObject(hdcMem, hBitmapTitle[RULESONE]);
-      }
-      break;
-    case RULESTWO:
-      if (pnt.y >= 619 && pnt.y <= 650 && GetAsyncKeyState(VK_LBUTTON) < 0 && is_active) {
-        if (pnt.x >= 975 && pnt.x <= 1074) {
-          oldBitmap = SelectObject(hdcMem, hBitmapTitle[TITLEBLANK]);
-          menustate = TITLEBLANK;
-        }
-        else if (pnt.x >= 1087 && pnt.x <= 1118) {
-          oldBitmap = SelectObject(hdcMem, hBitmapTitle[RULESONE]);
-          menustate = RULESONE;
-        }
-        else {
-          oldBitmap = SelectObject(hdcMem, hBitmapTitle[RULESTWO]);
-        }
-      }
-      else {
-        oldBitmap = SelectObject(hdcMem, hBitmapTitle[RULESTWO]);
-      }
-      break;
-    case LOBBY:
-      //if (pnt.x >= 120 && pnt.x <= 309 && pnt.y >= 590 && pnt.y <= 639 && GetAsyncKeyState(VK_LBUTTON) < 0 && is_active) {
-      //  // start game
-      //}
-      oldBitmap = SelectObject(hdcMem, hBitmapTitle[LOBBY]);
-      RedrawWindow(hwnd, NULL, NULL, RDW_INVALIDATE);
-      break;
-    default:
-      oldBitmap = SelectObject(hdcMem, hBitmapTitle[TITLEBLANK]);
-      break;
-    }
-
-    BitBlt(hdc, 0, 0, BWIDTH, BHEIGHT,
-      hdcMem, 0, 0, SRCCOPY);
-    SelectObject(hdcMem, oldBitmap);
-
-    // this just flickers because of sleep(15) i think?
-    // RECT rec = {5, 5, 50, 30};
-    // DrawText(hdc, greeting, _tcslen(greeting), &rec, DT_LEFT);
-
-    Sleep(15);
-  }
-
-  DeleteDC(hdcMem);
-  ReleaseDC(hwnd, hdc);
-}
-
 int SelectBabyUnicorn(int pnum, POINT pnt) {
   for (int i = 0; i < 13; i++) {
     if (pnt.y >= babies[i].top && pnt.y <= babies[i].bottom &&
@@ -1054,115 +843,92 @@ int SelectBabyUnicorn(int pnum, POINT pnt) {
 }
 
 // ********************************************************************************
-// ************************* game state helper functions **************************
+// *************************** game state wm functions ****************************
 // ********************************************************************************
 
-void NothingBurger() {
-  return NULL;
+StateManager stateMach[NUMSTATES];
+
+void InitStateMachine() {
+  // stateMach = (StateManager*)malloc(NUMSTATES * sizeof(StateManager));
+  stateMach[TITLEBLANK] = (StateManager){ TITLEBLANK, PaintTitle, HoverTitle, ClickTitle };
+  stateMach[RULESONE]   = (StateManager){ RULESONE  , NULL      , NULL      , ClickRules };
+  stateMach[RULESTWO]   = (StateManager){ RULESTWO  , NULL      , NULL      , ClickRules };
+  stateMach[LOBBY]      = (StateManager){ LOBBY     , PaintLobby, NULL      , ClickLobby };
+  stateMach[GAMESTART]  = (StateManager){ GAMESTART , PaintDebug, HoverDebug, ClickDebug };
+  stateMach[DEBUGMODE]  = (StateManager){ DEBUGMODE , PaintDebug, HoverDebug, ClickDebug };
 }
 
-// hacky fix for mapping the game state with the button manager array; a giant array may not be the answer if it requires stuff like this and NothingBurger...
-int StateButtonMap(int state) {
-  switch (state) {
-  case TITLEBLANK:
-    return titlebuttons;
-  case TITLEHOST:
-    return titlebuttons;
-  case TITLEJOIN:
-    return titlebuttons;
-  case TITLERULES:
-    return titlebuttons;
-  case RULESONE:
-    return rulebuttons;
-  case RULESTWO:
-    return rulebuttons;
-  case LOBBY:
-    return lobbybuttons;
-  case DEBUGMODE:
-    return debugbuttons;
-  default:
-    // ???
-    return NULL;
-  }
-}
+// WM_MOUSEMOVE
 
-void SwitchState(int statenum) {
-  menustate = statenum;
-}
+void HoverTitle(POINT pnt) {
+  int state = titlebuttons;
+  istitleHover = FALSE;
 
-void HostGeneration(HWND hWnd) {
-  MSG msg;
-
-  menustate = TITLEBLANK;
-
-  // https://stackoverflow.com/questions/17202377/c-creating-a-window-in-a-new-thread
-  // this won't work in a thread unless there's a message loop, but that would create bliting issues
-  CreateHostWindow(hWnd);
-
-  while (windowOpen[1]) {
-    if (GetMessage(&msg, NULL, 0, 0)) {
-      TranslateMessage(&msg);
-      DispatchMessage(&msg);
+  for (int i = 0; i < 5; i++) {
+    if (pnt.x >= buttonManager2D[state][i].x && pnt.x <= buttonManager2D[state][i].x + buttonManager2D[state][i].width &&
+      pnt.y >= buttonManager2D[state][i].y && pnt.y <= buttonManager2D[state][i].y + buttonManager2D[state][i].height) {
+        buttonManager2D[state][i].onHover(&buttonManager2D[state][i], &istitleHover);
     }
   }
 }
 
-void JoinGeneration(HWND hWnd) {
-  MSG msg;
+void HoverDebug(POINT pnt) {
+  hoverTip.ishover = FALSE;
+  if (pnt.x >= 87 && pnt.x <= 237 && pnt.y >= 507 && pnt.y <= 707) {
+    if (tabnum == UNICORN_TAB)
+      hoverTip = ReturnCardHoverTip(deck[player[0].stable.unicorns[0]].name, deck[player[0].stable.unicorns[0]].description, 87, 507);
+    if (tabnum == HAND_TAB)
+      hoverTip = ReturnCardHoverTip(deck[player[0].hand.cards[0]].name, deck[player[0].hand.cards[0]].description, 87, 507);
+  }
 
-  menustate = TITLEBLANK;
-
-  // https://stackoverflow.com/questions/17202377/c-creating-a-window-in-a-new-thread
-  // this won't work in a thread unless there's a message loop, but that would create bliting issues
-  CreateJoinWindow(hWnd);
-
-  while (windowOpen[1]) {
-    if (GetMessage(&msg, NULL, 0, 0)) {
-      TranslateMessage(&msg);
-      DispatchMessage(&msg);
+  for (int i = 0; i < current_players; i++) {
+    if (pnt.x >= player_nums[i].x && pnt.x <= player_nums[i].x + player_nums[i].width &&
+      pnt.y >= player_nums[i].y && pnt.y <= player_nums[i].y + player_nums[i].width) {
+      hoverTip = ReturnPlayerHoverTip(i, player_nums[i].x, player_nums[i].y);
     }
   }
 }
 
-void LeaveLobby() {
-  // user clicked the leave button
-  networktoggle ^= 1;
-  if (!isclient) {
-    closesocket(udpfd);
+// WM_LBUTTONDOWN
+
+void ClickTitle(POINT pnt) {
+  if (pnt.x >= 0 && pnt.x <= 50 && pnt.y >= 0 && pnt.y <= 50 && is_active) {
+    menustate = DEBUGMODE;
+    tabnum = UNICORN_TAB;
+    InitDebugMode(); // for card testing purposes
+    return;
   }
 
-  menustate = TITLEBLANK;
+  int state = titlebuttons;
+
+  for (int i = 0; i < 5; i++) {
+    if (pnt.x >= buttonManager2D[state][i].x && pnt.x <= buttonManager2D[state][i].x + buttonManager2D[state][i].width &&
+      pnt.y >= buttonManager2D[state][i].y && pnt.y <= buttonManager2D[state][i].y + buttonManager2D[state][i].height) {
+      // left click action
+      if (is_active && windowOpen[1] == FALSE) {
+        buttonManager2D[state][i].onClick(buttonManager2D[state][i].source);
+        istitleHover = FALSE;
+      }
+    }
+  }
 }
 
-void StartGame() {
-  // user clicked the start button; only the host can properly start the game
-  if (!isclient && current_players >= 2) {
-    networktoggle ^= 4;
-    // closesocket(udpfd); // ??? why did i close the socket here o.O ?? testing purposes?
-  }
+void ClickRules(POINT pnt) {
+  int state = rulebuttons;
 
-  // // TBC: don't do anything just yet
-  // menustate = GAMESTART;
-}
-
-void ClickBabyUnicorn(POINT pnt) {
-  int ret;
-
-  if (isclient) {
-    clientPnt = pnt;
-    networktoggle ^= 2;
-  }
-  else {
-    ret = SelectBabyUnicorn(0, pnt); // server is always player index 0
-    if (ret) {
-      networktoggle ^= 2;
+  for (int i = 0; i < 5; i++) {
+    if (pnt.x >= buttonManager2D[state][i].x && pnt.x <= buttonManager2D[state][i].x + buttonManager2D[state][i].width &&
+      pnt.y >= buttonManager2D[state][i].y && pnt.y <= buttonManager2D[state][i].y + buttonManager2D[state][i].height) {
+      // left click action
+      if (is_active) {
+        buttonManager2D[state][i].onClick(buttonManager2D[state][i].source);
+      }
     }
   }
 }
 
 volatile DWORD whatever;
-
-void GUIlobby(POINT pnt) {
+void ClickLobby(POINT pnt) {
   int ret;
   DWORD waitResult;
 
@@ -1249,6 +1015,219 @@ void GUIlobby(POINT pnt) {
   }
 }
 
+void ClickDebug(POINT pnt) {
+  if (pnt.x >= 0 && pnt.x <= 50 && pnt.y >= 0 && pnt.y <= 50 && is_active) {
+    menustate = TITLEBLANK;
+    ResetDebugMode(); // for card testing purposes
+    tabnum = UNICORN_TAB;
+    pagenum = 1;
+  }
+  else if (GetAsyncKeyState(VK_LBUTTON) < 0 && is_active && pnt.y >= 463 && pnt.y <= 491) {
+    if (pnt.x <= 232) {
+      tabnum = UNICORN_TAB;
+      pagenum = 1;
+    }
+    else if (pnt.x <= 505) {
+      tabnum = UPGRADE_TAB;
+      pagenum = 1;
+    }
+    else if (pnt.x <= 777) {
+      tabnum = HAND_TAB;
+      pagenum = 1;
+    }
+  }
+  else if (pnt.x >= buttons[PAGE_RIGHT].x && pnt.x <= buttons[PAGE_RIGHT].x + buttons[PAGE_RIGHT].width &&
+    pnt.y >= buttons[PAGE_RIGHT].y && pnt.y <= buttons[PAGE_RIGHT].y + buttons[PAGE_RIGHT].height &&
+    GetAsyncKeyState(VK_LBUTTON) < 0 && is_active) {
+    if (tabsize > pagenum * 7) {
+      pagenum++;
+    }
+  }
+  else if (pnt.x >= buttons[PAGE_LEFT].x && pnt.x <= buttons[PAGE_LEFT].x + buttons[PAGE_LEFT].width &&
+    pnt.y >= buttons[PAGE_LEFT].y && pnt.y <= buttons[PAGE_LEFT].y + buttons[PAGE_LEFT].height &&
+    GetAsyncKeyState(VK_LBUTTON) < 0 && is_active) {
+    if (pagenum > 1) {
+      pagenum--;
+    }
+  }
+}
+
+// WM_PAINT
+
+void PaintTitle(HDC hdc, HDC *hdcMem) {
+  HDC hdcSprite;
+  HGDIOBJ oldSprite;
+
+  hdcSprite = CreateCompatibleDC(hdc);
+
+  if (istitleHover) {
+    oldSprite = SelectObject(hdcSprite, hornbutton.bitmap);
+    TransparentBlt(*hdcMem, hornbutton.x, hornbutton.y, hornbutton.width, hornbutton.height, hdcSprite, 0, 0, hornbutton.width, hornbutton.height, RGB(0, 255, 0));
+    SelectObject(hdcSprite, oldSprite);
+  }
+  DeleteDC(hdcSprite);
+}
+
+void PaintLobby(HDC hdc, HDC *hdcMem) {
+  RECT rc;
+  HDC hdcSprite;
+  HGDIOBJ oldSprite;
+
+  SetBkMode(*hdcMem, TRANSPARENT); // box surrounding text is transparent instead of white
+
+  // type out lobby code
+  SetRect(&rc, 78, 180, 1202, 225);
+  SetTextColor(*hdcMem, RGB(255, 255, 255));
+  SelectObject(*hdcMem, fonts[CHONKYFONT]);
+  DrawText(*hdcMem, hexcode, strlen(hexcode), &rc, DT_CENTER);
+
+  // type out party members
+  SetRect(&rc, 115, 260, 800, 625);
+  SelectObject(*hdcMem, fonts[OLDFONT]);
+  DrawText(*hdcMem, partymems, strlen(partymems), &rc, DT_LEFT);
+
+  // draw border for chosen baby unicorns (ughhhh)
+  hdcSprite = CreateCompatibleDC(hdc);
+  for (int i = 0; i < current_players; i++) {
+    if (pselect[i].left != 0) {
+      oldSprite = SelectObject(hdcSprite, hBitmapBorder[i]);
+      TransparentBlt(*hdcMem, pselect[i].left, pselect[i].top, BORDERWIDTH, BORDERWIDTH, hdcSprite, 0, 0, BORDERWIDTH, BORDERWIDTH, RGB(0, 255, 0));
+      SelectObject(hdcSprite, oldSprite);
+    }
+  }
+  DeleteDC(hdcSprite);
+}
+
+void PaintDebug(HDC hdc, HDC *hdcMem) {
+  HDC hdcSprite;
+  HGDIOBJ oldSprite;
+
+  hdcSprite = CreateCompatibleDC(hdc);
+
+  // display the player boxes on the right side of the in-game screen
+  for (int i = 0; i < current_players; i++) {
+    // player icon in-game
+    oldSprite = SelectObject(hdcSprite, icons[player[i].icon].bitmap);
+    TransparentBlt(*hdcMem, player_nums[i].x, player_nums[i].y, player_nums[i].width, player_nums[i].height, hdcSprite, 0, 0, player_nums[i].width, player_nums[i].height, RGB(0, 255, 0));
+    SelectObject(hdcSprite, oldSprite);
+
+    // player number
+    oldSprite = SelectObject(hdcSprite, player_nums[i].bitmap);
+    TransparentBlt(*hdcMem, player_nums[i].x, player_nums[i].y, player_nums[i].width, player_nums[i].height, hdcSprite, 0, 0, player_nums[i].width, player_nums[i].height, RGB(0, 255, 0));
+    SelectObject(hdcSprite, oldSprite);
+
+    // number of unicorns in stable
+    if (player[i].stable.num_unicorns < 7) {
+      oldSprite = SelectObject(hdcSprite, stable_nums[player[i].stable.num_unicorns].bitmap);
+    }
+    else {
+      oldSprite = SelectObject(hdcSprite, stable_nums[7].bitmap);
+    }
+    TransparentBlt(*hdcMem, player_nums[i].x, player_nums[i].y, player_nums[i].width, player_nums[i].height, hdcSprite, 0, 0, player_nums[i].width, player_nums[i].height, RGB(0, 255, 0));
+    SelectObject(hdcSprite, oldSprite);
+  }
+
+  DisplayCardWindow(hdcMem, &hdcSprite, pagenum, &tabsize, tabnum);
+  DeleteDC(hdcSprite);
+
+  if (hoverTip.ishover) {
+    CreateCustomToolTip(hdcMem, hoverTip);
+  }
+}
+
+// ********************************************************************************
+// ************************* game state helper functions **************************
+// ********************************************************************************
+
+// hacky fix for mapping the game state with the button manager array; a giant array may not be the answer if it requires stuff like this...
+int StateButtonMap(int state) {
+  switch (state) {
+  case TITLEBLANK:
+    return titlebuttons;
+  case RULESONE:
+    return rulebuttons;
+  case RULESTWO:
+    return rulebuttons;
+  case LOBBY:
+    return lobbybuttons;
+  case DEBUGMODE:
+    return debugbuttons;
+  default:
+    // ???
+    return NULL;
+  }
+}
+
+void SwitchState(int statenum) {
+  menustate = statenum;
+}
+
+void HostGeneration(HWND hWnd) {
+  MSG msg;
+
+  // https://stackoverflow.com/questions/17202377/c-creating-a-window-in-a-new-thread
+  // this won't work in a thread unless there's a message loop, but that would create bliting issues
+  CreateHostWindow(hWnd);
+
+  while (windowOpen[1]) {
+    if (GetMessage(&msg, NULL, 0, 0)) {
+      TranslateMessage(&msg);
+      DispatchMessage(&msg);
+    }
+  }
+}
+
+void JoinGeneration(HWND hWnd) {
+  MSG msg;
+
+  // https://stackoverflow.com/questions/17202377/c-creating-a-window-in-a-new-thread
+  // this won't work in a thread unless there's a message loop, but that would create bliting issues
+  CreateJoinWindow(hWnd);
+
+  while (windowOpen[1]) {
+    if (GetMessage(&msg, NULL, 0, 0)) {
+      TranslateMessage(&msg);
+      DispatchMessage(&msg);
+    }
+  }
+}
+
+void LeaveLobby() {
+  // user clicked the leave button
+  networktoggle ^= 1;
+  if (!isclient) {
+    closesocket(udpfd);
+  }
+
+  menustate = TITLEBLANK;
+}
+
+void StartGame() {
+  // user clicked the start button; only the host can properly start the game
+  if (!isclient && current_players >= 2) {
+    networktoggle ^= 4;
+    // closesocket(udpfd); // ??? why did i close the socket here o.O ?? testing purposes?
+  }
+
+  // // TBC: don't do anything just yet
+  // menustate = GAMESTART;
+}
+
+void ClickBabyUnicorn(POINT pnt) {
+  int ret;
+
+  if (isclient) {
+    clientPnt = pnt;
+    networktoggle ^= 2;
+  }
+  else {
+    ret = SelectBabyUnicorn(0, pnt); // server is always player index 0
+    if (ret) {
+      networktoggle ^= 2;
+    }
+  }
+}
+
 // ********************************************************************************
 // ****************************** callback functions ******************************
 // ********************************************************************************
@@ -1258,38 +1237,45 @@ void GUIlobby(POINT pnt) {
 //
 //  PURPOSE:  Processes messages for the main window.
 //
-//  WM_PAINT    - Paint the main window
-//  WM_DESTROY  - post a quit message and return
-LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+//  WM_CREATE       - initialize data when the window is created
+//  WM_ACTIVATE     - trigger when the window is being activated or deactivated
+//  WM_TIMER        - run when the timer expires
+//  WM_ERASEBKGND   - prepare an invalidated portion of a window for painting
+//  WM_MOUSEMOVE    - trigger upon mouse movement across the window
+//  WM_LBUTTONDOWN  - trigger upon left mouse clicks
+//  WM_PAINT        - Paint the main window
+//  WM_DESTROY      - post a quit message and return
+LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
   HDC hdc;
   PAINTSTRUCT ps;
+  POINT pnt;
+
   HDC hdcMem;
   HGDIOBJ oldBitmap, oldSprite;
-  POINT pnt;
-  RECT rc;
-  const int pntpi = 72; // points-per-inch
-  int pxpi, points, pxheight;
   HBITMAP hBitmapBuffer;
-  BOOL err;
-  DWORD err2;
 
   HDC hdcSprite;
   HBITMAP hbmSprite;
-  MSG msg;
 
-  static int pagenum = 1;
-  static int tabsize;
-  static int tabnum;
-  static BOOL istitleHover; // TODO: maybe combine istitleHover w/ hoverTip.ishover into a single hover boolean check; or combine istitleHover w/ the struct Button "hornbutton"
-  static struct ToolTip hoverTip;
+  // RECT rc;
+  // BOOL err;
+  // DWORD err2;
+  // MSG msg;
 
-  switch (message)
+  // static int pagenum = 1;
+  // static int tabsize;
+  // static int tabnum;
+  // static BOOL istitleHover; // TODO: maybe combine istitleHover w/ hoverTip.ishover into a single hover boolean check; or combine istitleHover w/ the struct Button "hornbutton"
+  // static struct ToolTip hoverTip;
+
+  switch (uMsg)
   {
   case WM_CREATE:
     LoadImages(hWnd);
     InitFonts(hWnd);
     InitButtonManager(hWnd);
+    InitStateMachine();
     windowOpen[0] = TRUE;
     webhwnd = hWnd; // for server and client to access in the wsapoll lobby loop
 
@@ -1315,6 +1301,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     GetCursorPos(&pnt);
     ScreenToClient(hWnd, &pnt);
 
+    if (stateMach[menustate].stateHover != NULL)
+      stateMach[menustate].stateHover(pnt);
+
+    /*
     if (menustate == DEBUGMODE) {
       hoverTip.ishover = 0;
       if (pnt.x >= 87 && pnt.x <= 237 && pnt.y >= 507 && pnt.y <= 707) {
@@ -1338,13 +1328,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
     // TODO: potentially just skip the button manager stuff and create a separate one specifically for hovered items
     // this will avoid having to create a dummy function that does nothing
-    for (int i = 0; i < numsubsets - 1; i++) {
+    for (int i = 0; i < 5; i++) {
       if (pnt.x >= buttonManager2D[state][i].x && pnt.x <= buttonManager2D[state][i].x + buttonManager2D[state][i].width &&
         pnt.y >= buttonManager2D[state][i].y && pnt.y <= buttonManager2D[state][i].y + buttonManager2D[state][i].height) {
         // hover action
-        buttonManager2D[state][i].onHover(&buttonManager2D[state][i], &istitleHover);
+        if (buttonManager2D[state][i].onHover != NULL)
+          buttonManager2D[state][i].onHover(&buttonManager2D[state][i], &istitleHover);
       }
     }
+    */
 
     break;
   }
@@ -1354,6 +1346,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     GetCursorPos(&pnt);
     ScreenToClient(hWnd, &pnt);
 
+    stateMach[menustate].stateClick(pnt);
+
+    /*
     int state = StateButtonMap(menustate);
 
     if (menustate == LOBBY) {
@@ -1361,7 +1356,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
       break;
     }
 
-    for (int i = 0; i < numsubsets - 1; i++) {
+    for (int i = 0; i < 5; i++) {
       if (pnt.x >= buttonManager2D[state][i].x && pnt.x <= buttonManager2D[state][i].x + buttonManager2D[state][i].width &&
         pnt.y >= buttonManager2D[state][i].y && pnt.y <= buttonManager2D[state][i].y + buttonManager2D[state][i].height) {
         // left click action
@@ -1416,12 +1411,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
       }
 
     }
+    */
 
     break;
   }
   case WM_PAINT:
   {
-    // TODO: use UpdateLayeredWindow() instead of WM_PAINT????
+    // TODO: DON'T use UpdateLayeredWindow() instead of WM_PAINT, but it's nice to know about though
     // https://stackoverflow.com/questions/67689087/correct-way-to-handle-and-redraw-a-layered-window-with-a-bitmap
 
     // validate that HWND
@@ -1430,9 +1426,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     // create memory DC and memory bitmap where we shall do our drawing
     hdcMem = CreateCompatibleDC(hdc);
     // create a deep copy so that the original image doesn't get updated when bitblt'ing the extra info to the memory bitmap
-    hBitmapBuffer = (HBITMAP)CopyImage(hBitmapTitle[menustate], IMAGE_BITMAP, BWIDTH, BHEIGHT, LR_COPYRETURNORG);
+    hBitmapBuffer = (HBITMAP)CopyImage(hBitmapBG[menustate], IMAGE_BITMAP, BWIDTH, BHEIGHT, LR_COPYRETURNORG);
     oldBitmap = SelectObject(hdcMem, hBitmapBuffer);
 
+    if (stateMach[menustate].statePaint != NULL) {
+      stateMach[menustate].statePaint(hdc, &hdcMem);
+    }
+
+    /*
     if (menustate == LOBBY) {
 
       SetBkMode(hdcMem, TRANSPARENT); // box surrounding text is transparent instead of white
@@ -1449,9 +1450,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
       DrawText(hdcMem, partymems, strlen(partymems), &rc, DT_LEFT);
 
       // draw border for chosen baby unicorns (ughhhh)
-      // TODO: MAX_PLAYERS is an inefficient hacky fix; should be current_players (see: server.c)
       hdcSprite = CreateCompatibleDC(hdc);
-      for (int i = 0; i < MAX_PLAYERS; i++) {
+      for (int i = 0; i < current_players; i++) {
         if (pselect[i].left != 0) {
           // // for whatever reason, the original hdcMem is incompatible and will draw the whole
           // // border (non-alpha included) at the top-left corner
@@ -1466,11 +1466,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
       DeleteDC(hdcSprite);
     }
     else if (menustate == DEBUGMODE) {
-      // draw player Narwhal!!
       hdcSprite = CreateCompatibleDC(hdc);
-      // TODO: this one actually has to be based off of current players, so it is capped at 1 for now
       for (int i = 0; i < current_players; i++) {
-        oldSprite = SelectObject(hdcSprite, icons[BABYNARWHAL - i].bitmap);
+        // player icon in-game
+        oldSprite = SelectObject(hdcSprite, icons[player[i].icon].bitmap);
         TransparentBlt(hdcMem, player_nums[i].x, player_nums[i].y, player_nums[i].width, player_nums[i].height, hdcSprite, 0, 0, player_nums[i].width, player_nums[i].height, RGB(0, 255, 0));
         SelectObject(hdcSprite, oldSprite);
 
@@ -1480,7 +1479,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         SelectObject(hdcSprite, oldSprite);
 
         // number of unicorns in stable
-        if (player[i].stable.num_unicorns <= 7) {
+        if (player[i].stable.num_unicorns < 7) {
           oldSprite = SelectObject(hdcSprite, stable_nums[player[i].stable.num_unicorns].bitmap);
         }
         else {
@@ -1497,7 +1496,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         CreateCustomToolTip(&hdcMem, hoverTip);
       }
     }
-    else if (menustate == TITLEBLANK || menustate == TITLEHOST || menustate == TITLEJOIN || menustate == TITLERULES) {
+    else if (menustate == TITLEBLANK) {
       hdcSprite = CreateCompatibleDC(hdc);
 
       if (istitleHover) {
@@ -1507,6 +1506,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
       }
       DeleteDC(hdcSprite);
     }
+    */
 
     // render memory buffer to on-screen DC
     BitBlt(hdc, 0, 0, BWIDTH, BHEIGHT, hdcMem, 0, 0, SRCCOPY);
@@ -1521,8 +1521,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
   case WM_DESTROY:
   {
     windowOpen[0] = FALSE;
-    for (int i = 0; i < sizeof hBitmapTitle / sizeof hBitmapTitle[0]; i++) {
-      DeleteObject(hBitmapTitle[i]);
+    for (int i = 0; i < sizeof hBitmapBG / sizeof hBitmapBG[0]; i++) {
+      DeleteObject(hBitmapBG[i]);
     }
     for (int i = 0; i < sizeof hBitmapBorder / sizeof hBitmapBorder[0]; i++) {
       DeleteObject(hBitmapBorder[i]);
@@ -1550,10 +1550,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
   }
   }
 
-  return DefWindowProc(hWnd, message, wParam, lParam);
+  return DefWindowProc(hWnd, uMsg, wParam, lParam);
 }
 
-LRESULT CALLBACK WndProcHost(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
+LRESULT CALLBACK WndProcHost(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
   // char tmpuser[NAME_SIZE * 2] = { 0 };
   char portstr[NAME_SIZE] = { 0 };
   int count = 0, portno;
@@ -1561,7 +1561,7 @@ LRESULT CALLBACK WndProcHost(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
   HDC hdc;
   RECT rc;
 
-  switch (message)
+  switch (uMsg)
   {
   case WM_CREATE:
     windowOpen[1] = TRUE;
@@ -1646,17 +1646,17 @@ LRESULT CALLBACK WndProcHost(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
     break;
   }
 
-  return DefWindowProc(hWnd, message, wParam, lParam);
+  return DefWindowProc(hWnd, uMsg, wParam, lParam);
 }
 
-LRESULT CALLBACK WndProcJoin(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
+LRESULT CALLBACK WndProcJoin(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
   char portstr[NAME_SIZE] = { 0 }, codestr[9] = { 0 };
   int count = 0, portno;
   PAINTSTRUCT ps;
   HDC hdc;
   RECT rc;
 
-  switch (message)
+  switch (uMsg)
   {
   case WM_CREATE:
     windowOpen[1] = TRUE;
@@ -1718,5 +1718,5 @@ LRESULT CALLBACK WndProcJoin(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
     break;
   }
 
-  return DefWindowProc(hWnd, message, wParam, lParam);
+  return DefWindowProc(hWnd, uMsg, wParam, lParam);
 }

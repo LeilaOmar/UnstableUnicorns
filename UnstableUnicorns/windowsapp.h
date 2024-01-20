@@ -7,7 +7,14 @@
 #define BHEIGHT 720
 #define PARTYSTRSIZE 296
 
-enum GameState { TITLEBLANK, TITLEHOST, TITLEJOIN, TITLERULES, RULESONE, RULESTWO, LOBBY, GAMESTART, DEBUGMODE } ;
+enum GameState { TITLEBLANK, RULESONE, RULESTWO, LOBBY, GAMESTART, DEBUGMODE, NUMSTATES } ;
+
+typedef struct {
+	enum GameState state;
+	void (*statePaint)(HDC, HDC*);
+	void (*stateHover)(POINT);
+	void (*stateClick)(POINT);
+} StateManager;
 
 extern HINSTANCE hInstanceGlob;
 extern char ip[16], hexcode[43];
@@ -47,11 +54,13 @@ struct ToolTip {
 };
 
 // callback functions
+
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 LRESULT CALLBACK WndProcHost(HWND, UINT, WPARAM, LPARAM);
 LRESULT CALLBACK WndProcJoin(HWND, UINT, WPARAM, LPARAM);
 
 // window/UI creation
+
 void CreateHostWindow(HWND);
 void CreateJoinWindow(HWND);
 void DisplayCardWindow(HDC*, HDC*, int, int*, int);
@@ -60,11 +69,11 @@ struct ToolTip ReturnCardHoverTip(char*, char*, int, int);
 struct ToolTip ReturnPlayerHoverTip(int, int, int);
 
 // button management
-void HoverTitle(struct Button*, BOOL*);
+
+void HornPosition(struct Button*, BOOL*);
 void InitTitleButtons(struct Button, HWND);
 void InitRuleButtons(struct Button);
 void InitLobbyButtons(struct Button);
-void InitPlayerIcons();
 void InitButtonManager(HWND);
 
 // initializing/deinitializing data
@@ -74,8 +83,22 @@ void DestroyFonts();
 void InitDebugMode();
 void ResetDebugMode();
 
-// state functions
-void NothingBurger();
+// state window message functions
+
+void HoverTitle(POINT);
+void HoverDebug(POINT);
+
+void ClickTitle(POINT);
+void ClickRules(POINT);
+void ClickLobby(POINT);
+void ClickDebug(POINT);
+
+void PaintTitle(HDC, HDC*);
+void PaintLobby(HDC, HDC*);
+void PaintDebug(HDC, HDC*);
+
+// button function pointers
+
 int StateButtonMap(int);
 void SwitchState(int);
 void HostGeneration(HWND);
@@ -83,8 +106,6 @@ void JoinGeneration(HWND);
 void StartGame();
 void LeaveLobby();
 void ClickBabyUnicorn(POINT);
-void GUIlobby(POINT);
 
-// helper functions
-void GameLoop(HWND);
+// game logic helper functions
 int SelectBabyUnicorn(int, POINT);
