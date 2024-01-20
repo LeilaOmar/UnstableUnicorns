@@ -21,7 +21,6 @@ extern char ip[16], hexcode[43];
 extern enum GameState menustate;
 extern char partymems[PARTYSTRSIZE];
 extern HWND webhwnd;
-extern BOOL is_active;
 extern BOOL babytoggle[13];
 extern RECT pselect[MAX_PLAYERS];
 extern unsigned char networktoggle; // 00000000 nothing
@@ -65,15 +64,19 @@ void CreateHostWindow(HWND);
 void CreateJoinWindow(HWND);
 void DisplayCardWindow(HDC*, HDC*, int, int*, int);
 void CreateCustomToolTip(HDC*);
-struct ToolTip ReturnCardHoverTip(char*, char*, int, int);
+void ReturnCardHoverTip(struct Button*, struct ToolTip*);
 struct ToolTip ReturnPlayerHoverTip(int, int, int);
 
 // button management
 
 void HornPosition(struct Button*, BOOL*);
-void InitTitleButtons(struct Button, HWND);
-void InitRuleButtons(struct Button);
-void InitLobbyButtons(struct Button);
+void InitTitleButtons(struct Button*, HWND);
+void InitRuleButtons(struct Button*);
+void InitLobbyButtons(struct Button*);
+void InitCardWindowButtons(struct Button*);
+void InitCardButtons();
+void InitDeckButtons();
+void InitPlayerButtons();
 void InitButtonManager(HWND);
 
 // initializing/deinitializing data
@@ -106,6 +109,8 @@ void JoinGeneration(HWND);
 void StartGame();
 void LeaveLobby();
 void ClickBabyUnicorn(POINT);
+void SwitchTab(int);
+void TurnPage(int);
 
 // game logic helper functions
 int SelectBabyUnicorn(int, POINT);
