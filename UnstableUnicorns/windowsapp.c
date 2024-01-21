@@ -26,7 +26,7 @@ unsigned char networktoggle = 0;
 // ********************************************************************************
 
 enum tab {UNICORN_TAB, UPGRADE_TAB, HAND_TAB, PAGE_LEFT, PAGE_RIGHT, NURSERY_TAB, DECK_TAB, DISCARD_TAB};
-enum fonts { OLDFONT, CHONKYFONT, BOLDFONT, FANCYFONT };
+enum fonts { OLDFONT, CHONKYFONT, BOLDFONT, FANCYFONT, FANCYITALICS, NUMCUSTOMFONTS };
 
 HWND gamethread, networkthread, textNameHwnd, portHwnd, codeHwnd;
 DWORD tId, tIdweb;
@@ -35,7 +35,7 @@ WNDCLASSEX wcexJoin;
 HBITMAP hBitmapBG[NUMSTATES], hBitmapBorder[MAX_PLAYERS], hBitmapCard[2];
 BOOL windowOpen[2] = { FALSE };
 BOOL childWindow[2] = { FALSE };
-HFONT fonts[4] = { NULL };
+HFONT fonts[NUMCUSTOMFONTS] = { NULL };
 
 enum tab tabnum;  // the tab number representation of the window to display on the bottom of the in-game screen
 int tabsize;      // number of total cards within the current tab view array (e.g. if you're looking at the deck, then tabsize could be anywhere from 1 to 115)
@@ -66,6 +66,9 @@ const RECT babies[] = {
 
 // only used for providing addresses for the sources in the player_nums button array
 int arbitrarypnum[] = { 0, 1, 2, 3, 4, 5, 6, 7 };
+
+// used to switch between player indices to show their respective stables inside the DisplayCardWindow function
+int pnumindex = 0;
 
 // TODO: potentially rename these to icon[1-13]?
 struct Button icons[] = {
@@ -441,14 +444,12 @@ void CreateJoinWindow(HWND hwnd) {
 void DisplayCardWindow(HDC* hdcMem, HDC* hdcSprite, int pagenum, int* tabsize, int tabnum) {
   // use pages to view the card window in lieu of scroll bars :)
 
+  char windowtxt[64]; // tab window info to show the name of the currently viewed stable/deck
   HGDIOBJ oldSprite;
-
-  // start is the starting point for the display, of course, with the scroll bar it could go to 0
-  POINT start = { 87, 507 };
-  RECT windowTab = { 0, 463, 1279, 491 };
+  POINT start = { 87, 507 }; // starting point for the display
   BITMAP bm;
-  GetObject(hBitmapCard[0], (int)sizeof bm, &bm); // fetches width/height; all cards have the same w/h
 
+  GetObject(hBitmapCard[0], (int)sizeof bm, &bm); // fetches width/height; all cards have the same w/h
   int distance = stablePadding + bm.bmWidth;
 
   // cards are just rectangles, so transparentblt isn't necessary
@@ -461,25 +462,27 @@ void DisplayCardWindow(HDC* hdcMem, HDC* hdcSprite, int pagenum, int* tabsize, i
   switch (tabnum) {
   case UNICORN_TAB:
   {
-    *tabsize = player[0].stable.num_unicorns;
+    *tabsize = player[pnumindex].stable.num_unicorns;
+    snprintf(windowtxt, sizeof windowtxt, "%s's Stable", player[pnumindex].username);
+
     // TODO: using the original index_start wouldn't account for skipped upgrade/downgrade cards,
     // but adding an extra array to check for offset cards within extra pages seems extremely overkill...
     // 
     // in any case, filtering is still necessary for specific deck functions, and fixing this one by
     // grouping the unicorns w/ upgrade/downgrade cards in a stable wouldn't fully solve the problem
     int j = 0;
-    for (int count = 0; j < player[0].stable.size && count < (pagenum - 1) * 7; j++) {
-      if (checkClass(ANYUNICORN, deck[player[0].stable.unicorns[j]].class))
+    for (int count = 0; j < player[pnumindex].stable.size && count < (pagenum - 1) * 7; j++) {
+      if (checkClass(ANYUNICORN, deck[player[pnumindex].stable.unicorns[j]].class))
         count++;
     }
     index_start = j;
 
-    for (int i = index_start; i < player[0].stable.size && skip < 7; i++) {
+    for (int i = index_start; i < player[pnumindex].stable.size && skip < 7; i++) {
       // for now, this cycles through hBitmapCard which only has the super neigh card and the back design
       // in the future, hBitmapCard could be replaced/assimilated by an updated Unicorn or Deck structure featuring the file name and the loaded hBitmap
-      if (checkClass(ANYUNICORN, deck[player[0].stable.unicorns[i]].class)) {
+      if (checkClass(ANYUNICORN, deck[player[pnumindex].stable.unicorns[i]].class)) {
         // save the source into cardslots
-        cardslots[skip].source = &deck[player[0].stable.unicorns[i]];
+        cardslots[skip].source = &deck[player[pnumindex].stable.unicorns[i]];
 
         // draw the sprite
         oldSprite = SelectObject(*hdcSprite, hBitmapCard[i & 1]);
@@ -493,21 +496,22 @@ void DisplayCardWindow(HDC* hdcMem, HDC* hdcSprite, int pagenum, int* tabsize, i
   case UPGRADE_TAB:
   {
     // TODO: see unicorn_tab for the indexing issues. this is unlikely to happen in a normal game though due to most players having less than 8 up/downgrades
-    *tabsize = player[0].stable.size - player[0].stable.num_unicorns;
+    *tabsize = player[pnumindex].stable.size - player[pnumindex].stable.num_unicorns;
+    snprintf(windowtxt, sizeof windowtxt, "%s's Stable", player[pnumindex].username);
 
     int j = 0;
-    for (int count = 0; j < player[0].stable.size && count < (pagenum - 1) * 7; j++) {
-      if (!checkClass(ANYUNICORN, deck[player[0].stable.unicorns[j]].class))
+    for (int count = 0; j < player[pnumindex].stable.size && count < (pagenum - 1) * 7; j++) {
+      if (!checkClass(ANYUNICORN, deck[player[pnumindex].stable.unicorns[j]].class))
         count++;
     }
     index_start = j;
 
-    for (int i = index_start; i < player[0].stable.size && skip < 7; i++) {
+    for (int i = index_start; i < player[pnumindex].stable.size && skip < 7; i++) {
       // for now, this cycles through hBitmapCard which only has the super neigh card and the back design
       // in the future, hBitmapCard could be replaced/assimilated by an updated Unicorn or Deck structure featuring the file name and the loaded hBitmap
-      if (deck[player[0].stable.unicorns[i]].class == UPGRADE || deck[player[0].stable.unicorns[i]].class == DOWNGRADE) {
+      if (deck[player[pnumindex].stable.unicorns[i]].class == UPGRADE || deck[player[pnumindex].stable.unicorns[i]].class == DOWNGRADE) {
         // save the source into cardslots
-        cardslots[skip].source = &deck[player[0].stable.unicorns[i]];
+        cardslots[skip].source = &deck[player[pnumindex].stable.unicorns[i]];
 
         // draw the sprite
         oldSprite = SelectObject(*hdcSprite, hBitmapCard[i % 2]);
@@ -520,10 +524,12 @@ void DisplayCardWindow(HDC* hdcMem, HDC* hdcSprite, int pagenum, int* tabsize, i
   }
   case HAND_TAB:
   {
-    *tabsize = player[0].hand.num_cards;
-    for (int i = index_start; i < player[0].hand.num_cards && i < index_start + 7; i++) {
+    *tabsize = player[pnumindex].hand.num_cards;
+    snprintf(windowtxt, sizeof windowtxt, "%s's Hand", player[pnumindex].username);
+
+    for (int i = index_start; i < player[pnumindex].hand.num_cards && i < index_start + 7; i++) {
       // save the source into cardslots
-      cardslots[skip++].source = &deck[player[0].hand.cards[i]];
+      cardslots[skip++].source = &deck[player[pnumindex].hand.cards[i]];
 
       // for now, this cycles through hBitmapCard which only has the super neigh card and the back design
       // in the future, hBitmapCard could be replaced/assimilated by an updated Unicorn or Deck structure featuring the file name and the loaded hBitmap
@@ -536,6 +542,8 @@ void DisplayCardWindow(HDC* hdcMem, HDC* hdcSprite, int pagenum, int* tabsize, i
   case NURSERY_TAB:
   {
     *tabsize = NURSERY_SIZE - nursery_index;
+    strcpy_s(windowtxt, sizeof windowtxt, "Nursery");
+
     for (int i = nursery_index + index_start; i < NURSERY_SIZE && i < index_start + 7; i++) {
       // for now, this cycles through hBitmapCard which only has the super neigh card and the back design
       // in the future, hBitmapCard could be replaced/assimilated by an updated Unicorn or Deck structure featuring the file name and the loaded hBitmap
@@ -549,6 +557,8 @@ void DisplayCardWindow(HDC* hdcMem, HDC* hdcSprite, int pagenum, int* tabsize, i
   {
     // TODO: include a check for card effects that allow deck viewing, and then include a check for specific cards
     *tabsize = DECK_SIZE - deck_index;
+    strcpy_s(windowtxt, sizeof windowtxt, "Deck");
+
     for (int i = deck_index + index_start; i < DECK_SIZE && i < index_start + 7; i++) {
       // for now, this cycles through hBitmapCard which only has the super neigh card and the back design
       // in the future, hBitmapCard could be replaced/assimilated by an updated Unicorn or Deck structure featuring the file name and the loaded hBitmap
@@ -562,6 +572,8 @@ void DisplayCardWindow(HDC* hdcMem, HDC* hdcSprite, int pagenum, int* tabsize, i
   {
     // TODO: (maybe) include a check for specific cards
     *tabsize = discard_index;
+    strcpy_s(windowtxt, sizeof windowtxt, "Discard Pile");
+
     for (int i = index_start; i < discard_index && i < index_start + 7; i++) {
       // for now, this cycles through hBitmapCard which only has the super neigh card and the back design
       // in the future, hBitmapCard could be replaced/assimilated by an updated Unicorn or Deck structure featuring the file name and the loaded hBitmap
@@ -592,6 +604,14 @@ void DisplayCardWindow(HDC* hdcMem, HDC* hdcSprite, int pagenum, int* tabsize, i
     TransparentBlt(*hdcMem, buttonManager2D[debugbuttons][PAGE_LEFT].x, buttonManager2D[debugbuttons][PAGE_LEFT].y, buttonManager2D[debugbuttons][PAGE_LEFT].width, buttonManager2D[debugbuttons][PAGE_LEFT].height, *hdcSprite, 0, 0, buttonManager2D[debugbuttons][PAGE_LEFT].width, buttonManager2D[debugbuttons][PAGE_LEFT].height, RGB(0, 255, 0));
     SelectObject(*hdcSprite, oldSprite);
   }
+
+  // display the window tab as text
+  // RECT rc = { 5, 422, 935, 457 }; // left side dimensions in case there isn't enough space inside the tab
+  RECT rc = { 787, 463, 1272, 491 }; // right side
+  SetTextColor(*hdcMem, RGB(34, 91, 126));
+  SelectObject(*hdcMem, fonts[FANCYITALICS]);
+  SetBkMode(*hdcMem, TRANSPARENT); // box surrounding text is transparent instead of white
+  DrawText(*hdcMem, windowtxt, strlen(windowtxt), &rc, DT_RIGHT | DT_VCENTER | DT_NOCLIP | DT_WORDBREAK);
 }
 
 void ReturnCardHoverTip(struct Button *self, struct ToolTip *tippy) {
@@ -861,6 +881,17 @@ void InitFonts(HWND hWnd) {
     CLEARTYPE_QUALITY,
     VARIABLE_PITCH | FF_SWISS,
     "RuneScape Large");
+
+  fonts[FANCYITALICS] = CreateFontA(pxheight, 0, // size
+    0, 0,                 // normal orientation
+    FW_NORMAL,            // normal weight--e.g., bold would be FW_BOLD
+    TRUE, NULL, NULL,     // not italic, underlined or strike out
+    DEFAULT_CHARSET,
+    OUT_OUTLINE_PRECIS,   // select only outline (not bitmap) fonts
+    CLIP_DEFAULT_PRECIS,
+    CLEARTYPE_QUALITY,
+    VARIABLE_PITCH | FF_SWISS,
+    "RuneScape Large");
 }
 
 void DestroyFonts() {
@@ -928,18 +959,20 @@ void InitDebugMode() {
   // player 2: noob
   strcpy_s(player[1].username, sizeof player[1].username, "nooblet");
   player[1].icon = rand() % 12;
+  int handsize = 1 + rand() % 7;
   for (int i = 0; i < 5; i++) {
     player[1].stable.unicorns[i] = (i & 1) ? 50 : 40;
     if (checkClass(ANYUNICORN, deck[player[1].stable.unicorns[i]].class))
       player[1].stable.num_unicorns++;
     player[1].stable.size++;
   }
-  for (int i = 0; i < 5; i++) {
+  for (int i = 0; i < handsize; i++) {
     player[1].hand.cards[i] = 42 + i;
     player[1].hand.num_cards++;
   }
 
   current_players = 2;
+  pnumindex = 0;
 }
 
 void ResetDebugMode() {
@@ -1051,8 +1084,8 @@ void ClickTitle(POINT pnt) {
   int state = titlebuttons;
 
   for (int i = 0; i < sizeof buttonManager2D[state] / sizeof buttonManager2D[state][0]; i++) {
-    if (pnt.x >= buttonManager2D[state][i].x && pnt.x <= buttonManager2D[state][i].x + buttonManager2D[state][i].width &&
-      pnt.y >= buttonManager2D[state][i].y && pnt.y <= buttonManager2D[state][i].y + buttonManager2D[state][i].height) {
+    if (pnt.x >= buttonManager2D[state][i].x && pnt.x < buttonManager2D[state][i].x + buttonManager2D[state][i].width &&
+      pnt.y >= buttonManager2D[state][i].y && pnt.y < buttonManager2D[state][i].y + buttonManager2D[state][i].height) {
       // left click action
       if (windowOpen[1] == FALSE) {
         buttonManager2D[state][i].onClick(buttonManager2D[state][i].source);
@@ -1066,8 +1099,8 @@ void ClickRules(POINT pnt) {
   int state = rulebuttons;
 
   for (int i = 0; i < sizeof buttonManager2D[state] / sizeof buttonManager2D[state][0]; i++) {
-    if (pnt.x >= buttonManager2D[state][i].x && pnt.x <= buttonManager2D[state][i].x + buttonManager2D[state][i].width &&
-      pnt.y >= buttonManager2D[state][i].y && pnt.y <= buttonManager2D[state][i].y + buttonManager2D[state][i].height) {
+    if (pnt.x >= buttonManager2D[state][i].x && pnt.x < buttonManager2D[state][i].x + buttonManager2D[state][i].width &&
+      pnt.y >= buttonManager2D[state][i].y && pnt.y < buttonManager2D[state][i].y + buttonManager2D[state][i].height) {
       // left click action
       buttonManager2D[state][i].onClick(buttonManager2D[state][i].source);
     }
@@ -1172,11 +1205,26 @@ void ClickDebug(POINT pnt) {
 
   int state = debugbuttons;
 
+  // general tab buttons
   for (int i = 0; i < sizeof buttonManager2D[state] / sizeof buttonManager2D[state][0]; i++) {
-    if (pnt.x >= buttonManager2D[state][i].x && pnt.x <= buttonManager2D[state][i].x + buttonManager2D[state][i].width &&
-      pnt.y >= buttonManager2D[state][i].y && pnt.y <= buttonManager2D[state][i].y + buttonManager2D[state][i].height) {
+    if (pnt.x >= buttonManager2D[state][i].x && pnt.x < buttonManager2D[state][i].x + buttonManager2D[state][i].width &&
+      pnt.y >= buttonManager2D[state][i].y && pnt.y < buttonManager2D[state][i].y + buttonManager2D[state][i].height) {
       // left click action
       buttonManager2D[state][i].onClick(buttonManager2D[state][i].source);
+    }
+  }
+
+  // select the player to view
+  // 
+  // TODO: should probably only initialize player_nums up to the current_player count instead of the full MAX_PLAYERS count
+  // anything with player_nums will bug out unless the loops go up to current_players, so limiting the player_nums array
+  // or initializing it as negative numbers would reduce the possibility of more bugs popping up
+  for (int i = 0; i < current_players; i++) {
+    if (pnt.x >= player_nums[i].x && pnt.x < player_nums[i].x + player_nums[i].width &&
+      pnt.y >= player_nums[i].y && pnt.y < player_nums[i].y + player_nums[i].height) {
+      pnumindex = i;
+      tabnum = UNICORN_TAB; // TODO: it might be more beneficial to keep the same tab? ask other people
+      pagenum = 1;
     }
   }
 }
