@@ -26,13 +26,13 @@ unsigned char networktoggle = 0;
 // ********************************************************************************
 
 enum tab {UNICORN_TAB, UPGRADE_TAB, HAND_TAB, PAGE_LEFT, PAGE_RIGHT, NURSERY_TAB, DECK_TAB, DISCARD_TAB};
-enum fonts { OLDFONT, CHONKYFONT, BOLDFONT, FANCYFONT, FANCYITALICS, NUMCUSTOMFONTS };
+enum fonts { OLDFONT, CHONKYFONT, BOLDFONT, ITALICFONT, FANCYFONT, FANCYITALICS, NUMCUSTOMFONTS };
 
 HWND gamethread, networkthread, textNameHwnd, portHwnd, codeHwnd;
 DWORD tId, tIdweb;
 WNDCLASSEX wcexHost;
 WNDCLASSEX wcexJoin;
-HBITMAP hBitmapBG[NUMSTATES], hBitmapBorder[MAX_PLAYERS], hBitmapCard[2];
+HBITMAP hBitmapBG[NUMSTATES], hBitmapBorder[MAX_PLAYERS], hBitmapCard[15], hBitmapTab[3];
 BOOL windowOpen[2] = { FALSE };
 BOOL childWindow[2] = { FALSE };
 HFONT fonts[NUMCUSTOMFONTS] = { NULL };
@@ -44,6 +44,17 @@ BOOL istitleHover; // TODO: maybe combine istitleHover w/ hoverTip.ishover into 
 struct ToolTip hoverTip;
 
 int stablePadding = 15; // arbitrary number of pixels to pad between the displayed list of cards in their respective stables/hands/decks
+
+// these are in the same order as UnicornDatatypes, which are used to represent the card classes
+COLORREF cardColors[] = {
+  RGB(185, 109, 171),   // baby unicorn color     - purple
+  RGB(107, 116, 181),   // basic unicorn color    - dark periwinkle (blue)
+  RGB( 32, 189, 242),   // magical unicorn color  - aqua blue
+  RGB(242, 128,  38),   // upgrade color          - orange
+  RGB(255, 180,  23),   // downgrade color        - gold
+  RGB(134, 200,  80),   // magic color            - lime green
+  RGB(244,  29,  37),   // instant color          - red
+};
 
 // left, top, right, bottom
 const RECT babies[] = {
@@ -106,8 +117,7 @@ struct Button stable_nums[8];
 
 enum buttontypes { titlebuttons, rulebuttons, lobbybuttons, debugbuttons, numsubsets };
 
-struct Button** buttonManager;
-struct Button buttonManager2D[numsubsets][5];
+struct Button buttonManager2D[numsubsets][8];
 struct Button hornbutton;
 struct Button cardslots[7];
 
@@ -272,8 +282,32 @@ void InitCardButtons() {
   }
 }
 
-void InitDeckButtons() {
+void InitDeckButtons(struct Button *b) {
+  // TODO: the onClick function will likely be multi-purpose, so this will need to be rewritten
 
+  // nursery pile
+  b[NURSERY_TAB].x = 346;
+  b[NURSERY_TAB].y = 132;
+  b[NURSERY_TAB].width = 145;
+  b[NURSERY_TAB].height = 200;
+  b[NURSERY_TAB].source = NURSERY_TAB;
+  b[NURSERY_TAB].onClick = SwitchTab;
+
+  // deck pile
+  b[DECK_TAB].x = 521;
+  b[DECK_TAB].y = 132;
+  b[DECK_TAB].width = 145;
+  b[DECK_TAB].height = 200;
+  b[DECK_TAB].source = DECK_TAB;
+  b[DECK_TAB].onClick = SwitchTab;
+
+  // discard pile
+  b[DISCARD_TAB].x = 696;
+  b[DISCARD_TAB].y = 132;
+  b[DISCARD_TAB].width = 145;
+  b[DISCARD_TAB].height = 200;
+  b[DISCARD_TAB].source = DISCARD_TAB;
+  b[DISCARD_TAB].onClick = SwitchTab;
 }
 
 void InitPlayerButtons() {
@@ -323,7 +357,7 @@ void InitButtonManager(HWND hWnd) {
   InitLobbyButtons(buttonManager2D[lobbybuttons]);
   InitCardWindowButtons(buttonManager2D[debugbuttons]);
   InitCardButtons();
-  // InitDeckButtons();
+  InitDeckButtons(buttonManager2D[debugbuttons]);
   // InitPlayerButtons();
 }
 
@@ -462,6 +496,11 @@ void DisplayCardWindow(HDC* hdcMem, HDC* hdcSprite, int pagenum, int* tabsize, i
   switch (tabnum) {
   case UNICORN_TAB:
   {
+    // draw the background for ease of view
+    oldSprite = SelectObject(*hdcSprite, hBitmapTab[tabnum]);
+    BitBlt(*hdcMem, 0, 497, BWIDTH, 223, *hdcSprite, 0, 0, SRCCOPY);
+    SelectObject(*hdcSprite, oldSprite);
+
     *tabsize = player[pnumindex].stable.num_unicorns;
     snprintf(windowtxt, sizeof windowtxt, "%s's Stable", player[pnumindex].username);
 
@@ -470,12 +509,12 @@ void DisplayCardWindow(HDC* hdcMem, HDC* hdcSprite, int pagenum, int* tabsize, i
     // 
     // in any case, filtering is still necessary for specific deck functions, and fixing this one by
     // grouping the unicorns w/ upgrade/downgrade cards in a stable wouldn't fully solve the problem
-    int j = 0;
-    for (int count = 0; j < player[pnumindex].stable.size && count < (pagenum - 1) * 7; j++) {
-      if (checkClass(ANYUNICORN, deck[player[pnumindex].stable.unicorns[j]].class))
-        count++;
+    int count = 0;
+    for (int k = 0; count < player[pnumindex].stable.size && k < (pagenum - 1) * 7; count++) {
+      if (checkClass(ANYUNICORN, deck[player[pnumindex].stable.unicorns[count]].class))
+        k++;
     }
-    index_start = j;
+    index_start = count;
 
     for (int i = index_start; i < player[pnumindex].stable.size && skip < 7; i++) {
       // for now, this cycles through hBitmapCard which only has the super neigh card and the back design
@@ -485,7 +524,7 @@ void DisplayCardWindow(HDC* hdcMem, HDC* hdcSprite, int pagenum, int* tabsize, i
         cardslots[skip].source = &deck[player[pnumindex].stable.unicorns[i]];
 
         // draw the sprite
-        oldSprite = SelectObject(*hdcSprite, hBitmapCard[i & 1]);
+        oldSprite = SelectObject(*hdcSprite, hBitmapCard[13 + i % 2]);
         BitBlt(*hdcMem, start.x + (distance * skip), start.y, bm.bmWidth, bm.bmHeight, *hdcSprite, 0, 0, SRCCOPY);
         SelectObject(*hdcSprite, oldSprite);
         skip++;
@@ -495,6 +534,11 @@ void DisplayCardWindow(HDC* hdcMem, HDC* hdcSprite, int pagenum, int* tabsize, i
   }
   case UPGRADE_TAB:
   {
+    // draw the background for ease of view
+    oldSprite = SelectObject(*hdcSprite, hBitmapTab[tabnum]);
+    BitBlt(*hdcMem, 0, 497, BWIDTH, 223, *hdcSprite, 0, 0, SRCCOPY);
+    SelectObject(*hdcSprite, oldSprite);
+
     // TODO: see unicorn_tab for the indexing issues. this is unlikely to happen in a normal game though due to most players having less than 8 up/downgrades
     *tabsize = player[pnumindex].stable.size - player[pnumindex].stable.num_unicorns;
     snprintf(windowtxt, sizeof windowtxt, "%s's Stable", player[pnumindex].username);
@@ -514,7 +558,7 @@ void DisplayCardWindow(HDC* hdcMem, HDC* hdcSprite, int pagenum, int* tabsize, i
         cardslots[skip].source = &deck[player[pnumindex].stable.unicorns[i]];
 
         // draw the sprite
-        oldSprite = SelectObject(*hdcSprite, hBitmapCard[i % 2]);
+        oldSprite = SelectObject(*hdcSprite, hBitmapCard[13 + i % 2]);
         BitBlt(*hdcMem, start.x + (distance * skip), start.y, bm.bmWidth, bm.bmHeight, *hdcSprite, 0, 0, SRCCOPY);
         SelectObject(*hdcSprite, oldSprite);
         skip++;
@@ -524,6 +568,11 @@ void DisplayCardWindow(HDC* hdcMem, HDC* hdcSprite, int pagenum, int* tabsize, i
   }
   case HAND_TAB:
   {
+    // draw the background for ease of view
+    oldSprite = SelectObject(*hdcSprite, hBitmapTab[tabnum]);
+    BitBlt(*hdcMem, 0, 497, BWIDTH, 223, *hdcSprite, 0, 0, SRCCOPY);
+    SelectObject(*hdcSprite, oldSprite);
+
     *tabsize = player[pnumindex].hand.num_cards;
     snprintf(windowtxt, sizeof windowtxt, "%s's Hand", player[pnumindex].username);
 
@@ -533,7 +582,7 @@ void DisplayCardWindow(HDC* hdcMem, HDC* hdcSprite, int pagenum, int* tabsize, i
 
       // for now, this cycles through hBitmapCard which only has the super neigh card and the back design
       // in the future, hBitmapCard could be replaced/assimilated by an updated Unicorn or Deck structure featuring the file name and the loaded hBitmap
-      oldSprite = SelectObject(*hdcSprite, hBitmapCard[i % 2]);
+      oldSprite = SelectObject(*hdcSprite, hBitmapCard[13 + i % 2]);
       BitBlt(*hdcMem, start.x + (distance * (i % 7)), start.y, bm.bmWidth, bm.bmHeight, *hdcSprite, 0, 0, SRCCOPY);
       SelectObject(*hdcSprite, oldSprite);
     }
@@ -545,9 +594,12 @@ void DisplayCardWindow(HDC* hdcMem, HDC* hdcSprite, int pagenum, int* tabsize, i
     strcpy_s(windowtxt, sizeof windowtxt, "Nursery");
 
     for (int i = nursery_index + index_start; i < NURSERY_SIZE && i < index_start + 7; i++) {
+      // save the source into cardslots
+      cardslots[skip++].source = &deck[i];
+
       // for now, this cycles through hBitmapCard which only has the super neigh card and the back design
       // in the future, hBitmapCard could be replaced/assimilated by an updated Unicorn or Deck structure featuring the file name and the loaded hBitmap
-      oldSprite = SelectObject(*hdcSprite, hBitmapCard[i % 2]);
+      oldSprite = SelectObject(*hdcSprite, hBitmapCard[i]);
       BitBlt(*hdcMem, start.x + (distance * (i % 7)), start.y, bm.bmWidth, bm.bmHeight, *hdcSprite, 0, 0, SRCCOPY);
       SelectObject(*hdcSprite, oldSprite);
     }
@@ -560,9 +612,12 @@ void DisplayCardWindow(HDC* hdcMem, HDC* hdcSprite, int pagenum, int* tabsize, i
     strcpy_s(windowtxt, sizeof windowtxt, "Deck");
 
     for (int i = deck_index + index_start; i < DECK_SIZE && i < index_start + 7; i++) {
+      // save the source into cardslots
+      cardslots[skip++].source = &deck[deck_ref[i]];
+
       // for now, this cycles through hBitmapCard which only has the super neigh card and the back design
       // in the future, hBitmapCard could be replaced/assimilated by an updated Unicorn or Deck structure featuring the file name and the loaded hBitmap
-      oldSprite = SelectObject(*hdcSprite, hBitmapCard[i % 2]);
+      oldSprite = SelectObject(*hdcSprite, hBitmapCard[13 + i % 2]);
       BitBlt(*hdcMem, start.x + (distance * (i % 7)), start.y, bm.bmWidth, bm.bmHeight, *hdcSprite, 0, 0, SRCCOPY);
       SelectObject(*hdcSprite, oldSprite);
     }
@@ -575,6 +630,9 @@ void DisplayCardWindow(HDC* hdcMem, HDC* hdcSprite, int pagenum, int* tabsize, i
     strcpy_s(windowtxt, sizeof windowtxt, "Discard Pile");
 
     for (int i = index_start; i < discard_index && i < index_start + 7; i++) {
+      // save the source into cardslots
+      cardslots[skip++].source = &deck[discard_ref[i]];
+
       // for now, this cycles through hBitmapCard which only has the super neigh card and the back design
       // in the future, hBitmapCard could be replaced/assimilated by an updated Unicorn or Deck structure featuring the file name and the loaded hBitmap
       oldSprite = SelectObject(*hdcSprite, hBitmapCard[i % 2]);
@@ -606,12 +664,11 @@ void DisplayCardWindow(HDC* hdcMem, HDC* hdcSprite, int pagenum, int* tabsize, i
   }
 
   // display the window tab as text
-  // RECT rc = { 5, 422, 935, 457 }; // left side dimensions in case there isn't enough space inside the tab
-  RECT rc = { 787, 463, 1272, 491 }; // right side
-  SetTextColor(*hdcMem, RGB(34, 91, 126));
   SelectObject(*hdcMem, fonts[FANCYITALICS]);
   SetBkMode(*hdcMem, TRANSPARENT); // box surrounding text is transparent instead of white
-  DrawText(*hdcMem, windowtxt, strlen(windowtxt), &rc, DT_RIGHT | DT_VCENTER | DT_NOCLIP | DT_WORDBREAK);
+  SetTextColor(*hdcMem, RGB(255, 255, 255));
+  RECT rc = { 5, 425, 935, 457 }; // left side directly above the tabs
+  DrawText(*hdcMem, windowtxt, strlen(windowtxt), &rc, DT_LEFT | DT_NOCLIP | DT_WORDBREAK);
 }
 
 void ReturnCardHoverTip(struct Button *self, struct ToolTip *tippy) {
@@ -632,10 +689,35 @@ void ReturnCardHoverTip(struct Button *self, struct ToolTip *tippy) {
   tippy->width   = width;
   tippy->height  = height;
   tippy->ishover = TRUE;
+  tippy->bgcolor = cardColors[corn.class];
 
   // update edge
   if (tippy->x + tippy->width > BWIDTH) {
     tippy->x = BWIDTH - tippy->width - (padding * 2);
+  }
+
+  switch (corn.class) {
+  case BABYUNICORN:
+    strcpy_s(tippy->subtitle, sizeof tippy->subtitle, "Baby Unicorn card");
+    break;
+  case BASICUNICORN:
+    strcpy_s(tippy->subtitle, sizeof tippy->subtitle, "Basic Unicorn card");
+    break;
+  case MAGICUNICORN:
+    strcpy_s(tippy->subtitle, sizeof tippy->subtitle, "Magical Unicorn card");
+    break;
+  case UPGRADE:
+    strcpy_s(tippy->subtitle, sizeof tippy->subtitle, "Upgrade card");
+    break;
+  case DOWNGRADE:
+    strcpy_s(tippy->subtitle, sizeof tippy->subtitle, "Downgrade card");
+    break;
+  case MAGIC:
+    strcpy_s(tippy->subtitle, sizeof tippy->subtitle, "Magic card");
+    break;
+  case INSTANT:
+    strcpy_s(tippy->subtitle, sizeof tippy->subtitle, "Instant card");
+    break;
   }
 }
 
@@ -646,7 +728,9 @@ void ReturnPlayerHoverTip(struct Button *self, struct ToolTip *tippy) {
   int width = 200;
   int height = 60;
 
+  // TODO: update size for longer names
   strcpy_s(tippy->title, sizeof tippy->title, player[pnum].username);
+  tippy->subtitle[0] = '\0';
   snprintf(tippy->msg, sizeof tippy->msg, "# of cards in hand: %d\n# of unicorns in stable: %d",
     player[pnum].hand.num_cards, player[pnum].stable.num_unicorns);
   tippy->fonttitle = BOLDFONT;
@@ -657,6 +741,7 @@ void ReturnPlayerHoverTip(struct Button *self, struct ToolTip *tippy) {
   tippy->width   = width;
   tippy->height  = height;
   tippy->ishover = TRUE;
+  tippy->bgcolor = RGB(255, 0, 150);
 }
 
 void CreateCustomToolTip(HDC *hdcMem, struct ToolTip hoverTip) {
@@ -666,7 +751,7 @@ void CreateCustomToolTip(HDC *hdcMem, struct ToolTip hoverTip) {
   // TODO: mess around with colors later to make it look prettier :3
 
   // draw the outer box
-  HBRUSH brush = CreateSolidBrush(RGB(255, 0, 150));
+  HBRUSH brush = CreateSolidBrush(hoverTip.bgcolor);
   HBRUSH old_brush = (HBRUSH) SelectObject(*hdcMem, brush);
 
   // add some padding to the rectangle area instead of applying it to the text
@@ -680,31 +765,42 @@ void CreateCustomToolTip(HDC *hdcMem, struct ToolTip hoverTip) {
   SetBkMode(*hdcMem, TRANSPARENT); // box surrounding text is transparent instead of white
 
   int title_offset = 0;
-  // type out title if applicable
-  if (hoverTip.title[0] != '\0') {
-    SetRect(&rc, hoverTip.x, hoverTip.y, hoverTip.x + hoverTip.width, hoverTip.y + hoverTip.width);
+  SetRect(&rc, hoverTip.x, hoverTip.y, hoverTip.x + hoverTip.width, hoverTip.y + hoverTip.width);
+  SetTextColor(*hdcMem, RGB(255, 255, 255));
+  SelectObject(*hdcMem, fonts[hoverTip.fonttitle]);
+  DrawText(*hdcMem, hoverTip.title, strlen(hoverTip.title), &rc, DT_LEFT | DT_WORDBREAK);
+
+  // calculate the vertical space taken by the title
+  SIZE size;
+  GetTextExtentPoint(*hdcMem, hoverTip.title, strlen(hoverTip.title), &size);
+  title_offset = size.cy + (padding / 2);
+
+  // double the vertical space if the title is long enough to wrap around the rect border
+  if (strlen(hoverTip.title) >= 24) {
+    title_offset = (title_offset * 2) - (padding / 2);
+  }
+
+  // TODO: (maybe) calculate horizontal space too for the more verbose titles?
+  // GetTextExtentPoint only works after the text has been drawn, but then the title and bg rectangle wouldn't be updateable...
+  
+  // hoverTip.width = (size.cx > hoverTip.width) ? size.cx : hoverTip.width;
+  // 
+  // if (hoverTip.x + hoverTip.width > BWIDTH) {
+  //   hoverTip.x = BWIDTH - hoverTip.width - (padding * 2);
+  // }
+
+
+  // type out the subtitle for the card info (i.e. the class/type of card)
+  if (hoverTip.subtitle[0] != '\0') {
+    SetRect(&rc, hoverTip.x, hoverTip.y + title_offset, hoverTip.x + hoverTip.width, hoverTip.y + hoverTip.width);
     SetTextColor(*hdcMem, RGB(255, 255, 255));
-    SelectObject(*hdcMem, fonts[hoverTip.fonttitle]);
-    DrawText(*hdcMem, hoverTip.title, strlen(hoverTip.title), &rc, DT_LEFT | DT_WORDBREAK);
+    SelectObject(*hdcMem, fonts[ITALICFONT]);
+    DrawText(*hdcMem, hoverTip.subtitle, strlen(hoverTip.subtitle), &rc, DT_LEFT | DT_WORDBREAK);
 
     // calculate the vertical space taken by the title
     SIZE size;
     GetTextExtentPoint(*hdcMem, hoverTip.title, strlen(hoverTip.title), &size);
-    title_offset = size.cy + (padding / 2);
-
-    // double the vertical space if the title is long enough to wrap around the rect border
-    if (strlen(hoverTip.title) >= 24) {
-      title_offset = (title_offset * 2) - (padding / 2);
-    }
-
-    // TODO: (maybe) calculate horizontal space too for the more verbose titles?
-    // GetTextExtentPoint only works after the text has been drawn, but then the title and bg rectangle wouldn't be updateable...
-    
-    // hoverTip.width = (size.cx > hoverTip.width) ? size.cx : hoverTip.width;
-    // 
-    // if (hoverTip.x + hoverTip.width > BWIDTH) {
-    //   hoverTip.x = BWIDTH - hoverTip.width - (padding * 2);
-    // }
+    title_offset += size.cy + (padding / 2);
   }
 
   // type out message
@@ -810,14 +906,45 @@ void LoadImages(HWND hWnd) {
     }
   }
 
+  // bitmaps for displaying the tab background
+  hBitmapTab[UNICORN_TAB] = (HBITMAP)LoadImage(NULL, "Assets\\unicorntab_bg.bmp",
+    IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+  if (hBitmapTab[UNICORN_TAB] == NULL) {
+    issuccess = FALSE;
+    strcat_s(errors, sizeof errors, "unicorntab_bg.bmp ");
+  }
+  hBitmapTab[UPGRADE_TAB] = (HBITMAP)LoadImage(NULL, "Assets\\upgradetab_bg.bmp",
+    IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+  if (hBitmapTab[UPGRADE_TAB] == NULL) {
+    issuccess = FALSE;
+    strcat_s(errors, sizeof errors, "unicorntab_bg.bmp ");
+  }
+  hBitmapTab[HAND_TAB] = (HBITMAP)LoadImage(NULL, "Assets\\handtab_bg.bmp",
+    IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+  if (hBitmapTab[HAND_TAB] == NULL) {
+    issuccess = FALSE;
+    strcat_s(errors, sizeof errors, "unicorntab_bg.bmp ");
+  }
+
   // TODO: (maybe) use file I/O to read directories and copy the file names to load; could possibly parse XML or csv files too
-  hBitmapCard[0] = (HBITMAP)LoadImage(NULL, "Assets\\back.bmp",
+  char cardname[64];
+  for (int i = 0; i < 13; i++) {
+    snprintf(cardname, sizeof cardname, "Assets\\Cards\\default_%03d.bmp", i + 1);
+    hBitmapCard[i] = (HBITMAP)LoadImage(NULL, cardname,
+      IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+    if (hBitmapCard[i] == NULL) {
+      issuccess = FALSE;
+      strcat_s(errors, sizeof errors, cardname);
+      strcat_s(errors, sizeof errors, " ");
+    }
+  }
+  hBitmapCard[13] = (HBITMAP)LoadImage(NULL, "Assets\\back.bmp",
     IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
   if (hBitmapCard[0] == NULL) {
     issuccess = FALSE;
     strcat_s(errors, sizeof errors, "back.bmp ");
   }
-  hBitmapCard[1] = (HBITMAP)LoadImage(NULL, "Assets\\default_superneigh.bmp",
+  hBitmapCard[14] = (HBITMAP)LoadImage(NULL, "Assets\\default_superneigh.bmp",
     IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
   if (hBitmapCard[1] == NULL) {
     issuccess = FALSE;
@@ -839,9 +966,9 @@ void InitFonts(HWND hWnd) {
   fonts[OLDFONT] = GetCurrentObject(hdc, OBJ_FONT); // save old font
 
   pxpi = GetDeviceCaps(hdc, LOGPIXELSY); // pixels-per-inch
+
   points = 30;
   pxheight = -(points * pxpi / pntpi);
-
   fonts[CHONKYFONT] = CreateFontA(pxheight, 0, // size
     0, 0,               // normal orientation
     FW_BOLD,            // normal weight--e.g., bold would be FW_BOLD
@@ -866,6 +993,19 @@ void InitFonts(HWND hWnd) {
     VARIABLE_PITCH | FF_SWISS,
     "Arial");
 
+  points = 11;
+  pxheight = -(points * pxpi / pntpi);
+  fonts[ITALICFONT] = CreateFontA(pxheight, 0, // size
+    0, 0,               // normal orientation
+    FW_NORMAL,          // normal weight--e.g., bold would be FW_BOLD
+    TRUE, NULL, NULL,   // italic, not underlined or strike out
+    DEFAULT_CHARSET,
+    OUT_OUTLINE_PRECIS, // select only outline (not bitmap) fonts
+    CLIP_DEFAULT_PRECIS,
+    CLEARTYPE_QUALITY,
+    VARIABLE_PITCH | FF_SWISS,
+    "Times New Roman");
+
   LPCWSTR font_resource = L"Assets\\runescape_large.ttf";
   AddFontResource(font_resource);
 
@@ -885,7 +1025,7 @@ void InitFonts(HWND hWnd) {
   fonts[FANCYITALICS] = CreateFontA(pxheight, 0, // size
     0, 0,                 // normal orientation
     FW_NORMAL,            // normal weight--e.g., bold would be FW_BOLD
-    TRUE, NULL, NULL,     // not italic, underlined or strike out
+    TRUE, NULL, NULL,     // italic, not underlined or strike out
     DEFAULT_CHARSET,
     OUT_OUTLINE_PRECIS,   // select only outline (not bitmap) fonts
     CLIP_DEFAULT_PRECIS,
@@ -934,6 +1074,7 @@ void InitDebugMode() {
   // player 1: host
   // this should output 7 unicorns in the first page and 1 in the 2nd page
   strcpy_s(player[0].username, sizeof player[0].username, "host");
+  // strcpy_s(player[0].username, sizeof player[0].username, "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW");
   player[0].icon = BABYNARWHAL;
   for (int i = 0; i < 10; i++) {
     BOOL isvalid = FALSE;
@@ -1039,10 +1180,11 @@ void HoverTitle(POINT pnt) {
   int state = titlebuttons;
   istitleHover = FALSE;
 
-  for (int i = 0; i < 5; i++) {
+  for (int i = 0; i < 3; i++) {
     if (pnt.x >= buttonManager2D[state][i].x && pnt.x <= buttonManager2D[state][i].x + buttonManager2D[state][i].width &&
       pnt.y >= buttonManager2D[state][i].y && pnt.y <= buttonManager2D[state][i].y + buttonManager2D[state][i].height) {
         buttonManager2D[state][i].onHover(&buttonManager2D[state][i], &istitleHover);
+        return;
     }
   }
 }
@@ -1223,7 +1365,7 @@ void ClickDebug(POINT pnt) {
     if (pnt.x >= player_nums[i].x && pnt.x < player_nums[i].x + player_nums[i].width &&
       pnt.y >= player_nums[i].y && pnt.y < player_nums[i].y + player_nums[i].height) {
       pnumindex = i;
-      tabnum = UNICORN_TAB; // TODO: it might be more beneficial to keep the same tab? ask other people
+      // tabnum = UNICORN_TAB; // TODO: it might be more beneficial to keep the same tab? ask other people
       pagenum = 1;
     }
   }
@@ -1304,6 +1446,14 @@ void PaintDebug(HDC hdc, HDC *hdcMem) {
     SelectObject(hdcSprite, oldSprite);
   }
 
+  // display the nursery and discard pile if they are not empty
+  if (nursery_index < NURSERY_SIZE) {
+    oldSprite = SelectObject(hdcSprite, hBitmapCard[nursery_index]);
+    BitBlt(*hdcMem, buttonManager2D[debugbuttons][NURSERY_TAB].x, buttonManager2D[debugbuttons][NURSERY_TAB].y, buttonManager2D[debugbuttons][NURSERY_TAB].width, buttonManager2D[debugbuttons][NURSERY_TAB].height, hdcSprite, 0, 0, SRCCOPY);
+    SelectObject(hdcSprite, oldSprite);
+  }
+
+  // display the list of cards under the current tab
   DisplayCardWindow(hdcMem, &hdcSprite, pagenum, &tabsize, tabnum);
   DeleteDC(hdcSprite);
 
@@ -1540,6 +1690,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     }
     for (int i = 0; i < sizeof buttonManager2D[debugbuttons] / sizeof buttonManager2D[debugbuttons][0]; i++) {
       DeleteObject(buttonManager2D[debugbuttons][i].bitmap);
+    }
+    for (int i = 0; i < sizeof hBitmapTab / sizeof hBitmapTab[0]; i++) {
+      DeleteObject(hBitmapTab[i]);
     }
     for (int i = 0; i < sizeof hBitmapCard / sizeof hBitmapCard[0]; i++) {
       DeleteObject(hBitmapCard[i]);

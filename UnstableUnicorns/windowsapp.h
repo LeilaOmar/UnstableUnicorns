@@ -41,7 +41,8 @@ struct Button {
 };
 
 struct ToolTip {
-	char title[128];
+	char title[64];
+	char subtitle[64];
 	char msg[512];
 	int x;
 	int y;
@@ -50,6 +51,7 @@ struct ToolTip {
 	BOOL ishover;
 	int fonttxt;
 	int fonttitle;
+	COLORREF bgcolor;
 };
 
 // callback functions
