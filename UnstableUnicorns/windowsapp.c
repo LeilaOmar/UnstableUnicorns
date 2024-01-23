@@ -32,7 +32,7 @@ HWND gamethread, networkthread, textNameHwnd, portHwnd, codeHwnd;
 DWORD tId, tIdweb;
 WNDCLASSEX wcexHost;
 WNDCLASSEX wcexJoin;
-HBITMAP hBitmapBG[NUMSTATES], hBitmapBorder[MAX_PLAYERS], hBitmapCard[15], hBitmapTab[3];
+HBITMAP hBitmapBG[NUMSTATES], hBitmapBorder[MAX_PLAYERS], hBitmapCard[84], hBitmapTab[3];
 BOOL windowOpen[2] = { FALSE };
 BOOL childWindow[2] = { FALSE };
 HFONT fonts[NUMCUSTOMFONTS] = { NULL };
@@ -55,6 +55,141 @@ const COLORREF cardColors[] = {
   RGB(134, 200,  80),   // magic color            - lime green
   RGB(244,  29,  37),   // instant color          - red
 };
+
+// TODO: (see LoadCards) this is an example of what such a script for generating card->bitmap indices could look like
+const unsigned int cardmap[] = {
+   0,   // 1: Baby Unicorn (Red) [ID: 0]
+   1,   // 2: Baby Unicorn (Pink) [ID: 1]
+   2,   // 3: Baby Unicorn (Orange) [ID: 2]
+   3,   // 4: Baby Unicorn (Yellow) [ID: 3]
+   4,   // 5: Baby Unicorn (Green) [ID: 4]
+   5,   // 6: Baby Unicorn (Blue) [ID: 5]
+   6,   // 7: Baby Unicorn (Purple) [ID: 6]
+   7,   // 8: Baby Unicorn (Black) [ID: 7]
+   8,   // 9: Baby Unicorn (White) [ID: 8]
+   9,   // 10: Baby Unicorn (Brown) [ID: 9]
+  10,   // 11: Baby Unicorn (Rainbow) [ID: 10]
+  11,   // 12: Baby Unicorn (Death) [ID: 11]
+  12,   // 13: Baby Narwhal [ID: 12]
+  13,   // 1: Basic Unicorn (Red) [ID: 13]
+  13,   // 2: Basic Unicorn (Red) [ID: 14]
+  13,   // 3: Basic Unicorn (Red) [ID: 15]
+  14,   // 4: Basic Unicorn (Orange) [ID: 16]
+  14,   // 5: Basic Unicorn (Orange) [ID: 17]
+  14,   // 6: Basic Unicorn (Orange) [ID: 18]
+  15,   // 7: Basic Unicorn (Yellow) [ID: 19]
+  15,   // 8: Basic Unicorn (Yellow) [ID: 20]
+  15,   // 9: Basic Unicorn (Yellow) [ID: 21]
+  16,   // 10: Basic Unicorn (Green) [ID: 22]
+  16,   // 11: Basic Unicorn (Green) [ID: 23]
+  16,   // 12: Basic Unicorn (Green) [ID: 24]
+  17,   // 13: Basic Unicorn (Blue) [ID: 25]
+  17,   // 14: Basic Unicorn (Blue) [ID: 26]
+  17,   // 15: Basic Unicorn (Blue) [ID: 27]
+  18,   // 16: Basic Unicorn (Indigo) [ID: 28]
+  18,   // 17: Basic Unicorn (Indigo) [ID: 29]
+  18,   // 18: Basic Unicorn (Indigo) [ID: 30]
+  19,   // 19: Basic Unicorn (Purple) [ID: 31]
+  19,   // 20: Basic Unicorn (Purple) [ID: 32]
+  19,   // 21: Basic Unicorn (Purple) [ID: 33]
+  20,   // 22: Narwhal [ID: 34]
+  20,   // 23: Narwhal [ID: 35]
+  20,   // 24: Narwhal [ID: 36]
+  21,   // 25: Rhinocorn [ID: 37]
+  22,   // 26: Extremely Fertile Unicorn [ID: 38]
+  23,   // 27: Magical Kittencorn [ID: 39]
+  24,   // 28: Stabby the Unicorn [ID: 40]
+  25,   // 29: Puppicorn [ID: 41]
+  26,   // 30: Rainbow Unicorn [ID: 42]
+  27,   // 31: Zombie Unicorn [ID: 43]
+  28,   // 32: Extremely Destructive Unicorn [ID: 44]
+  29,   // 33: Chainsaw Unicorn [ID: 45]
+  30,   // 34: Llamacorn [ID: 46]
+  31,   // 35: Americorn [ID: 47]
+  32,   // 36: Ginormous Unicorn [ID: 48]
+  33,   // 37: Seductive Unicorn [ID: 49]
+  34,   // 38: Angel Unicorn [ID: 50]
+  35,   // 39: Queen Bee Unicorn [ID: 51]
+  36,   // 40: Greedy Flying Unicorn [ID: 52]
+  37,   // 41: Annoying Flying Unicorn [ID: 53]
+  38,   // 42: Magical Flying Unicorn [ID: 54]
+  39,   // 43: Swift Flying Unicorn [ID: 55]
+  40,   // 44: Majestic Flying Unicorn [ID: 56]
+  41,   // 45: Unicorn Phoenix [ID: 57]
+  42,   // 46: Unicorn on the Cob [ID: 58]
+  43,   // 47: Black Knight Unicorn [ID: 59]
+  44,   // 48: Shark With a Horn [ID: 60]
+  45,   // 49: Shabby the Narwhal [ID: 61]
+  46,   // 50: Narwhal Torpedo [ID: 62]
+  47,   // 51: Alluring Narwhal [ID: 63]
+  48,   // 52: Mermaid Unicorn [ID: 64]
+  49,   // 53: Classy Narwhal [ID: 65]
+  50,   // 54: The Great Narwhal [ID: 66]
+  51,   // 55: Unicorn Poison [ID: 67]
+  51,   // 56: Unicorn Poison [ID: 68]
+  51,   // 57: Unicorn Poison [ID: 69]
+  52,   // 58: Back Kick [ID: 70]
+  52,   // 59: Back Kick [ID: 71]
+  52,   // 60: Back Kick [ID: 72]
+  53,   // 61: Change of Luck [ID: 73]
+  53,   // 62: Change of Luck [ID: 74]
+  54,   // 63: Glitter Tornado [ID: 75]
+  54,   // 64: Glitter Tornado [ID: 76]
+  55,   // 65: Unicorn Swap [ID: 77]
+  55,   // 66: Unicorn Swap [ID: 78]
+  56,   // 67: Re-Target [ID: 79]
+  56,   // 68: Re-Target [ID: 80]
+  57,   // 69: Unfair Bargain [ID: 81]
+  57,   // 70: Unfair Bargain [ID: 82]
+  58,   // 71: Two-For-One [ID: 83]
+  58,   // 72: Two-For-One [ID: 84]
+  59,   // 73: Unicorn Shrinkray [ID: 85]
+  60,   // 74: Targeted Destruction [ID: 86]
+  61,   // 75: Mystical Vortex [ID: 87]
+  62,   // 76: Good Deal [ID: 88]
+  63,   // 77: Shake Up [ID: 89]
+  64,   // 78: Blatant Thievery [ID: 90]
+  65,   // 79: Reset Button [ID: 91]
+  66,   // 80: Rainbow Mane [ID: 92]
+  66,   // 81: Rainbow Mane [ID: 93]
+  66,   // 82: Rainbow Mane [ID: 94]
+  67,   // 83: Extra Tail [ID: 95]
+  67,   // 84: Extra Tail [ID: 96]
+  67,   // 85: Extra Tail [ID: 97]
+  68,   // 86: Glitter Bomb [ID: 98]
+  68,   // 87: Glitter Bomb [ID: 99]
+  69,   // 88: Yay [ID: 100]
+  69,   // 89: Yay [ID: 101]
+  70,   // 90: Unicorn Lasso [ID: 102]
+  71,   // 91: Rainbow Aura [ID: 103]
+  72,   // 92: Double Dutch [ID: 104]
+  73,   // 93: Summoning Ritual [ID: 105]
+  74,   // 94: Barbed Wire [ID: 106]
+  75,   // 95: Pandamonium [ID: 107]
+  76,   // 96: Sadistic Ritual [ID: 108]
+  77,   // 97: Slowdown [ID: 109]
+  78,   // 98: Nanny Cam [ID: 110]
+  79,   // 99: Broken Stable [ID: 111]
+  80,   // 100: Blinding Light [ID: 112]
+  81,   // 101: Tiny Stable [ID: 113]
+  82,   // 102: Neigh [ID: 114]
+  82,   // 103: Neigh [ID: 115]
+  82,   // 104: Neigh [ID: 116]
+  82,   // 105: Neigh [ID: 117]
+  82,   // 106: Neigh [ID: 118]
+  82,   // 107: Neigh [ID: 119]
+  82,   // 108: Neigh [ID: 120]
+  82,   // 109: Neigh [ID: 121]
+  82,   // 110: Neigh [ID: 122]
+  82,   // 111: Neigh [ID: 123]
+  82,   // 112: Neigh [ID: 124]
+  82,   // 113: Neigh [ID: 125]
+  82,   // 114: Neigh [ID: 126]
+  82,   // 115: Neigh [ID: 127]
+  83,   // 116: Super Neigh [ID: 128]
+};
+unsigned int numcardbm = 84;
+HBITMAP hBitmapBack;
 
 // ********************************************************************************
 // ****************************** button management *******************************
@@ -244,7 +379,7 @@ void InitCardButtons(struct Button *b, int size) {
   // start is the starting point for the display, of course, with the scroll bar it could go to 0
   POINT start = { 87, 507 };
   BITMAP bm;
-  GetObject(hBitmapCard[0], (int)sizeof bm, &bm); // fetches width/height; all cards have the same w/h
+  GetObject(hBitmapBack, (int)sizeof bm, &bm); // fetches width/height; all cards have the same w/h
 
   int distance = stablePadding + bm.bmWidth;
 
@@ -419,7 +554,7 @@ void DisplayCardWindow(HDC* hdcMem, HDC* hdcSprite) {
   POINT start = { 87, 507 }; // starting point for the display
   BITMAP bm;
 
-  GetObject(hBitmapCard[0], (int)sizeof bm, &bm); // fetches width/height; all cards have the same w/h
+  GetObject(hBitmapBack, (int)sizeof bm, &bm); // fetches width/height; all cards have the same w/h
   int distance = stablePadding + bm.bmWidth;
 
   // cards are just rectangles, so transparentblt isn't necessary
@@ -453,14 +588,12 @@ void DisplayCardWindow(HDC* hdcMem, HDC* hdcSprite) {
     index_start = count;
 
     for (int i = index_start; i < player[pnumindex].stable.size && skip < 7; i++) {
-      // for now, this cycles through hBitmapCard which only has the super neigh card and the back design
-      // in the future, hBitmapCard could be replaced/assimilated by an updated Unicorn or Deck structure featuring the file name and the loaded hBitmap
       if (checkClass(ANYUNICORN, deck[player[pnumindex].stable.unicorns[i]].class)) {
         // save the source into cardslots
         cardslots[skip].source = &deck[player[pnumindex].stable.unicorns[i]];
 
         // draw the sprite
-        oldSprite = SelectObject(*hdcSprite, hBitmapCard[13 + i % 2]);
+        oldSprite = SelectObject(*hdcSprite, deck[player[pnumindex].stable.unicorns[i]].bitmap);
         BitBlt(*hdcMem, start.x + (distance * skip), start.y, bm.bmWidth, bm.bmHeight, *hdcSprite, 0, 0, SRCCOPY);
         SelectObject(*hdcSprite, oldSprite);
         skip++;
@@ -487,14 +620,12 @@ void DisplayCardWindow(HDC* hdcMem, HDC* hdcSprite) {
     index_start = j;
 
     for (int i = index_start; i < player[pnumindex].stable.size && skip < 7; i++) {
-      // for now, this cycles through hBitmapCard which only has the super neigh card and the back design
-      // in the future, hBitmapCard could be replaced/assimilated by an updated Unicorn or Deck structure featuring the file name and the loaded hBitmap
       if (deck[player[pnumindex].stable.unicorns[i]].class == UPGRADE || deck[player[pnumindex].stable.unicorns[i]].class == DOWNGRADE) {
         // save the source into cardslots
         cardslots[skip].source = &deck[player[pnumindex].stable.unicorns[i]];
 
         // draw the sprite
-        oldSprite = SelectObject(*hdcSprite, hBitmapCard[13 + i % 2]);
+        oldSprite = SelectObject(*hdcSprite, deck[player[pnumindex].stable.unicorns[i]].bitmap);
         BitBlt(*hdcMem, start.x + (distance * skip), start.y, bm.bmWidth, bm.bmHeight, *hdcSprite, 0, 0, SRCCOPY);
         SelectObject(*hdcSprite, oldSprite);
         skip++;
@@ -516,9 +647,7 @@ void DisplayCardWindow(HDC* hdcMem, HDC* hdcSprite) {
       // save the source into cardslots
       cardslots[skip++].source = &deck[player[pnumindex].hand.cards[i]];
 
-      // for now, this cycles through hBitmapCard which only has the super neigh card and the back design
-      // in the future, hBitmapCard could be replaced/assimilated by an updated Unicorn or Deck structure featuring the file name and the loaded hBitmap
-      oldSprite = SelectObject(*hdcSprite, hBitmapCard[13 + i % 2]);
+      oldSprite = SelectObject(*hdcSprite, deck[player[pnumindex].hand.cards[i]].bitmap);
       BitBlt(*hdcMem, start.x + (distance * (i % 7)), start.y, bm.bmWidth, bm.bmHeight, *hdcSprite, 0, 0, SRCCOPY);
       SelectObject(*hdcSprite, oldSprite);
     }
@@ -533,9 +662,7 @@ void DisplayCardWindow(HDC* hdcMem, HDC* hdcSprite) {
       // save the source into cardslots
       cardslots[skip++].source = &deck[nursery_ref[i]];
 
-      // for now, this cycles through hBitmapCard which only has the super neigh card and the back design
-      // in the future, hBitmapCard could be replaced/assimilated by an updated Unicorn or Deck structure featuring the file name and the loaded hBitmap
-      oldSprite = SelectObject(*hdcSprite, hBitmapCard[i]);
+      oldSprite = SelectObject(*hdcSprite, deck[nursery_ref[i]].bitmap);
       BitBlt(*hdcMem, start.x + (distance * (i % 7)), start.y, bm.bmWidth, bm.bmHeight, *hdcSprite, 0, 0, SRCCOPY);
       SelectObject(*hdcSprite, oldSprite);
     }
@@ -556,9 +683,8 @@ void DisplayCardWindow(HDC* hdcMem, HDC* hdcSprite) {
       // save the source into cardslots
       cardslots[skip++].source = &deck[deck_ref[i]];
 
-      // for now, this cycles through hBitmapCard which only has the super neigh card and the back design
-      // in the future, hBitmapCard could be replaced/assimilated by an updated Unicorn or Deck structure featuring the file name and the loaded hBitmap
-      oldSprite = SelectObject(*hdcSprite, hBitmapCard[13 + i % 2]);
+      // oldSprite = SelectObject(*hdcSprite, hBitmapCard[cardmap[deck_ref[i]]]);
+      oldSprite = SelectObject(*hdcSprite, deck[deck_ref[i]].bitmap);
       BitBlt(*hdcMem, start.x + (distance * (i % 7)), start.y, bm.bmWidth, bm.bmHeight, *hdcSprite, 0, 0, SRCCOPY);
       SelectObject(*hdcSprite, oldSprite);
     }
@@ -574,9 +700,7 @@ void DisplayCardWindow(HDC* hdcMem, HDC* hdcSprite) {
       // save the source into cardslots
       cardslots[skip++].source = &deck[discard_ref[i]];
 
-      // for now, this cycles through hBitmapCard which only has the super neigh card and the back design
-      // in the future, hBitmapCard could be replaced/assimilated by an updated Unicorn or Deck structure featuring the file name and the loaded hBitmap
-      oldSprite = SelectObject(*hdcSprite, hBitmapCard[i % 2]);
+      oldSprite = SelectObject(*hdcSprite, deck[discard_ref[i]].bitmap);
       BitBlt(*hdcMem, start.x + (distance * (i % 7)), start.y, bm.bmWidth, bm.bmHeight, *hdcSprite, 0, 0, SRCCOPY);
       SelectObject(*hdcSprite, oldSprite);
     }
@@ -870,34 +994,90 @@ void LoadImages(HWND hWnd) {
     strcat_s(errors, sizeof errors, "unicorntab_bg.bmp ");
   }
 
-  // TODO: (maybe) use file I/O to read directories and copy the file names to load; could possibly parse XML or csv files too
-  char cardname[64];
-  for (int i = 0; i < 13; i++) {
-    snprintf(cardname, sizeof cardname, "Assets\\Cards\\default_%03d.bmp", i + 1);
-    hBitmapCard[i] = (HBITMAP)LoadImage(NULL, cardname,
-      IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-    if (hBitmapCard[i] == NULL) {
-      issuccess = FALSE;
-      strcat_s(errors, sizeof errors, cardname);
-      strcat_s(errors, sizeof errors, " ");
-    }
+  // char cardname[64];
+  // for (int i = 0; i < numcardbm; i++) {
+  //   snprintf(cardname, sizeof cardname, "Assets\\Cards\\default_%03d.bmp", i + 1);
+  //   hBitmapCard[i] = (HBITMAP)LoadImage(NULL, cardname,
+  //     IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+  //   if (hBitmapCard[i] == NULL) {
+  //     issuccess = FALSE;
+  //     strcat_s(errors, sizeof errors, cardname + 13);
+  //     strcat_s(errors, sizeof errors, " ");
+  //   }
+  // }
+
+  if (issuccess == FALSE) {
+    MessageBox(hWnd, errors, "Error", MB_OK);
   }
-  hBitmapCard[13] = (HBITMAP)LoadImage(NULL, "Assets\\back.bmp",
+}
+
+// TODO: this isn't totally fool-proof because it doesn't map the deck index w/ the file names
+// it's just assuming that the images/deck are both sorted
+// writing a script to generate a map might be easier and/or more maintainable *shrugs*
+void LoadCards(HWND hWnd) {
+
+  // TODO: (maybe) use a default error texture for files that couldn't load in the case of missing files
+  // ideally the error texture(s) should just be a resource file tbh, same for the back of the card
+
+  char errors[9999] = "Failed to load cards(s) ";
+  BOOL issuccess = TRUE;
+
+  // the back of the card; used for unknown cards that the player shouldn't know (i.e. someone else's hand)
+  hBitmapBack = (HBITMAP)LoadImage(NULL, "Assets\\back.bmp",
     IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-  if (hBitmapCard[0] == NULL) {
+  if (hBitmapBack == NULL) {
     issuccess = FALSE;
     strcat_s(errors, sizeof errors, "back.bmp ");
   }
-  hBitmapCard[14] = (HBITMAP)LoadImage(NULL, "Assets\\default_superneigh.bmp",
+
+  // read through the file directory to find the bitmaps
+  HANDLE fileHandle;
+  WIN32_FIND_DATA ffd;
+  fileHandle = FindFirstFile("Assets\\Cards\\*.bmp", &ffd);
+  
+  char tmp[128];
+  int decksize = sizeof deck / sizeof deck[0];
+  int index = 0;
+
+  snprintf(tmp, sizeof tmp,  "Assets\\Cards\\%s", ffd.cFileName);
+  deck[index].bitmap = (HBITMAP)LoadImage(NULL, tmp,
     IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-  if (hBitmapCard[1] == NULL) {
+  if (deck[index].bitmap == NULL) {
     issuccess = FALSE;
-    strcat_s(errors, sizeof errors, "default_superneigh.bmp ");
+    strcat_s(errors, sizeof errors, ffd.cFileName);
+    strcat_s(errors, sizeof errors, ", ");
+  }
+  index++;
+  FindNextFile(fileHandle, &ffd);
+
+  do {
+    // assuming the deck is already sorted
+    while (index < decksize && strcmp(deck[index].name, deck[index - 1].name) == 0) {
+      deck[index].bitmap = deck[index - 1].bitmap;
+      index++;
+    }
+
+    snprintf(tmp, sizeof tmp, "Assets\\Cards\\%s", ffd.cFileName);
+    deck[index].bitmap = (HBITMAP)LoadImage(NULL, tmp,
+      IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+    if (deck[index].bitmap == NULL) {
+      issuccess = FALSE;
+      strcat_s(errors, sizeof errors, ffd.cFileName);
+      strcat_s(errors, sizeof errors, ", ");
+    }
+    index++;
+  } while (FindNextFile(fileHandle, &ffd) != 0 && index < decksize);
+
+  // in case there are missing files, in which i should have just named the cards after their names in the deck
+  while (index < decksize) {
+    deck[index++].bitmap = hBitmapBack;
   }
 
   if (issuccess == FALSE) {
     MessageBox(hWnd, errors, "Error", MB_OK);
   }
+
+  FindClose(fileHandle);
 }
 
 void InitFonts(HWND hWnd) {
@@ -1384,13 +1564,13 @@ void PaintDebug(HDC hdc, HDC *hdcMem) {
 
   // display the nursery and discard pile if they are not empty
   if (nursery_index < NURSERY_SIZE) {
-    oldSprite = SelectObject(hdcSprite, hBitmapCard[nursery_ref[nursery_index]]);
+    oldSprite = SelectObject(hdcSprite, deck[nursery_ref[nursery_index]].bitmap);
     BitBlt(*hdcMem, debugButtons[NURSERY_TAB].x, debugButtons[NURSERY_TAB].y, debugButtons[NURSERY_TAB].width, debugButtons[NURSERY_TAB].height, hdcSprite, 0, 0, SRCCOPY);
     SelectObject(hdcSprite, oldSprite);
   }
 
   if (discard_index > 0) {
-    oldSprite = SelectObject(hdcSprite, hBitmapCard[discard_ref[discard_index]]);
+    oldSprite = SelectObject(hdcSprite, deck[discard_ref[discard_index]].bitmap);
     BitBlt(*hdcMem, debugButtons[DISCARD_TAB].x, debugButtons[DISCARD_TAB].y, debugButtons[DISCARD_TAB].width, debugButtons[DISCARD_TAB].height, hdcSprite, 0, 0, SRCCOPY);
     SelectObject(hdcSprite, oldSprite);
 
@@ -1511,6 +1691,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
   {
   case WM_CREATE:
     LoadImages(hWnd);
+    LoadCards(hWnd);
     InitFonts(hWnd);
     InitButtonManager(hWnd);
     InitStateMachine();
@@ -1544,6 +1725,23 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
     break;
   }
+  case WM_KEYDOWN:
+    // TODO: don't forget to add the gamestate here too
+    if (menustate != DEBUGMODE) {
+      break;
+    }
+
+    // TODO: (bug) hoverTip doesn't update when the page turns, so it's a bit scuffed...
+    if (wParam == VK_LEFT || wParam == 0x41 || wParam == 0x61) {
+      // user pressed the left arrow key, 'a', or 'A'
+      TurnPage(PAGE_LEFT);
+    }
+    else if (wParam == VK_RIGHT || wParam == 0x44 || wParam == 0x64) {
+      // user pressed the right arrow key, 'd', or 'D'
+      TurnPage(PAGE_RIGHT);
+    }
+
+    break;
   case WM_PAINT:
   {
     // TODO: DON'T use UpdateLayeredWindow() instead of WM_PAINT, but it's nice to know about though
@@ -1596,12 +1794,17 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     for (int i = 0; i < sizeof hBitmapTab / sizeof hBitmapTab[0]; i++) {
       DeleteObject(hBitmapTab[i]);
     }
-    for (int i = 0; i < sizeof hBitmapCard / sizeof hBitmapCard[0]; i++) {
-      DeleteObject(hBitmapCard[i]);
+    // for (int i = 0; i < sizeof hBitmapCard / sizeof hBitmapCard[0]; i++) {
+    //   DeleteObject(hBitmapCard[i]);
+    // }
+    for (int i = 0; i < sizeof deck / sizeof deck[0]; i++) {
+      DeleteObject(deck[i].bitmap);
     }
+    DeleteObject(hBitmapBack);
     DestroyFonts();
     PostQuitMessage(0);
-    CloseHandle(mutex);
+    if (mutex != NULL)
+      CloseHandle(mutex);
     WSACleanup();
     break;
   }

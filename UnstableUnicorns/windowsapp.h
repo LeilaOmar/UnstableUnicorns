@@ -81,6 +81,7 @@ void InitButtonManager(HWND);
 
 // initializing/deinitializing data
 void LoadImages(HWND);
+void LoadCards(HWND);
 void InitFonts(HDC);
 void DestroyFonts();
 void InitDebugMode();

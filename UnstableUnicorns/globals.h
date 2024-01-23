@@ -41,6 +41,7 @@ struct Unicorn {
                           // 10 = Other or N/A [for now...]
   char name[NAME_SIZE];
   char description[DESC_SIZE];
+  HBITMAP bitmap;
   short
     effect;  // switch table; 0 = nothing
              // 1 = DRAW 1 card (when this card enters your stable - >
