@@ -36,7 +36,6 @@ struct Button {
 	char	filename[64];			// filename of bitmap source
 	HBITMAP bitmap;					// bitmap for button asset
 	void* source;						// void variable to use as a reference for functions
-	void (*onHover)(struct Button*, void*);	// function that triggers on mouse hover
 	void (*onClick)(void*);	// function that triggers on left mouse click
 };
 
@@ -64,21 +63,20 @@ LRESULT CALLBACK WndProcJoin(HWND, UINT, WPARAM, LPARAM);
 
 void CreateHostWindow(HWND);
 void CreateJoinWindow(HWND);
-void DisplayCardWindow(HDC*, HDC*, int, int*, int);
+void DisplayCardWindow(HDC*, HDC*);
 void CreateCustomToolTip(HDC*);
-void ReturnCardHoverTip(struct Button*, struct ToolTip*);
-void ReturnPlayerHoverTip(struct Button*, struct ToolTip*);
+struct ToolTip ReturnCardHoverTip(struct Button);
+struct ToolTip ReturnPlayerHoverTip(int, int, int);
 
 // button management
 
-void HornPosition(struct Button*, BOOL*);
-void InitTitleButtons(struct Button*, HWND);
-void InitRuleButtons(struct Button*);
+void HornPosition(struct Button);
+void InitTitleButtons(struct Button*, HWND, int);
+void InitRuleButtons(struct Button*, int);
 void InitLobbyButtons(struct Button*);
 void InitCardWindowButtons(struct Button*);
-void InitCardButtons();
-void InitDeckButtons();
-void InitPlayerButtons();
+void InitCardButtons(struct Button*, int);
+void InitDeckButtons(struct Button*);
 void InitButtonManager(HWND);
 
 // initializing/deinitializing data
@@ -104,13 +102,11 @@ void PaintDebug(HDC, HDC*);
 
 // button function pointers
 
-int StateButtonMap(int);
 void SwitchState(int);
 void HostGeneration(HWND);
 void JoinGeneration(HWND);
 void StartGame();
 void LeaveLobby();
-void ClickBabyUnicorn(POINT);
 void SwitchTab(int);
 void TurnPage(int);
 

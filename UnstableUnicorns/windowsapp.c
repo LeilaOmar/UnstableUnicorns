@@ -37,16 +37,16 @@ BOOL windowOpen[2] = { FALSE };
 BOOL childWindow[2] = { FALSE };
 HFONT fonts[NUMCUSTOMFONTS] = { NULL };
 
-enum tab tabnum;  // the tab number representation of the window to display on the bottom of the in-game screen
-int tabsize;      // number of total cards within the current tab view array (e.g. if you're looking at the deck, then tabsize could be anywhere from 1 to 115)
-int pagenum = 1;  // the page number within the current tab view array
-BOOL istitleHover; // TODO: maybe combine istitleHover w/ hoverTip.ishover into a single hover boolean check; or combine istitleHover w/ the struct Button "hornbutton"
-struct ToolTip hoverTip;
+enum tab tabnum;    // the tab number representation of the window to display on the bottom of the in-game screen
+int tabsize;        // number of total cards within the current tab view array (e.g. if you're looking at the deck, then tabsize could be anywhere from 1 to 115)
+int pagenum = 1;    // the page number within the current tab view array
+int pnumindex = 0;  // used to switch between player indices to show their respective stables inside the DisplayCardWindow function
 
+struct ToolTip hoverTip;
 int stablePadding = 15; // arbitrary number of pixels to pad between the displayed list of cards in their respective stables/hands/decks
 
 // these are in the same order as UnicornDatatypes, which are used to represent the card classes
-COLORREF cardColors[] = {
+const COLORREF cardColors[] = {
   RGB(185, 109, 171),   // baby unicorn color     - purple
   RGB(107, 116, 181),   // basic unicorn color    - dark periwinkle (blue)
   RGB( 32, 189, 242),   // magical unicorn color  - aqua blue
@@ -56,7 +56,47 @@ COLORREF cardColors[] = {
   RGB(244,  29,  37),   // instant color          - red
 };
 
-// left, top, right, bottom
+// ********************************************************************************
+// ****************************** button management *******************************
+// ********************************************************************************
+
+struct Button hornbutton;
+struct Button titleButtons[3];
+struct Button ruleButtons[3];
+struct Button lobbyButtons[2];
+struct Button debugButtons[8];
+struct Button cardslots[7];
+
+// TODO: potentially rename these to icon[1-13]?
+struct Button icons[] = {
+  { 1064, 28, 95, 81,     "Assets\\icon_red.bmp", NULL, NULL, NULL },
+  { 1064, 28, 95, 81,    "Assets\\icon_pink.bmp", NULL, NULL, NULL },
+  { 1064, 28, 95, 81,  "Assets\\icon_orange.bmp", NULL, NULL, NULL },
+  { 1064, 28, 95, 81,  "Assets\\icon_yellow.bmp", NULL, NULL, NULL },
+  { 1064, 28, 95, 81,   "Assets\\icon_green.bmp", NULL, NULL, NULL },
+  { 1064, 28, 95, 81,    "Assets\\icon_blue.bmp", NULL, NULL, NULL },
+  { 1064, 28, 95, 81,  "Assets\\icon_purple.bmp", NULL, NULL, NULL },
+  { 1064, 28, 95, 81,   "Assets\\icon_black.bmp", NULL, NULL, NULL },
+  { 1064, 28, 95, 81,   "Assets\\icon_white.bmp", NULL, NULL, NULL },
+  { 1064, 28, 95, 81,   "Assets\\icon_brown.bmp", NULL, NULL, NULL },
+  { 1064, 28, 95, 81, "Assets\\icon_rainbow.bmp", NULL, NULL, NULL },
+  { 1064, 28, 95, 81,   "Assets\\icon_death.bmp", NULL, NULL, NULL },
+  { 1064, 28, 95, 81, "Assets\\icon_narwhal.bmp", NULL, NULL, NULL }
+};
+struct Button player_nums[] = {
+  { 1064, 28,  95, 81, "Assets\\player1.bmp", NULL, NULL, NULL },
+  { 1175, 28,  95, 81, "Assets\\player2.bmp", NULL, NULL, NULL },
+  { 1064, 118, 95, 81, "Assets\\player3.bmp", NULL, NULL, NULL },
+  { 1175, 118, 95, 81, "Assets\\player4.bmp", NULL, NULL, NULL },
+  { 1064, 208, 95, 81, "Assets\\player5.bmp", NULL, NULL, NULL },
+  { 1175, 208, 95, 81, "Assets\\player6.bmp", NULL, NULL, NULL },
+  { 1064, 298, 95, 81, "Assets\\player7.bmp", NULL, NULL, NULL },
+  { 1175, 298, 95, 81, "Assets\\player8.bmp", NULL, NULL, NULL }
+};
+struct Button stable_nums[8];
+
+// baby unicorn point coordinates in the lobby selection
+// ordered: left, top, right, bottom
 const RECT babies[] = {
   {  659,  243,  748,  332 },   // BABYRED
   {  779,  243,  868,  332 },   // BABYPINK
@@ -75,75 +115,28 @@ const RECT babies[] = {
   { 1019,  473, 1108,  562 },   // BABYNARWHAL
 };
 
-// only used for providing addresses for the sources in the player_nums button array
-int arbitrarypnum[] = { 0, 1, 2, 3, 4, 5, 6, 7 };
-
-// used to switch between player indices to show their respective stables inside the DisplayCardWindow function
-int pnumindex = 0;
-
-// TODO: potentially rename these to icon[1-13]?
-struct Button icons[] = {
-  { 1064, 28, 95, 81, "Assets\\icon_red.bmp", NULL },
-  { 1064, 28, 95, 81, "Assets\\icon_pink.bmp", NULL },
-  { 1064, 28, 95, 81, "Assets\\icon_orange.bmp", NULL },
-  { 1064, 28, 95, 81, "Assets\\icon_yellow.bmp", NULL },
-  { 1064, 28, 95, 81, "Assets\\icon_green.bmp", NULL },
-  { 1064, 28, 95, 81, "Assets\\icon_blue.bmp", NULL },
-  { 1064, 28, 95, 81, "Assets\\icon_purple.bmp", NULL },
-  { 1064, 28, 95, 81, "Assets\\icon_black.bmp", NULL },
-  { 1064, 28, 95, 81, "Assets\\icon_white.bmp", NULL },
-  { 1064, 28, 95, 81, "Assets\\icon_brown.bmp", NULL },
-  { 1064, 28, 95, 81, "Assets\\icon_rainbow.bmp", NULL },
-  { 1064, 28, 95, 81, "Assets\\icon_death.bmp", NULL },
-  { 1064, 28, 95, 81, "Assets\\icon_narwhal.bmp", NULL }
-};
-struct Button player_nums[] = {
-  { 1064, 28,  95, 81, "Assets\\player1.bmp", NULL, &arbitrarypnum[0], ReturnPlayerHoverTip, NULL },
-  { 1175, 28,  95, 81, "Assets\\player2.bmp", NULL, &arbitrarypnum[1], ReturnPlayerHoverTip, NULL },
-  { 1064, 118, 95, 81, "Assets\\player3.bmp", NULL, &arbitrarypnum[2], ReturnPlayerHoverTip, NULL },
-  { 1175, 118, 95, 81, "Assets\\player4.bmp", NULL, &arbitrarypnum[3], ReturnPlayerHoverTip, NULL },
-  { 1064, 208, 95, 81, "Assets\\player5.bmp", NULL, &arbitrarypnum[4], ReturnPlayerHoverTip, NULL },
-  { 1175, 208, 95, 81, "Assets\\player6.bmp", NULL, &arbitrarypnum[5], ReturnPlayerHoverTip, NULL },
-  { 1064, 298, 95, 81, "Assets\\player7.bmp", NULL, &arbitrarypnum[6], ReturnPlayerHoverTip, NULL },
-  { 1175, 298, 95, 81, "Assets\\player8.bmp", NULL, &arbitrarypnum[7], ReturnPlayerHoverTip, NULL }
-};
-struct Button stable_nums[8];
-
+// for the player number border surrounding the baby unicorn selection in the lobby
 #define BORDERWIDTH 97
 
-// ********************************************************************************
-// ****************************** button management *******************************
-// ********************************************************************************
-
-enum buttontypes { titlebuttons, rulebuttons, lobbybuttons, debugbuttons, numsubsets };
-
-struct Button buttonManager2D[numsubsets][8];
-struct Button hornbutton;
-struct Button cardslots[7];
-
 // calculates the position for the horn select bitmap that centers around the hovered button
-void HornPosition(struct Button *self, BOOL *hover) {
+void HornPosition(struct Button b) {
   HGDIOBJ oldSprite;
 
   int xdiff = -93;
   int ydiff = 17;
 
-  hornbutton.x = self->x + xdiff;
-  hornbutton.y = self->y + ydiff;
-  *hover = TRUE;
+  hornbutton.x = b.x + xdiff;
+  hornbutton.y = b.y + ydiff;
+  hornbutton.source = TRUE;
 }
 
-void InitTitleButtons(struct Button *b, HWND hWnd) {
-  int size = 3;
-  // *b = (struct Button*)calloc(size, sizeof(struct Button));
-
+void InitTitleButtons(struct Button *b, HWND hWnd, int size) {
   // horn is at point 435, 402 for the first button
   for (int i = 0; i < size; i++) {
     b[i].x = 528;
     b[i].y = 385 + (i * 100);
     b[i].width = 230;
     b[i].height = 75;
-    b[i].onHover = HornPosition;
   }
 
   b[0].source = hWnd;
@@ -161,15 +154,11 @@ void InitTitleButtons(struct Button *b, HWND hWnd) {
     IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
 }
 
-void InitRuleButtons(struct Button *b) {
-  int size = 3;
-  // b = (struct Button*)malloc(size * sizeof(struct Button));
-
+void InitRuleButtons(struct Button *b, int size) {
   for (int i = 0; i < size; i++) {
     b[i].y = 619;
     b[i].width = 32;
     b[i].height = 32;
-    b[i].onHover = NULL;
     b[i].onClick = SwitchState;
   }
 
@@ -185,16 +174,12 @@ void InitRuleButtons(struct Button *b) {
 }
 
 void InitLobbyButtons(struct Button *b) {
-  int size = 2;
-  // b = (struct Button*)malloc(size * sizeof(struct Button));
-
   // start game
   b[0].x = 120;
   b[0].y = 590;
   b[0].width = 190;
   b[0].height = 50;
   b[0].source = GAMESTART;
-  b[0].onHover = NULL;
   b[0].onClick = StartGame;
 
   // leave lobby
@@ -203,7 +188,6 @@ void InitLobbyButtons(struct Button *b) {
   b[1].width = 190;
   b[1].height = 50;
   b[0].source = TITLEBLANK;
-  b[1].onHover = NULL;
   b[1].onClick = LeaveLobby;
 }
 
@@ -214,7 +198,6 @@ void InitCardWindowButtons(struct Button *b) {
   b[UNICORN_TAB].width = 233;
   b[UNICORN_TAB].height = 29;
   b[UNICORN_TAB].source = UNICORN_TAB;
-  b[UNICORN_TAB].onHover = NULL;
   b[UNICORN_TAB].onClick = SwitchTab;
 
   // upgrade/downgrade tab
@@ -223,7 +206,6 @@ void InitCardWindowButtons(struct Button *b) {
   b[UPGRADE_TAB].width = 273;
   b[UPGRADE_TAB].height = 29;
   b[UPGRADE_TAB].source = UPGRADE_TAB;
-  b[UPGRADE_TAB].onHover = NULL;
   b[UPGRADE_TAB].onClick = SwitchTab;
 
   // hand tab
@@ -232,7 +214,6 @@ void InitCardWindowButtons(struct Button *b) {
   b[HAND_TAB].width = 272;
   b[HAND_TAB].height = 29;
   b[HAND_TAB].source = HAND_TAB;
-  b[HAND_TAB].onHover = NULL;
   b[HAND_TAB].onClick = SwitchTab;
 
   // TODO: incorporate error msg in case of failure
@@ -242,7 +223,6 @@ void InitCardWindowButtons(struct Button *b) {
   b[PAGE_LEFT].width = 80;
   b[PAGE_LEFT].height = 59;
   b[PAGE_LEFT].source = PAGE_LEFT;
-  b[PAGE_LEFT].onHover = NULL;
   b[PAGE_LEFT].onClick = TurnPage;
   strcpy_s(b[PAGE_LEFT].filename, sizeof b[PAGE_LEFT].filename, "Assets\\pageleft.bmp");
   b[PAGE_LEFT].bitmap = (HBITMAP)LoadImage(NULL, b[PAGE_LEFT].filename,
@@ -254,15 +234,13 @@ void InitCardWindowButtons(struct Button *b) {
   b[PAGE_RIGHT].width = 80;
   b[PAGE_RIGHT].height = 59;
   b[PAGE_RIGHT].source = PAGE_RIGHT;
-  b[PAGE_RIGHT].onHover = NULL;
   b[PAGE_RIGHT].onClick = TurnPage;
   strcpy_s(b[PAGE_RIGHT].filename, sizeof b[PAGE_RIGHT].filename, "Assets\\pageright.bmp");
   b[PAGE_RIGHT].bitmap = (HBITMAP)LoadImage(NULL, b[PAGE_RIGHT].filename,
     IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
 }
 
-void InitCardButtons() {
-
+void InitCardButtons(struct Button *b, int size) {
   // start is the starting point for the display, of course, with the scroll bar it could go to 0
   POINT start = { 87, 507 };
   BITMAP bm;
@@ -270,15 +248,15 @@ void InitCardButtons() {
 
   int distance = stablePadding + bm.bmWidth;
 
-  for (int i = 0; i < sizeof cardslots / sizeof cardslots[0]; i++) {
-    cardslots[i].x = start.x + (distance * i);
-    cardslots[i].y = start.y;
-    cardslots[i].width = bm.bmWidth;
-    cardslots[i].height = bm.bmHeight;
-    cardslots[i].filename[0] = '\0';
-    cardslots[i].source = NULL;
-    cardslots[i].onHover = ReturnCardHoverTip;
-    cardslots[i].onClick = NULL;
+  for (int i = 0; i < size; i++) {
+    b[i].x = start.x + (distance * i);
+    b[i].y = start.y;
+    b[i].width = bm.bmWidth;
+    b[i].height = bm.bmHeight;
+    b[i].filename[0] = '\0';
+    b[i].bitmap = NULL;
+    b[i].source = NULL;
+    b[i].onClick = NULL;
   }
 }
 
@@ -310,55 +288,13 @@ void InitDeckButtons(struct Button *b) {
   b[DISCARD_TAB].onClick = SwitchTab;
 }
 
-void InitPlayerButtons() {
-  for (int i = 0; i < MAX_PLAYERS; i++) {
-    player_nums[i].onClick = NULL;
-    player_nums[i].onHover = ReturnPlayerHoverTip;
-  }
-}
-
-void malloctest(struct Button** b) {
-  int size = 3;
-  *b = (struct Button*)calloc(size, sizeof(struct Button));
-}
-
 void InitButtonManager(HWND hWnd) {
-  // buttonManager = (struct Button**)calloc((numsubsets - 1), sizeof(struct Button*));
-
-  // InitTitleButtons(&buttonManager[titlebuttons]);
-
-  // int size = 3;
-  // malloctest(&buttonManager[titlebuttons]);
-  // 
-  // // horn is at point 435, 402 for the first button
-  // for (int i = 0; i < size; i++) {
-  //   buttonManager[titlebuttons][i].x = 528;
-  //   buttonManager[titlebuttons][i].y = 385 + (i * 100);
-  //   buttonManager[titlebuttons][i].width = 230;
-  //   buttonManager[titlebuttons][i].height = 75;
-  //   // b[i]->onHover = HornPosition;
-  //   // b[i]->onClick = SwitchState;
-  // }
-  // 
-  // 
-  // // source is just storing the triggered game state that should occur when clicking the button
-  // buttonManager[titlebuttons][0].source = TITLEHOST;
-  // buttonManager[titlebuttons][1].source = TITLEJOIN;
-  // buttonManager[titlebuttons][2].source = RULESONE;
-  // 
-  // // horn select
-  // hornbutton.width = 416;
-  // hornbutton.height = 40;
-  // hornbutton.bitmap = (HBITMAP)LoadImage(NULL, "Assets\\horn_select.bmp",
-  //   IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-
-  InitTitleButtons(buttonManager2D[titlebuttons], hWnd);
-  InitRuleButtons(buttonManager2D[rulebuttons]);
-  InitLobbyButtons(buttonManager2D[lobbybuttons]);
-  InitCardWindowButtons(buttonManager2D[debugbuttons]);
-  InitCardButtons();
-  InitDeckButtons(buttonManager2D[debugbuttons]);
-  // InitPlayerButtons();
+  InitTitleButtons(titleButtons, hWnd, sizeof titleButtons / sizeof titleButtons[0]);
+  InitRuleButtons(ruleButtons, sizeof ruleButtons / sizeof ruleButtons[0]);
+  InitLobbyButtons(lobbyButtons);
+  InitCardWindowButtons(debugButtons);
+  InitCardButtons(cardslots, sizeof cardslots / sizeof cardslots[0]);
+  InitDeckButtons(debugButtons);
 }
 
 // ********************************************************************************
@@ -475,7 +411,7 @@ void CreateJoinWindow(HWND hwnd) {
   ShowWindow(hWndJoin, SW_NORMAL);
 }
 
-void DisplayCardWindow(HDC* hdcMem, HDC* hdcSprite, int pagenum, int* tabsize, int tabnum) {
+void DisplayCardWindow(HDC* hdcMem, HDC* hdcSprite) {
   // use pages to view the card window in lieu of scroll bars :)
 
   char windowtxt[64]; // tab window info to show the name of the currently viewed stable/deck
@@ -501,7 +437,7 @@ void DisplayCardWindow(HDC* hdcMem, HDC* hdcSprite, int pagenum, int* tabsize, i
     BitBlt(*hdcMem, 0, 497, BWIDTH, 223, *hdcSprite, 0, 0, SRCCOPY);
     SelectObject(*hdcSprite, oldSprite);
 
-    *tabsize = player[pnumindex].stable.num_unicorns;
+    tabsize = player[pnumindex].stable.num_unicorns;
     snprintf(windowtxt, sizeof windowtxt, "%s's Stable", player[pnumindex].username);
 
     // TODO: using the original index_start wouldn't account for skipped upgrade/downgrade cards,
@@ -540,7 +476,7 @@ void DisplayCardWindow(HDC* hdcMem, HDC* hdcSprite, int pagenum, int* tabsize, i
     SelectObject(*hdcSprite, oldSprite);
 
     // TODO: see unicorn_tab for the indexing issues. this is unlikely to happen in a normal game though due to most players having less than 8 up/downgrades
-    *tabsize = player[pnumindex].stable.size - player[pnumindex].stable.num_unicorns;
+    tabsize = player[pnumindex].stable.size - player[pnumindex].stable.num_unicorns;
     snprintf(windowtxt, sizeof windowtxt, "%s's Stable", player[pnumindex].username);
 
     int j = 0;
@@ -573,7 +509,7 @@ void DisplayCardWindow(HDC* hdcMem, HDC* hdcSprite, int pagenum, int* tabsize, i
     BitBlt(*hdcMem, 0, 497, BWIDTH, 223, *hdcSprite, 0, 0, SRCCOPY);
     SelectObject(*hdcSprite, oldSprite);
 
-    *tabsize = player[pnumindex].hand.num_cards;
+    tabsize = player[pnumindex].hand.num_cards;
     snprintf(windowtxt, sizeof windowtxt, "%s's Hand", player[pnumindex].username);
 
     for (int i = index_start; i < player[pnumindex].hand.num_cards && i < index_start + 7; i++) {
@@ -590,12 +526,12 @@ void DisplayCardWindow(HDC* hdcMem, HDC* hdcSprite, int pagenum, int* tabsize, i
   }
   case NURSERY_TAB:
   {
-    *tabsize = NURSERY_SIZE - nursery_index;
+    tabsize = NURSERY_SIZE - nursery_index;
     strcpy_s(windowtxt, sizeof windowtxt, "Nursery");
 
     for (int i = nursery_index + index_start; i < NURSERY_SIZE && i < index_start + 7; i++) {
       // save the source into cardslots
-      cardslots[skip++].source = &deck[i];
+      cardslots[skip++].source = &deck[nursery_ref[i]];
 
       // for now, this cycles through hBitmapCard which only has the super neigh card and the back design
       // in the future, hBitmapCard could be replaced/assimilated by an updated Unicorn or Deck structure featuring the file name and the loaded hBitmap
@@ -607,8 +543,13 @@ void DisplayCardWindow(HDC* hdcMem, HDC* hdcSprite, int pagenum, int* tabsize, i
   }
   case DECK_TAB:
   {
+    // TODO: ifdef, or put this check earlier?
+    if (menustate != DEBUGMODE) {
+      break;
+    }
+
     // TODO: include a check for card effects that allow deck viewing, and then include a check for specific cards
-    *tabsize = DECK_SIZE - deck_index;
+    tabsize = DECK_SIZE - deck_index;
     strcpy_s(windowtxt, sizeof windowtxt, "Deck");
 
     for (int i = deck_index + index_start; i < DECK_SIZE && i < index_start + 7; i++) {
@@ -626,7 +567,7 @@ void DisplayCardWindow(HDC* hdcMem, HDC* hdcSprite, int pagenum, int* tabsize, i
   case DISCARD_TAB:
   {
     // TODO: (maybe) include a check for specific cards
-    *tabsize = discard_index;
+    tabsize = discard_index;
     strcpy_s(windowtxt, sizeof windowtxt, "Discard Pile");
 
     for (int i = index_start; i < discard_index && i < index_start + 7; i++) {
@@ -652,14 +593,14 @@ void DisplayCardWindow(HDC* hdcMem, HDC* hdcSprite, int pagenum, int* tabsize, i
   }
 
   // show the page arrow icons if applicable
-  if (*tabsize > pagenum * 7) {
-    oldSprite = SelectObject(*hdcSprite, buttonManager2D[debugbuttons][PAGE_RIGHT].bitmap);
-    TransparentBlt(*hdcMem, buttonManager2D[debugbuttons][PAGE_RIGHT].x, buttonManager2D[debugbuttons][PAGE_RIGHT].y, buttonManager2D[debugbuttons][PAGE_RIGHT].width, buttonManager2D[debugbuttons][PAGE_RIGHT].height, *hdcSprite, 0, 0, buttonManager2D[debugbuttons][PAGE_RIGHT].width, buttonManager2D[debugbuttons][PAGE_RIGHT].height, RGB(0, 255, 0));
+  if (tabsize > pagenum * 7) {
+    oldSprite = SelectObject(*hdcSprite, debugButtons[PAGE_RIGHT].bitmap);
+    TransparentBlt(*hdcMem, debugButtons[PAGE_RIGHT].x, debugButtons[PAGE_RIGHT].y, debugButtons[PAGE_RIGHT].width, debugButtons[PAGE_RIGHT].height, *hdcSprite, 0, 0, debugButtons[PAGE_RIGHT].width, debugButtons[PAGE_RIGHT].height, RGB(0, 255, 0));
     SelectObject(*hdcSprite, oldSprite);
   }
   if (pagenum > 1) {
-    oldSprite = SelectObject(*hdcSprite, buttonManager2D[debugbuttons][PAGE_LEFT].bitmap);
-    TransparentBlt(*hdcMem, buttonManager2D[debugbuttons][PAGE_LEFT].x, buttonManager2D[debugbuttons][PAGE_LEFT].y, buttonManager2D[debugbuttons][PAGE_LEFT].width, buttonManager2D[debugbuttons][PAGE_LEFT].height, *hdcSprite, 0, 0, buttonManager2D[debugbuttons][PAGE_LEFT].width, buttonManager2D[debugbuttons][PAGE_LEFT].height, RGB(0, 255, 0));
+    oldSprite = SelectObject(*hdcSprite, debugButtons[PAGE_LEFT].bitmap);
+    TransparentBlt(*hdcMem, debugButtons[PAGE_LEFT].x, debugButtons[PAGE_LEFT].y, debugButtons[PAGE_LEFT].width, debugButtons[PAGE_LEFT].height, *hdcSprite, 0, 0, debugButtons[PAGE_LEFT].width, debugButtons[PAGE_LEFT].height, RGB(0, 255, 0));
     SelectObject(*hdcSprite, oldSprite);
   }
 
@@ -671,77 +612,80 @@ void DisplayCardWindow(HDC* hdcMem, HDC* hdcSprite, int pagenum, int* tabsize, i
   DrawText(*hdcMem, windowtxt, strlen(windowtxt), &rc, DT_LEFT | DT_NOCLIP | DT_WORDBREAK);
 }
 
-void ReturnCardHoverTip(struct Button *self, struct ToolTip *tippy) {
-  // struct ToolTip tippy;
-  struct Unicorn corn = *(struct Unicorn*)(self->source);
+struct ToolTip ReturnCardHoverTip(struct Button self) {
+  struct ToolTip tippy;
+  struct Unicorn corn = *(struct Unicorn*)(self.source);
 
   int width = 250;
   int height = 150;
   int padding = 8;
 
-  strcpy_s(tippy->title, sizeof tippy->title, corn.name);
-  strcpy_s(tippy->msg, sizeof tippy->msg, corn.description);
-  tippy->fonttitle = FANCYFONT;
-  tippy->fonttxt   = OLDFONT;
+  strcpy_s(tippy.title, sizeof tippy.title, corn.name);
+  strcpy_s(tippy.msg, sizeof tippy.msg, corn.description);
+  tippy.fonttitle = FANCYFONT;
+  tippy.fonttxt   = OLDFONT;
 
-  tippy->x = self->x + 45;
-  tippy->y = self->y - height - 25;
-  tippy->width   = width;
-  tippy->height  = height;
-  tippy->ishover = TRUE;
-  tippy->bgcolor = cardColors[corn.class];
+  tippy.x = self.x + 45;
+  tippy.y = self.y - height - 25;
+  tippy.width   = width;
+  tippy.height  = height;
+  tippy.ishover = TRUE;
+  tippy.bgcolor = cardColors[corn.class];
 
   // update edge
-  if (tippy->x + tippy->width > BWIDTH) {
-    tippy->x = BWIDTH - tippy->width - (padding * 2);
+  if (tippy.x + tippy.width > BWIDTH) {
+    tippy.x = BWIDTH - tippy.width - (padding * 2);
   }
 
   switch (corn.class) {
   case BABYUNICORN:
-    strcpy_s(tippy->subtitle, sizeof tippy->subtitle, "Baby Unicorn card");
+    strcpy_s(tippy.subtitle, sizeof tippy.subtitle, "Baby Unicorn card");
     break;
   case BASICUNICORN:
-    strcpy_s(tippy->subtitle, sizeof tippy->subtitle, "Basic Unicorn card");
+    strcpy_s(tippy.subtitle, sizeof tippy.subtitle, "Basic Unicorn card");
     break;
   case MAGICUNICORN:
-    strcpy_s(tippy->subtitle, sizeof tippy->subtitle, "Magical Unicorn card");
+    strcpy_s(tippy.subtitle, sizeof tippy.subtitle, "Magical Unicorn card");
     break;
   case UPGRADE:
-    strcpy_s(tippy->subtitle, sizeof tippy->subtitle, "Upgrade card");
+    strcpy_s(tippy.subtitle, sizeof tippy.subtitle, "Upgrade card");
     break;
   case DOWNGRADE:
-    strcpy_s(tippy->subtitle, sizeof tippy->subtitle, "Downgrade card");
+    strcpy_s(tippy.subtitle, sizeof tippy.subtitle, "Downgrade card");
     break;
   case MAGIC:
-    strcpy_s(tippy->subtitle, sizeof tippy->subtitle, "Magic card");
+    strcpy_s(tippy.subtitle, sizeof tippy.subtitle, "Magic card");
     break;
   case INSTANT:
-    strcpy_s(tippy->subtitle, sizeof tippy->subtitle, "Instant card");
+    strcpy_s(tippy.subtitle, sizeof tippy.subtitle, "Instant card");
     break;
   }
+
+  return tippy;
 }
 
-void ReturnPlayerHoverTip(struct Button *self, struct ToolTip *tippy) {
-  // struct ToolTip tippy;
-  int pnum = *(int*)(self->source);
+struct ToolTip ReturnPlayerHoverTip(int pnum, int buttonX, int buttonY) {
+  struct ToolTip tippy;
 
   int width = 200;
   int height = 60;
 
   // TODO: update size for longer names
-  strcpy_s(tippy->title, sizeof tippy->title, player[pnum].username);
-  tippy->subtitle[0] = '\0';
-  snprintf(tippy->msg, sizeof tippy->msg, "# of cards in hand: %d\n# of unicorns in stable: %d",
+  strcpy_s(tippy.title, sizeof tippy.title, player[pnum].username);
+  tippy.subtitle[0] = '\0';
+  snprintf(tippy.msg, sizeof tippy.msg, "# of cards in hand: %d\n# of unicorns in stable: %d",
     player[pnum].hand.num_cards, player[pnum].stable.num_unicorns);
-  tippy->fonttitle = BOLDFONT;
-  tippy->fonttxt   = OLDFONT;
+  tippy.fonttitle = BOLDFONT;
+  tippy.fonttxt   = OLDFONT;
 
-  tippy->x = self->x - width - 20;
-  tippy->y = self->y - 10;
-  tippy->width   = width;
-  tippy->height  = height;
-  tippy->ishover = TRUE;
-  tippy->bgcolor = RGB(255, 0, 150);
+  tippy.x = buttonX - width - 20;
+  tippy.y = buttonY - 10;
+  tippy.width   = width;
+  tippy.height  = height;
+  tippy.ishover = TRUE;
+  tippy.bgcolor = RGB(255, 0, 150);
+
+  return tippy;
 }
 
 void CreateCustomToolTip(HDC *hdcMem, struct ToolTip hoverTip) {
@@ -1177,13 +1121,12 @@ void InitStateMachine() {
 // WM_MOUSEMOVE
 
 void HoverTitle(POINT pnt) {
-  int state = titlebuttons;
-  istitleHover = FALSE;
+  hornbutton.source = FALSE;
 
   for (int i = 0; i < 3; i++) {
-    if (pnt.x >= buttonManager2D[state][i].x && pnt.x <= buttonManager2D[state][i].x + buttonManager2D[state][i].width &&
-      pnt.y >= buttonManager2D[state][i].y && pnt.y <= buttonManager2D[state][i].y + buttonManager2D[state][i].height) {
-        buttonManager2D[state][i].onHover(&buttonManager2D[state][i], &istitleHover);
+    if (pnt.x >= titleButtons[i].x && pnt.x <= titleButtons[i].x + titleButtons[i].width &&
+      pnt.y >= titleButtons[i].y && pnt.y <= titleButtons[i].y + titleButtons[i].height) {
+        HornPosition(titleButtons[i]);
         return;
     }
   }
@@ -1196,8 +1139,7 @@ void HoverDebug(POINT pnt) {
     if (pnt.x >= cardslots[i].x && pnt.x < cardslots[i].x + cardslots[i].width &&
       pnt.y >= cardslots[i].y && pnt.y < cardslots[i].y + cardslots[i].height) {
       if (cardslots[i].source != NULL) {
-        ReturnCardHoverTip(&cardslots[i], &hoverTip);
-        // cardslots[i].onHover(&cardslots[i], &hoverTip);
+        hoverTip = ReturnCardHoverTip(cardslots[i]);
         return;
       }
     }
@@ -1206,8 +1148,7 @@ void HoverDebug(POINT pnt) {
   for (int i = 0; i < current_players; i++) {
     if (pnt.x >= player_nums[i].x && pnt.x < player_nums[i].x + player_nums[i].width &&
       pnt.y >= player_nums[i].y && pnt.y < player_nums[i].y + player_nums[i].height) {
-      ReturnPlayerHoverTip(&player_nums[i], &hoverTip);
-      // player_nums[i].onHover(&player_nums[i], &hoverTip);
+      hoverTip = ReturnPlayerHoverTip(i, player_nums[i].x, player_nums[i].y);
       return;
     }
   }
@@ -1223,28 +1164,26 @@ void ClickTitle(POINT pnt) {
     return;
   }
 
-  int state = titlebuttons;
-
-  for (int i = 0; i < sizeof buttonManager2D[state] / sizeof buttonManager2D[state][0]; i++) {
-    if (pnt.x >= buttonManager2D[state][i].x && pnt.x < buttonManager2D[state][i].x + buttonManager2D[state][i].width &&
-      pnt.y >= buttonManager2D[state][i].y && pnt.y < buttonManager2D[state][i].y + buttonManager2D[state][i].height) {
+  for (int i = 0; i < sizeof titleButtons / sizeof titleButtons[0]; i++) {
+    if (pnt.x >= titleButtons[i].x && pnt.x < titleButtons[i].x + titleButtons[i].width &&
+      pnt.y >= titleButtons[i].y && pnt.y < titleButtons[i].y + titleButtons[i].height) {
       // left click action
       if (windowOpen[1] == FALSE) {
-        buttonManager2D[state][i].onClick(buttonManager2D[state][i].source);
-        istitleHover = FALSE;
+        titleButtons[i].onClick(titleButtons[i].source);
+        hornbutton.source = FALSE;
+        return;
       }
     }
   }
 }
 
 void ClickRules(POINT pnt) {
-  int state = rulebuttons;
-
-  for (int i = 0; i < sizeof buttonManager2D[state] / sizeof buttonManager2D[state][0]; i++) {
-    if (pnt.x >= buttonManager2D[state][i].x && pnt.x < buttonManager2D[state][i].x + buttonManager2D[state][i].width &&
-      pnt.y >= buttonManager2D[state][i].y && pnt.y < buttonManager2D[state][i].y + buttonManager2D[state][i].height) {
+  for (int i = 0; i < sizeof ruleButtons / sizeof ruleButtons[0]; i++) {
+    if (pnt.x >= ruleButtons[i].x && pnt.x < ruleButtons[i].x + ruleButtons[i].width &&
+      pnt.y >= ruleButtons[i].y && pnt.y < ruleButtons[i].y + ruleButtons[i].height) {
       // left click action
-      buttonManager2D[state][i].onClick(buttonManager2D[state][i].source);
+      ruleButtons[i].onClick(ruleButtons[i].source);
+      return;
     }
   }
 }
@@ -1304,21 +1243,11 @@ void ClickLobby(POINT pnt) {
   //   return;
   // }
 
-  if (pnt.y >= 590 && pnt.y <= 639) {
-    if (pnt.x >= 360 && pnt.x <= 549) {
-      // user clicked the leave button
-      networktoggle ^= 1;
-      if (!isclient) {
-        closesocket(udpfd);
-      }
-      return;
-    }
-    else if (pnt.x >= 120 && pnt.x <= 309) {
-      // user clicked the start button; only the host can properly start the game
-      if (!isclient && current_players >= 2) {
-        networktoggle ^= 4;
-        // closesocket(udpfd); // ??? why did i close the socket here o.O ?? testing purposes?
-      }
+  for (int i = 0; i < sizeof lobbyButtons / sizeof lobbyButtons[0]; i++) {
+    if (pnt.x >= lobbyButtons[i].x && pnt.x < lobbyButtons[i].x + lobbyButtons[i].width &&
+      pnt.y >= lobbyButtons[i].y && pnt.y < lobbyButtons[i].y + lobbyButtons[i].height) {
+      // left click action
+      lobbyButtons[i].onClick(lobbyButtons[i].source);
       return;
     }
   }
@@ -1345,14 +1274,13 @@ void ClickDebug(POINT pnt) {
     return;
   }
 
-  int state = debugbuttons;
-
   // general tab buttons
-  for (int i = 0; i < sizeof buttonManager2D[state] / sizeof buttonManager2D[state][0]; i++) {
-    if (pnt.x >= buttonManager2D[state][i].x && pnt.x < buttonManager2D[state][i].x + buttonManager2D[state][i].width &&
-      pnt.y >= buttonManager2D[state][i].y && pnt.y < buttonManager2D[state][i].y + buttonManager2D[state][i].height) {
+  for (int i = 0; i < sizeof debugButtons / sizeof debugButtons[0]; i++) {
+    if (pnt.x >= debugButtons[i].x && pnt.x < debugButtons[i].x + debugButtons[i].width &&
+      pnt.y >= debugButtons[i].y && pnt.y < debugButtons[i].y + debugButtons[i].height) {
       // left click action
-      buttonManager2D[state][i].onClick(buttonManager2D[state][i].source);
+      debugButtons[i].onClick(debugButtons[i].source);
+      return;
     }
   }
 
@@ -1361,12 +1289,20 @@ void ClickDebug(POINT pnt) {
   // TODO: should probably only initialize player_nums up to the current_player count instead of the full MAX_PLAYERS count
   // anything with player_nums will bug out unless the loops go up to current_players, so limiting the player_nums array
   // or initializing it as negative numbers would reduce the possibility of more bugs popping up
+  // 
+  // TODO: will need to add an additional action here (or in a separate state) for whenever the user has to select a player to
+  // apply their card effect on; could also potentially just make another window for those cases, but that sounds lame :/
   for (int i = 0; i < current_players; i++) {
     if (pnt.x >= player_nums[i].x && pnt.x < player_nums[i].x + player_nums[i].width &&
       pnt.y >= player_nums[i].y && pnt.y < player_nums[i].y + player_nums[i].height) {
       pnumindex = i;
-      // tabnum = UNICORN_TAB; // TODO: it might be more beneficial to keep the same tab? ask other people
       pagenum = 1;
+
+      // this will switch to the new player window in case the user previously looked at the nursery, deck, or discard piles
+      if (tabnum == NURSERY_TAB || tabnum == DECK_TAB || tabnum == DISCARD_TAB) {
+        tabnum = UNICORN_TAB;
+      }
+      return;
     }
   }
 }
@@ -1379,7 +1315,7 @@ void PaintTitle(HDC hdc, HDC *hdcMem) {
 
   hdcSprite = CreateCompatibleDC(hdc);
 
-  if (istitleHover) {
+  if ((BOOL)hornbutton.source) {
     oldSprite = SelectObject(hdcSprite, hornbutton.bitmap);
     TransparentBlt(*hdcMem, hornbutton.x, hornbutton.y, hornbutton.width, hornbutton.height, hdcSprite, 0, 0, hornbutton.width, hornbutton.height, RGB(0, 255, 0));
     SelectObject(hdcSprite, oldSprite);
@@ -1448,13 +1384,20 @@ void PaintDebug(HDC hdc, HDC *hdcMem) {
 
   // display the nursery and discard pile if they are not empty
   if (nursery_index < NURSERY_SIZE) {
-    oldSprite = SelectObject(hdcSprite, hBitmapCard[nursery_index]);
-    BitBlt(*hdcMem, buttonManager2D[debugbuttons][NURSERY_TAB].x, buttonManager2D[debugbuttons][NURSERY_TAB].y, buttonManager2D[debugbuttons][NURSERY_TAB].width, buttonManager2D[debugbuttons][NURSERY_TAB].height, hdcSprite, 0, 0, SRCCOPY);
+    oldSprite = SelectObject(hdcSprite, hBitmapCard[nursery_ref[nursery_index]]);
+    BitBlt(*hdcMem, debugButtons[NURSERY_TAB].x, debugButtons[NURSERY_TAB].y, debugButtons[NURSERY_TAB].width, debugButtons[NURSERY_TAB].height, hdcSprite, 0, 0, SRCCOPY);
     SelectObject(hdcSprite, oldSprite);
   }
 
+  if (discard_index > 0) {
+    oldSprite = SelectObject(hdcSprite, hBitmapCard[discard_ref[discard_index]]);
+    BitBlt(*hdcMem, debugButtons[DISCARD_TAB].x, debugButtons[DISCARD_TAB].y, debugButtons[DISCARD_TAB].width, debugButtons[DISCARD_TAB].height, hdcSprite, 0, 0, SRCCOPY);
+    SelectObject(hdcSprite, oldSprite);
+
+  }
+
   // display the list of cards under the current tab
-  DisplayCardWindow(hdcMem, &hdcSprite, pagenum, &tabsize, tabnum);
+  DisplayCardWindow(hdcMem, &hdcSprite);
   DeleteDC(hdcSprite);
 
   if (hoverTip.ishover) {
@@ -1465,25 +1408,6 @@ void PaintDebug(HDC hdc, HDC *hdcMem) {
 // ********************************************************************************
 // *************************** button function pointers ***************************
 // ********************************************************************************
-
-// hacky fix for mapping the game state with the button manager array; a giant array may not be the answer if it requires stuff like this...
-int StateButtonMap(int state) {
-  switch (state) {
-  case TITLEBLANK:
-    return titlebuttons;
-  case RULESONE:
-    return rulebuttons;
-  case RULESTWO:
-    return rulebuttons;
-  case LOBBY:
-    return lobbybuttons;
-  case DEBUGMODE:
-    return debugbuttons;
-  default:
-    // ???
-    return NULL;
-  }
-}
 
 void SwitchState(int statenum) {
   menustate = statenum;
@@ -1526,33 +1450,17 @@ void LeaveLobby() {
     closesocket(udpfd);
   }
 
-  menustate = TITLEBLANK;
+  // menustate will switch in the server file
 }
 
 void StartGame() {
   // user clicked the start button; only the host can properly start the game
   if (!isclient && current_players >= 2) {
     networktoggle ^= 4;
-    // closesocket(udpfd); // ??? why did i close the socket here o.O ?? testing purposes?
+    // closesocket(udpfd); // TODO: (look into this) i might still need the udp socket for instant neigh shenanigans
   }
 
-  // // TBC: don't do anything just yet
-  // menustate = GAMESTART;
-}
-
-void ClickBabyUnicorn(POINT pnt) {
-  int ret;
-
-  if (isclient) {
-    clientPnt = pnt;
-    networktoggle ^= 2;
-  }
-  else {
-    ret = SelectBabyUnicorn(0, pnt); // server is always player index 0
-    if (ret) {
-      networktoggle ^= 2;
-    }
-  }
+  // menustate will switch in the server file
 }
 
 void SwitchTab(int num) {
@@ -1598,12 +1506,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
   HDC hdcSprite;
   HBITMAP hbmSprite;
-
-  // static int pagenum = 1;
-  // static int tabsize;
-  // static int tabnum;
-  // static BOOL istitleHover; // TODO: maybe combine istitleHover w/ hoverTip.ishover into a single hover boolean check; or combine istitleHover w/ the struct Button "hornbutton"
-  // static struct ToolTip hoverTip;
 
   switch (uMsg)
   {
@@ -1688,8 +1590,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     for (int i = 0; i < sizeof stable_nums / sizeof stable_nums[0]; i++) {
       DeleteObject(stable_nums[i].bitmap);
     }
-    for (int i = 0; i < sizeof buttonManager2D[debugbuttons] / sizeof buttonManager2D[debugbuttons][0]; i++) {
-      DeleteObject(buttonManager2D[debugbuttons][i].bitmap);
+    for (int i = 0; i < sizeof debugButtons / sizeof debugButtons[0]; i++) {
+      DeleteObject(debugButtons[i].bitmap); // TODO: this is looping extra because there are only 2 buttons w/ bitmaps
     }
     for (int i = 0; i < sizeof hBitmapTab / sizeof hBitmapTab[0]; i++) {
       DeleteObject(hBitmapTab[i]);
@@ -1827,7 +1729,7 @@ LRESULT CALLBACK WndProcJoin(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     switch (LOWORD(wParam))
     {
     case ID_BUTTON:
-      GetWindowText(textNameHwnd, player[0].username, NAME_SIZE);
+      GetWindowText(textNameHwnd, player[0].username, NAME_SIZE - 1); // -1 to account for the null variable :)
       GetWindowText(portHwnd, portstr, NAME_SIZE);
       GetWindowText(codeHwnd, codestr, 9);
       
@@ -1846,7 +1748,6 @@ LRESULT CALLBACK WndProcJoin(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         networkthread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)clientJoin, portno, 0, &tIdweb);
 
         // TODO: (very low priority) add a "loading" state as an intermediate period while connecting to the host
-        // menustate = LOBBY;
         DestroyWindow(hWnd);
       }
 
