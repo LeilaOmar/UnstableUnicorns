@@ -1,7 +1,5 @@
 ﻿// Unstable Unicorns - Online Edition!!
 //
-// http://collabedit.com/p9gs6
-//
 // Full inventory list -
 // http://unstablegameswiki.com/index.php?title=Unstable_Unicorns_Base_Deck_-_Inventory_List
 //
@@ -55,6 +53,23 @@
 // card, thus making it unable to be given back to the original owner (currently
 // it would probably bug out and pass over an incorrect card from the "original
 // index")
+// *** TODO: When a card effect requires multiple actions, those actions are
+// sometimes separated by “then”(ex. “SACRIFICE a Unicorn card, then DRAW a
+// card”). If a card says “then, ” you may only perform the second action if you
+// successfully perform the first action.In the example listed, if you do not
+// have a Unicorn card to SACRIFICE, you may not DRAW a card
+//    ^ i actually did not know this... so i may need to edit edge cases as
+//    described above
+// *** TODO: do not actually shuffle the discard pile into the deck if the
+// deck is empty. that's actually game-over, and the person with the most
+// unicorns in their stable at that time wins. tiebreakers are decided through
+// counting the number of letters in every unicorn
+// *** TODO: (low priority) balance the game for 2 players as described in the
+// rules -> https://www.unstablegames.com/pages/unstable-unicorns-rules
+// https://12ax7web.s3.amazonaws.com/accounts/1/homepage/2-Player-rules.pdf
+// *** TODO: (low priority) toggle between "easy" and "hard" mode where neighs
+// are taken into consideration either after or before a player chooses their
+// target respectively
 
 #include "client.h"
 #include "server.h"
