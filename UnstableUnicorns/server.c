@@ -35,7 +35,7 @@ int serverMain(void) {
   printf("\nEnter your desired username (max 32 chars): ");
   fgets(player[current_players].username, sizeof player[current_players].username, stdin);
   player[current_players].username[strlen(player[current_players].username) - 1] = 0;
-  current_players++;
+  current_players++; // the host is player one :>
 
   do {
     printf("Enter a valid port number to connect to (between 1024 and 65535 inclusive): ");

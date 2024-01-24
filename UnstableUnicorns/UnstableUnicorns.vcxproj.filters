@@ -32,7 +32,7 @@
     <ClCompile Include="unittests.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="windowsapp.c">
+    <ClCompile Include="basedeck.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -57,6 +57,9 @@
     </ClInclude>
     <ClInclude Include="resource.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="basedeck.h">
+      <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

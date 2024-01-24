@@ -1,4 +1,5 @@
 #include "gamemechanics.h"
+#include "basedeck.h"
 
 int num_fails = 0;
 
