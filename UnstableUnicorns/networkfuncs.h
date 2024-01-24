@@ -18,20 +18,6 @@ struct deckPacket {
 	int ref[DECK_SIZE];
 };
 
-// hash functions for scrambling IP addresses
-// https://stackoverflow.com/questions/664014/what-integer-hash-function-are-good-that-accepts-an-integer-hash-key
-unsigned int hash(unsigned int x);
-unsigned int unhash(unsigned int x);
-
-// IP stuff
-// https://stackoverflow.com/questions/39566240/how-to-get-the-external-ip-address-in-c
-void getIPreq(char* ip_address);
-int getLocalIP(char* ip_address);
-
-// uses hash function to get code for ip (and vice versa)
-unsigned int IPtoHexCode(char* ip);
-void HexCodetoIP(char* code, char* dest);
-
 int sendInt(int num, int fd);
 int receiveInt(int* num, int fd);
 int sendLobbyPacket(int num_players, int clientpnum, int fd);

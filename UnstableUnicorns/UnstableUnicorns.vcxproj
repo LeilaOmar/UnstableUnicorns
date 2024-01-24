@@ -91,7 +91,7 @@
       <StructMemberAlignment>1Byte</StructMemberAlignment>
     </ClCompile>
     <Link>
-      <SubSystem>Windows</SubSystem>
+      <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
@@ -153,7 +153,6 @@
     <ClCompile Include="server.c" />
     <ClCompile Include="unittests.c" />
     <ClCompile Include="uu_cmd_demo.c" />
-    <ClCompile Include="windowsapp.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="client.h" />
@@ -163,7 +162,6 @@
     <ClInclude Include="resource.h" />
     <ClInclude Include="server.h" />
     <ClInclude Include="unittests.h" />
-    <ClInclude Include="windowsapp.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="UnstableUnicorns.rc" />
