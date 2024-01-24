@@ -1,7 +1,9 @@
 #pragma once
-#include "globals.h"
+#include "basedeck.h"
 
-// ******************** Utility Functions ********************
+// ********************************************************************************
+// **************************** Print/Display Functions ***************************
+// ********************************************************************************
 
 void printPlayers(void);
 void printNursery(size_t start, size_t size);
@@ -12,10 +14,14 @@ void printStable(int pnum);
 void displayCardDesc(void);
 void displayDesiredStable(void);
 
+// ********************************************************************************
+// ******************************* Utility Functions ******************************
+// ********************************************************************************
+
 // OPTIMIZE: use species UNICORN instead of class ANYUNICORN and then combine
 // this with checking for species too
-// returns 1 if the desired class matches with the card's class, otherwises
-// return 0
+// return 0 = FALSE, the card's class does not equal the desired class
+// return 1 = TRUE, card match!
 int checkClass(int desired_class, int card_class);
 
 // randomize deck between specific indeces
@@ -58,7 +64,16 @@ void searchDiscard(int pnum, int class);
 // searching through the deck for a specific card, then shuffles the deck
 void searchDeck(int pnum, int class, int species);
 
-// ******************** Card Effect Functions ********************
+// check for flags that make the player immune to Neigh cards
+int canBeNeighed(int pnum);
+
+// check for flags that make the player unable to use Neigh cards
+int canNeighOthers(int pnum);
+
+// ********************************************************************************
+// ************************** Basic Card Effect Functions *************************
+// ********************************************************************************
+
 void draw(int pnum, int num_drawn);
 
 void discard(int pnum, int num_discard, int class);
@@ -76,36 +91,16 @@ void destroyMagic(int pnum, int class);
 // treat ANYUNICORN as all unicorns when checking class for Unicorn cards
 void steal(int pnum, int class);
 
-// ******************** Misc Game Mechanics ********************
+// ********************************************************************************
+// *************************** Core Game Loop Functions ***************************
+// ********************************************************************************
 
 // codes the part where players are able to use an instant card against a play
-// 0 = nobody used Neigh/Super Neigh or Neigh's cancelled out; 1 = card is gone
+// 0 = nobody used Neigh/Super Neigh or Neigh's cancelled out;
+// 1 = card is gone
 // TODO: bug where Neigh remained in player's hand that last refuted it (e.g. 3
 // neighs were used in total and when player 3 used americorn on player 1 to get
 // a random card, it picked the same Neigh ID that was in the discard pile)
 int refutePhase(int pnum, int cindex);
-
-// switch cases for cards that may trigger specific player flags (e.g. cannot
-// neigh)
-void toggleFlags(int pnum, int effect);
-
-// switch cases for when a card has a special effect upon being sacrificed or
-// destroyed
-void sacrificeDestroyEffects(int pnum, int cindex, int effect);
-
-// switch cases for cards that may be unable to be played due to certain
-// circumstances; this is separated so that the hand is not rearranged
-// unnecessarily; 1 means success, 0 means it returned prematurely, 2 means
-// the effect isn't here
-int conditionalEffects(int pnum, int effect, int cardid, int hindex, int upgrade_target);
-
-// switch cases for enter your stable effects with magical unicorn cards
-void enterStableEffects(int pnum, int effect);
-
-// switch cases for Magic cards
-void magicEffects(int pnum, int effect);
-
-// switch cases for beginning of your turn effects
-void beginningTurnEffects(int pnum, int effect);
 
 void playCard(int pnum);

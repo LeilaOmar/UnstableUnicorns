@@ -146,6 +146,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="basedeck.c" />
     <ClCompile Include="client.c" />
     <ClCompile Include="gamemechanics.c" />
     <ClCompile Include="globals.c" />
@@ -156,6 +157,7 @@
     <ClCompile Include="windowsapp.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="basedeck.h" />
     <ClInclude Include="client.h" />
     <ClInclude Include="gamemechanics.h" />
     <ClInclude Include="globals.h" />
