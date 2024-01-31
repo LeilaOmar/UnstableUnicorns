@@ -17,8 +17,8 @@
 #define MAX_PLAYERS 8
 #define STABLE_SIZE 25
 
-// in the future, these would be updated to the theoretical max value
-// so that the packet structures know how much to allocate at compile time
+// in the future, these would be changed to global ints composed of all chosen decks;
+// the packet structures would have to allocate space at runtime
 #define DECK_SIZE 116
 #define NURSERY_SIZE 13
 
@@ -41,21 +41,27 @@ struct Unicorn {
   char description[DESC_SIZE];
   HBITMAP bitmap;
   short effect;
-  void (*doEffect)(void*);
+  int id;
+};
+
+struct Deck {
+  struct Unicorn* cards;
+  int size; // this should never exceed the max, so no there's point in a max variable for reallocating
 };
 
 struct CardsInHand {
+  struct Unicorn cards[HAND_SIZE];
   int num_cards;
-  int cards[HAND_SIZE];  // "lookup table" for cards; uses deck_ref and
-                         // deck_index to get randomized location
 };
 
 struct Stable {
-  int unicorns[STABLE_SIZE];
+  struct Unicorn unicorns[STABLE_SIZE];
   int num_unicorns;
   int size;
 };
 
+// TODO: other decks apparently have different masquerade cards, so pandamonium
+// should be moved from the general flags to a masquerade flag/enum
 struct Player {
   struct CardsInHand hand;
   struct Stable stable;
@@ -83,17 +89,24 @@ SOCKET sockfd;
 SOCKET udpfd;
 extern unsigned int isclient; // 0 = server, 1 = client
 
-struct Player player[MAX_PLAYERS];
+extern struct Deck deck;
+extern struct Deck nursery;
+extern struct Deck discardpile;
+extern struct Player player[MAX_PLAYERS];
 extern int current_players;
-extern unsigned int WIN_CONDITION;
-extern unsigned int turn_count;
+extern int turn_count;
+extern int WIN_CONDITION;
 
 // toggles whether the deck piles are printed out or not
 extern unsigned char deck_flag;
 extern unsigned char discard_flag;
 extern unsigned char nursery_flag;
 
+extern FILE* fpinput; // stand-in for stdin in case it needs to read from a file instead
 int numinput(char*, char**, int);
+char charinput(char*, int);
+
+void init_deck(struct Deck*, struct Deck*, struct Deck*);
 
 // ********************************************************************************
 // **************************** Pretty Color Functions ****************************

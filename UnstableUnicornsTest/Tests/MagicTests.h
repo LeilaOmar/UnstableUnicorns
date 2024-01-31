@@ -1,0 +1,22 @@
+#pragma once
+#include "gamemechanics.h"
+#include "basedeck.h"
+#include "gamephase.h"
+#include "../resetfns.h"
+#include <assert.h>
+
+int unicorn_poison_tests();
+int back_kick_tests();
+int change_of_luck_tests();
+int glitter_tornado_tests();
+int unicorn_swap_tests();
+int re_target_tests();
+int unfair_bargain_tests();
+int two_for_one_tests();
+int unicorn_shrinkray_tests();
+int targeted_destruction_tests();
+int mystical_vortex_tests();
+int good_deal_tests();
+int shake_up_tests();
+int blatant_thievery_tests();
+int reset_button_tests();

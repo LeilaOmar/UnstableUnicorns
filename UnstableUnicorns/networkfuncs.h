@@ -34,8 +34,10 @@ void HexCodetoIP(char* code, char* dest);
 
 int sendInt(int num, int fd);
 int receiveInt(int* num, int fd);
-int sendLobbyPacket(int num_players, int clientpnum, int fd);
-int receiveLobbyPacket(int* num_players, int* clientpnum, int fd);
+int sendPlayer(struct Player p, int fd);
+int sendUnicorns(struct Unicorn* corns, int size, int fd);
+int receiveUnicorns(struct Unicorn* corns, int size, int fd);
+
 int sendNurseryInfo(struct nurseryPacket info, int fd);
 int receiveNurseryInfo(struct nurseryPacket info, int fd);
 int sendDiscardInfo(struct discardPacket info, int fd);

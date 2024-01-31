@@ -76,27 +76,10 @@ enum BaseCardEffects {
                     super_neigh   // 67 = super neigh
 };
 
-struct Deck {
-  struct Unicorn *deckcards;
-  unsigned int deck_index;
-  unsigned int *deck_ref;
-};
-
-extern struct Unicorn deck[129];
-
-// deck_index and nursery_index point to top-most card that is currently
-// available; discard index is basically the size count
-extern unsigned int deck_index;
-extern unsigned int discard_index;
-extern unsigned int nursery_index;
-extern unsigned int dnurse_size;
+extern struct Unicorn basedeck[129];
 
 extern int uni_lasso_flag[3];  // 0 = crd ind of p1, 1 = plyr stealer, 2 = victim
-extern int puppicorn_index;
-
-extern unsigned int deck_ref[DECK_SIZE];
-extern unsigned int discard_ref[DECK_SIZE];
-extern unsigned int nursery_ref[NURSERY_SIZE];
+extern int puppicorn_index[2];  // 0 = card index, 1 = player number of owner
 
 // ********************************************************************************
 // ***************************** Card Effect Functions ****************************
@@ -116,7 +99,7 @@ void sacrificeDestroyEffects(int pnum, int cindex, int effect);
 // 0 = returned prematurely, conditions not met (FALSE)
 // 1 = success (TRUE)
 // 2 = effect is not conditional/relevant; skip
-int conditionalEffects(int pnum, int effect, int cardid, int hindex, int upgrade_target);
+int conditionalEffects(int pnum, struct Unicorn corn, int hindex, int upgrade_target);
 
 // switch cases for enter your stable effects with magical unicorn cards
 void enterStableEffects(int pnum, int effect);
@@ -125,4 +108,4 @@ void enterStableEffects(int pnum, int effect);
 void magicEffects(int pnum, int effect);
 
 // switch cases for beginning of your turn effects
-void beginningTurnEffects(int pnum, int effect);
+void beginningTurnEffects(int pnum, struct Unicorn corn);

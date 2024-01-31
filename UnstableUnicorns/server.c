@@ -1,5 +1,6 @@
 #include "server.h"
 #include "gamemechanics.h"
+#include "gamephase.h"
 #include "windowsapp.h"
 
 #define ERRORBUF 256
@@ -21,10 +22,6 @@ int newConnection(SOCKET *cfd) {
   return 0;
 }
 
-void initGame(void) {
-  return;
-}
-
 int serverMain(void) {
   short portno;
   char *end, buf[LINE_MAX];
@@ -41,9 +38,7 @@ int serverMain(void) {
 
   do {
     printf("Enter a valid port number to connect to (between 1024 and 65535 inclusive): ");
-    fgets(buf, sizeof buf, stdin);
-    buf[strlen(buf) - 1] = 0;
-    portno = strtol(buf, &end, 10);
+    portno = numinput(buf, &end, sizeof buf);
   } while (portno < 1024 || portno > 65535 || end != (buf + strlen(buf)));
 
   addr.sin_family = AF_INET;
@@ -170,11 +165,11 @@ int serverMain(void) {
     "\n*** Game Start! ***"
     "\n*******************\n\n");
 
-  shuffleDeck(deck_index, DECK_SIZE);
+  shuffleDeck(&deck);
 
   if (deck_flag) {
     blue();
-    printDeck(deck_index, DECK_SIZE, ANY, ANY);
+    printPile(deck);
     reset_col();
   }
 
@@ -184,43 +179,41 @@ int serverMain(void) {
     draw(i, HAND_START);
   }
 
-  printNursery(nursery_index, NURSERY_SIZE);
+  printPile(nursery);
   do {
     red();
     printf("%s: ", player[0].username);
     reset_col();
     printf("Pick the index associated with your desired Baby Unicorn: ");
-    fgets(buf, sizeof buf, stdin);
-    buf[strlen(buf) - 1] = 0;
-    index = strtol(buf, &end, 10) - 1;
-  } while (index < 0 || index >= (int)dnurse_size || end != (buf + strlen(buf)));
+    index = numinput(buf, &end, sizeof buf) - 1;
+  } while (index < 0 || index >= nursery.size || end != (buf + strlen(buf)));
 
-  player[0].stable.unicorns[0] = nursery_ref[index + nursery_index];
+  player[0].stable.unicorns[0] = nursery.cards[index];
   player[0].stable.size = 1;
   player[0].stable.num_unicorns = 1;
 
-  rearrangeNursery(index + nursery_index);
+  rearrangePile(&nursery, index);
 
   red();
   puts("Waiting for other players to pick their Baby Unicorn...");
   reset_col();
 
   // TODO: serialize this for later; also check the amount of bytes sent!
-  // TODO: watch out for EWOULDBLOCK; this works on my local but what about online?
+  // TODO: watch out for EWOULDBLOCK; this works on my local machine, but what about online?
   for (int i = 1; i < current_players; i++) {
     sendInt(current_players, clientsockfd[i - 1]);
     sendInt(i, clientsockfd[i - 1]);
     send(clientsockfd[i - 1], (void*)&player[i], sizeof(struct Player), 0);
-    sendInt(nursery_index, clientsockfd[i - 1]);
-    sendInt(dnurse_size, clientsockfd[i - 1]);
-    send(clientsockfd[i - 1], (void*)nursery_ref, sizeof(nursery_ref), 0);
-    
+    sendInt(nursery.size, clientsockfd[i - 1]);
+    // send(clientsockfd[i - 1], (void*)nursery.cards, sizeof(struct Unicorn) * NURSERY_SIZE, 0);
+    sendUnicorns(nursery.cards, nursery.size, clientsockfd[i - 1]);
+
     receiveInt(&index, clientsockfd[i - 1]);
-    player[i].stable.unicorns[0] = nursery_ref[index + nursery_index];
+    player[i].stable.unicorns[0] = nursery.cards[index];
     player[i].stable.size = 1;
     player[i].stable.num_unicorns = 1;
     
-    rearrangeNursery(index + nursery_index);
+    rearrangePile(&nursery, index);
   }
 
   // player[0].hand.cards[player[0].hand.num_cards++] = 94;
@@ -256,154 +249,25 @@ int serverMain(void) {
 
     // it's your turn! do your thing :>
     //if (counter == 0) {
-      // *********************************************
-      // ********** beginning of turn phase **********
-      // *********************************************
+    beginningOfTurn(counter);
 
-      draw(counter, 1);
-      printHand(counter);
-      turn_count = 1;
-      uni_lasso_flag[0] = -1;
+    actionPhase(counter);
 
-      // Nanny Cam check
-      for (int i = 0; i < current_players; i++) {
-        if (i != counter && (player[i].flags & nanny_cam) != 0)
-          printHand(i);
-      }
-
-      for (int i = 0; i < player[counter].stable.size; i++) {
-        beginningTurnEffects(counter,
-          deck[player[counter].stable.unicorns[i]].effect);
-      }
-
-      // **********************************
-      // ********** action phase **********
-      // **********************************
-
-      // choose between drawing or playing a card
-      // OPTIMIZE: skip go straight to drawing another card in case all cards in
-      // hand are impossible plays (e.g. you MUST [xxx] when there are no
-      // available cards to be affected)
-
-      while (turn_count > 0) {
-        do {
-          printf(
-            "\nAction phase options:"
-            "\n1. Draw a card"
-            "\n2. Play a card"
-            "\n3. Display card description"
-            "\n4. Display a player's stable"
-            "\n5. Display your own hand"
-            "\n6. Display Nursery"
-            "\n7. Display Discard Pile"
-            "\nChoice: ");
-          fgets(buf, sizeof buf, stdin);
-          buf[strlen(buf) - 1] = 0;
-          index = strtol(buf, &end, 10);
-          if (index == 3)
-            displayCardDesc();
-          else if (index == 4)
-            displayDesiredStable();
-          else if (index == 5)
-            printHand(counter);
-          else if (index == 6) {
-            yellow();
-            printNursery(nursery_index, NURSERY_SIZE);
-            reset_col();
-          }
-          else if (index == 7) {
-            magenta();
-            printDiscard(ANY);
-            reset_col();
-          }
-        } while (index < 1 || index > 2 || end != (buf + strlen(buf)));
-        if (index == 1)
-          draw(counter, 1);
-        else
-          playCard(counter);
-
-        turn_count--;
-      }
-
-      // ***************************************
-      // ********** end of turn phase **********
-      // ***************************************
-
-      // discard extra cards since max hand limit in-game is 7
-      while (player[counter].hand.num_cards > 7) {
-        // optimize this later... maybe if statement and discard multiple
-        // instead of using another loop
-        discard(counter, 1, ANY);
-      }
-
-      // print stuff to see what's going on, duh
-      printHand(counter);
-      printStable(counter);
-
-      // cycle between players; count after checking number of unicorns
-      // maybe just check if the number is >= 7 every time a card enters your
-      // stable; ginormous unicorn counts for 2 unless blinding light is in effect
-      // pandamonium means you have 7+ pandas, not unicorns
-      // TODO: player won with this stable??? only 6 unicorns; tested it in a different
-      // game and rainbow mane bringing in cards did not make the game end prematurely
-      // so maybe there is some kind of issue with accidentally using the wrong effect
-      // that would trigger the ginormous unicorn flag?
-      //  1. Baby Unicorn(Rainbow) [ID:10]
-      //  2. Basic Unicorn(Green) [ID:23]
-      //  3. Basic Unicorn(Purple) [ID:32]
-      //  4. Rainbow Mane [ID:94]
-      //  5. Basic Unicorn(Blue) [ID:26]
-      //  6. Alluring Narwhal [ID:63]
-      //  7. Black Knight Unicorn [ID:59]
-      if ((player[counter].stable.num_unicorns >= WIN_CONDITION ||
-          (player[counter].stable.num_unicorns >= (WIN_CONDITION - 1) &&
-            (player[counter].flags & (ginormous_unicorn | blinding_light)) == ginormous_unicorn)) &&
-          (player[counter].flags & pandamonium) == 0)
-        break;
-
-      // return any unicorns or pass any unicorns to the proper or next owner
-      if (uni_lasso_flag[0] != -1) {
-        // uni_lasso_flag[2] represents proper owner, and the thief [1] has the
-        // card removed from their stable
-        addStable(uni_lasso_flag[2], player[uni_lasso_flag[1]].stable.unicorns[uni_lasso_flag[0]]);
-        // detoggle potential unicorn flags from the stealer once it leaves the
-        // stable so that it isn't improperly left
-        toggleFlags(
-          uni_lasso_flag[1],
-          deck[player[uni_lasso_flag[1]].stable.unicorns[uni_lasso_flag[0]]]
-          .effect);
-        rearrangeStable(uni_lasso_flag[1], uni_lasso_flag[0]);
-        enterStableEffects(
-          uni_lasso_flag[2],
-          deck[player[uni_lasso_flag[2]]
-          .stable.unicorns[player[uni_lasso_flag[2]].stable.size - 1]]
-          .effect);
-      }
-
-      // puppicorn swap
-      if (puppicorn_index != -1) {
-        if (counter == current_players - 1) {
-          addStable(0, player[counter].stable.unicorns[puppicorn_index]);
-          rearrangeStable(counter, puppicorn_index);
-          puppicorn_index = player[0].stable.size - 1;
-        }
-        else {
-          addStable(counter + 1, player[counter].stable.unicorns[puppicorn_index]);
-          rearrangeStable(counter, puppicorn_index);
-          puppicorn_index = player[counter + 1].stable.size - 1;
-        }
-      }
+    int didWin = 0;
+    didWin = endOfTurn(counter);
+    if (didWin == 1)
+      break;
     //}
 
-    // print state of deck, nursery, and discard pile
+    // print state of nursery and discard piles
     if (nursery_flag) {
       yellow();
-      printNursery(nursery_index, NURSERY_SIZE);
+      printPile(nursery);
       reset_col();
     }
     if (discard_flag) {
       magenta();
-      printDiscard(ANY);
+      printPile(discardpile);
       reset_col();
     }
 
