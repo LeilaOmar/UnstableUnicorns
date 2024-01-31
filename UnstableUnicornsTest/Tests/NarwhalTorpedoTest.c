@@ -12,14 +12,13 @@ int torpedo_basic_check() {
 	// adding downgrade cards in the first and last indices,
 	// even though the last should theoretically be impossible
 	addStable(0, barbed_tmp);
-	addStable(0, torpedo_tmp);
 	addStable(0, pandamonium_tmp);
 	addStable(0, sadistic_tmp);
 
 	assert(discardpile.size == 0);
-	assert(player[0].stable.num_unicorns == 1);
-	assert(player[0].stable.size == 4);
-	enterStableEffects(0, torpedo_tmp.effect);
+	assert(player[0].stable.num_unicorns == 0);
+	assert(player[0].stable.size == 3);
+	addStable(0, torpedo_tmp);
 
 	if (player[0].stable.size != 1 || player[0].stable.num_unicorns != 1) {
 		num_fails++;
@@ -60,14 +59,13 @@ int torpedo_empty_check() {
 	struct Unicorn yay_tmp = basedeck[100];
 
 	current_players = 2;
-	addStable(0, torpedo_tmp);
 	addStable(0, yay_tmp);
 	addStable(1, barbed_tmp);
 
 	assert(discardpile.size == 0);
-	assert(player[0].stable.num_unicorns == 1);
+	assert(player[0].stable.num_unicorns == 0);
 	assert(player[1].stable.size == 1);
-	enterStableEffects(0, torpedo_tmp.effect);
+	addStable(0, torpedo_tmp);
 
 	if (player[0].stable.size != 2 || player[0].stable.num_unicorns != 1 ||
 			player[1].stable.size != 1 || player[1].stable.num_unicorns != 0) {

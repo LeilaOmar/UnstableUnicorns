@@ -77,13 +77,12 @@ int black_knight_pandamonium_check() {
 
 	current_players = 2;
 	addStable(0, basic_tmp);
-	addStable(0, knight_tmp);
 	addStable(0, panda_tmp);
 	toggleFlags(0, panda_tmp.effect);
 
 	assert(discardpile.size == 0);
 	assert(player[0].flags == pandamonium);
-	enterStableEffects(0, knight_tmp.effect);
+	addStable(0, knight_tmp);
 
 	destroy(1, ANY, FALSE);
 
@@ -110,13 +109,12 @@ int black_knight_blinding_light_check() {
 
 	current_players = 2;
 	addStable(0, basic_tmp);
-	addStable(0, knight_tmp);
 	addStable(0, blinding_tmp);
 	toggleFlags(0, blinding_tmp.effect);
 
 	assert(discardpile.size == 0);
 	assert(player[0].flags == blinding_light);
-	enterStableEffects(0, knight_tmp.effect);
+	addStable(0, knight_tmp);
 
 	destroy(1, ANY, FALSE);
 

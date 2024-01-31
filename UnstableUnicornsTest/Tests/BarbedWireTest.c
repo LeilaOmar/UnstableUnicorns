@@ -98,7 +98,7 @@ int barbed_exit_check() {
 	assert(discardpile.size == 0);
 	assert(player[0].hand.num_cards == 1);
 	assert(player[0].stable.size == 2);
-	assert(player[0].flags == barbed_wire);
+	assert((player[0].flags & barbed_wire) == barbed_wire);
 
 	// player[0][1] == ginourmous_tmp
 	rearrangeStable(0, 1);
@@ -136,7 +136,7 @@ int barbed_exit_check() {
 	assert(discardpile.size == 0);
 	assert(player[0].hand.num_cards == 0);
 	assert(player[0].stable.size == 2);
-	assert(player[0].flags == barbed_wire);
+	assert((player[0].flags & barbed_wire) == barbed_wire);
 
 	// player[0][1] == ginourmous_tmp
 	rearrangeStable(0, 1);

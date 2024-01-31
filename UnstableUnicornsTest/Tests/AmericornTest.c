@@ -7,13 +7,12 @@ int americorn_basic_check() {
 
 	current_players = 2;
 	draw(0, 1); 
-	addStable(1, americorn_tmp);
 
 	int nhand0 = player[0].hand.num_cards;
 	int nhand1 = player[1].hand.num_cards;
 	struct Unicorn tmp_card = player[0].hand.cards[0];
 
-	enterStableEffects(1, player[1].stable.unicorns[0].effect);
+	addStable(1, americorn_tmp);
 
 	if (player[0].hand.num_cards != (nhand0 - 1) ||
 			player[1].hand.num_cards != (nhand1 + 1)) {
@@ -44,12 +43,11 @@ int americorn_empty_check() {
 	struct Unicorn americorn_tmp = basedeck[47];
 
 	current_players = 2;
-	addStable(0, americorn_tmp);
 
 	int nhand0 = player[0].hand.num_cards;
 	int nhand1 = player[1].hand.num_cards;
 
-	enterStableEffects(0, player[0].stable.unicorns[0].effect);
+	addStable(0, americorn_tmp);
 
 	if (player[0].hand.num_cards != nhand0 ||
 			player[1].hand.num_cards != nhand1) {
@@ -74,12 +72,11 @@ int americorn_nanny_cam_check() {
 	current_players = 2;
 	struct Unicorn corn = deck.cards[deck.size - 1];
 	draw(1, 7); // the first card drawn is "Super Neigh" since it's the last card when unshuffled
-	addStable(0, americorn_tmp);
 	toggleFlags(1, nanny_cam_effect);
 
 	assert(player[0].hand.num_cards == 0);
 	assert((player[1].flags & nanny_cam) == nanny_cam);
-	enterStableEffects(0, player[0].stable.unicorns[0].effect);
+	addStable(0, americorn_tmp);
 
 	// a random pick would take the 6th card w/ seed(0), so
 	// an incorrect result should actually be different from corn.name/Super Neigh

@@ -6,15 +6,13 @@ int classy_basic_check() {
 	struct Unicorn classy_tmp = basedeck[65];
 	struct Unicorn yay_tmp = basedeck[100];
 	struct Unicorn corn = deck.cards[42];
-	// corn is rainbow unicorn w/ the base deck; the index is notably before any upgrade cards,
-	// and the shuffling assumes the same seed each time
-
-	addStable(0, classy_tmp);
+	// corn is magical flying unicorn w/ the base deck; the index is notably
+	// before any upgrade cards, and the shuffling assumes the same seed each time
 
 	int tmp_size = deck.size;
 	assert(player[0].hand.num_cards == 0);
 
-	enterStableEffects(0, classy_tmp.effect);
+	addStable(0, classy_tmp);
 
 	if (deck.size != (tmp_size - 1)) {
 		num_fails++;
