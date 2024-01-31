@@ -6,9 +6,8 @@
 // ********************************************************************************
 
 void printPlayers(void);
-void printNursery(size_t start, size_t size);
-void printDeck(size_t start, size_t size, int class, int species);
-void printDiscard(int class);
+void printPile(struct Deck d);
+void printPileFilter(struct Deck d, int class, int species);
 void printHand(int pnum);
 void printStable(int pnum);
 void displayCardDesc(void);
@@ -24,21 +23,14 @@ void displayDesiredStable(void);
 // return 1 = TRUE, card match!
 int checkClass(int desired_class, int card_class);
 
-// randomize deck between specific indeces
-void shuffleDeck(int start, int size);
+// randomize deck between specific indices
+void shuffleDeck(struct Deck* d);
 
-// shuffles the indexed car out of the nursery's range
-// (so the nursery_index only keeps track of the cards within
-// nursery_ref that are still inside the nursery and not taken out)
-void rearrangeNursery(int index);
+// shuffles the discard pile into the deck, then shuffles the entire deck
+void shuffleDiscard(void);
 
-// nursery_index points to the top most card of the ones available in the
-// nursery at the time. this function basically lowers the index by one and
-// overwrites previous data to include the newly added card. order doesn't
-// matter
-void addNursery(int cardid);
-
-void addStable(int pnum, int cardid);
+// shuffles the indexed card out of the deck, nursery, or discard pile's range
+void rearrangePile(struct Deck* d, int index);
 
 // shuffles the indexed card out of the hand's range
 void rearrangeHand(int pnum, int index);
@@ -48,21 +40,23 @@ void rearrangeHand(int pnum, int index);
 // when cards are stolen or returned to someone's hand?
 void rearrangeStable(int pnum, int index);
 
-// OPTIMIZE: combine this with rearrangeNursery for cleanup purposes; basically it
-// is the same thing (except the indexes are arranged differently?)
-void rearrangeDiscard(int index);
+// searching through the deck or discard pile for a specific card
+// 0 = return failed
+// 1 = return successful
+int searchPile(int pnum, struct Deck* d, int class, int species);
 
-// shuffles the indexed card out of the deck's range
-void rearrangeDeck(int index);
+void addNursery(struct Unicorn corn);
 
-// shuffles the discard pile into the deck, then shuffles the entire deck
-void shuffleDiscard(void);
+void addDiscard(struct Unicorn corn);
 
-// searching through the discard pile for a specific card
-void searchDiscard(int pnum, int class);
+void addStable(int pnum, struct Unicorn corn);
 
-// searching through the deck for a specific card, then shuffles the deck
-void searchDeck(int pnum, int class, int species);
+// return card from stable to hand, or the nursery if it's a baby
+void returnCardToHand(int pnum, int cindex);
+
+// ********************************************************************************
+// **************************** Boolean Check Functions ***************************
+// ********************************************************************************
 
 // check for flags that make the player immune to Neigh cards
 int canBeNeighed(int pnum);
@@ -70,23 +64,29 @@ int canBeNeighed(int pnum);
 // check for flags that make the player unable to use Neigh cards
 int canNeighOthers(int pnum);
 
+// checks for all of the specific edge cases for card destruction
+int canBeDestroyed(int pindex, int cindex, int class, int isMagicCard);
+
+// returns number of available cards to destroy
+int checkNumCardsToDestroy(int pnum, int class, int isMagicCard);
+
+// checks for all of the specific edge cases for sacrificing cards
+int canBeSacrificed(int pindex, int cindex, int class);
+
 // ********************************************************************************
 // ************************** Basic Card Effect Functions *************************
 // ********************************************************************************
 
-void draw(int pnum, int num_drawn);
+int draw(int pnum, int num_drawn);
 
 void discard(int pnum, int num_discard, int class);
 
-void sacrifice(int pnum, int class);
+// 0 = sacrifice failed
+// 1 = successful
+int sacrifice(int pnum, int class);
 
 // treat ANYUNICORN as all unicorns when checking class for Unicorn cards
-void destroy(int pnum, int class);
-
-// treat ANYUNICORN as all unicorns when checking class for Unicorn cards;
-// this is for edge cases where Magic cards are being used to destroy cards
-// that cannot be destroyed by those specifically
-void destroyMagic(int pnum, int class);
+void destroy(int pnum, int class, int isMagicCard);
 
 // treat ANYUNICORN as all unicorns when checking class for Unicorn cards
 void steal(int pnum, int class);
@@ -96,11 +96,11 @@ void steal(int pnum, int class);
 // ********************************************************************************
 
 // codes the part where players are able to use an instant card against a play
-// 0 = nobody used Neigh/Super Neigh or Neigh's cancelled out;
+// 0 = nobody used Neigh/Super Neigh or Neigh's cancelled out
 // 1 = card is gone
 // TODO: bug where Neigh remained in player's hand that last refuted it (e.g. 3
 // neighs were used in total and when player 3 used americorn on player 1 to get
 // a random card, it picked the same Neigh ID that was in the discard pile)
-int refutePhase(int pnum, int cindex);
+int refutePhase(int orig_pnum, int orig_cindex);
 
 void playCard(int pnum);

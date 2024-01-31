@@ -12,81 +12,56 @@ void printPlayers(void) {
   }
 }
 
-// TODO (for this and printDeck): remove start and size params because those
-// are like always global variables
-void printNursery(size_t start, size_t size) {
-  int index = 1;
-
-  for (size_t i = start; i < size; i++) {
-    printf("%d: %s [ID: %d]\n", index++, deck[nursery_ref[i]].name,
-      nursery_ref[i]);
+void printPile(struct Deck d) {
+  for (int i = 0; i < d.size; i++) {
+    printf("%d: %s [ID: %d]\n", i + 1, d.cards[i].name, d.cards[i].id);
   }
 }
 
-void printDeck(size_t start, size_t size, int class, int species) {
-  // note that size references the size of the entire deck, not the size of the
-  // search
-  for (size_t i = start; i < size; i++) {
-    // first part: any species means it is dependent on the class being the same
-    // second part: class doesn't matter, only check if species matches
-    if (((species == ANY) &&
-      ((class == ANY) ||
-        (class == ANYUNICORN && (deck[deck_ref[i]].class == BASICUNICORN ||
-          deck[deck_ref[i]].class == MAGICUNICORN)) ||
-        (class == deck[deck_ref[i]].class))) ||
-      (species == deck[deck_ref[i]].species))
-      printf("%zu: %s [ID: %d]\n", i + 1, deck[deck_ref[i]].name, deck_ref[i]);
-  }
-}
-
-void printDiscard(int class) {
-  for (size_t i = 0; i < discard_index; i++) {
-    if ((class == ANY) ||
-      (class == ANYUNICORN && (deck[discard_ref[i]].class == BASICUNICORN ||
-        deck[discard_ref[i]].class == MAGICUNICORN)) ||
-      (class == deck[discard_ref[i]].class))
-      printf("%zu: %s [ID: %d]\n", i + 1, deck[discard_ref[i]].name,
-        discard_ref[i]);
+void printPileFilter(struct Deck d, int class, int species) {
+  for (int i = 0; i < d.size; i++) {
+    if ((species == ANY || species == d.cards[i].species) &&
+        checkClass(class, d.cards[i].class))
+    printf("%d: %s [ID: %d]\n", i + 1, d.cards[i].name, d.cards[i].id);
   }
 }
 
 void printHand(int pnum) {
-  printf("%s's hand:\n", player[pnum].username);
+  printf("\n%s's hand:\n", player[pnum].username);
   for (int i = 0; i < player[pnum].hand.num_cards; i++) {
-    printf("    %d. %s [ID: %d]\n", i + 1,
-      deck[player[pnum].hand.cards[i]].name, player[pnum].hand.cards[i]);
+    printf("    %d. %s [ID: %d]\n", i + 1, player[pnum].hand.cards[i].name, player[pnum].hand.cards[i].id);
   }
 }
 
 void printStable(int pnum) {
-  printf("%s's stable:\n", player[pnum].username);
+  printf("\n%s's stable:\n", player[pnum].username);
   for (int i = 0; i < player[pnum].stable.size; i++) {
-    if (deck[player[pnum].stable.unicorns[i]].class == 3)
+    if (player[pnum].stable.unicorns[i].class == UPGRADE)
       green();
-    else if (deck[player[pnum].stable.unicorns[i]].class == 4)
+    else if (player[pnum].stable.unicorns[i].class == DOWNGRADE)
       yellow();
 
-    printf("    %d. %s [ID: %d]\n", i + 1,
-      deck[player[pnum].stable.unicorns[i]].name,
-      player[pnum].stable.unicorns[i]);
+    printf("    %d. %s [ID: %d]\n", i + 1, player[pnum].stable.unicorns[i].name, player[pnum].stable.unicorns[i].id);
     reset_col();
   }
 }
 
-void displayCardDesc(void) {
+// currently isn't scalable to multiple decks
+void displayCardDesc() {
   int index;
   char *end, buf[LINE_MAX];
 
   do {
-    printf("Enter the ID of the card you wish to display the description of: ");
-    fgets(buf, sizeof buf, stdin);
-    buf[strlen(buf) - 1] = 0;
-    index = strtol(buf, &end, 10);
-  } while (index < 0 || index >= NURSERY_SIZE + DECK_SIZE || end != (buf + strlen(buf)));
+    printf("Enter the card ID of the card you wish to display the description of: ");
+    index = numinput(buf, &end, sizeof buf);
+  } while (index < 0 || index >= DECK_SIZE + NURSERY_SIZE || end != (buf + strlen(buf)));
 
   cyan();
-  printf("Card: %s\nDescription: %s\n", deck[index].name,
-    deck[index].description);
+  printf("Card: %s\nDescription: %s\n", basedeck[index].name, basedeck[index].description);
+  // if (index < NURSERY_SIZE)
+  //   printf("Card: %s\nDescription: %s\n", nursery.cards[index].name, nursery.cards[index].description);
+  // else
+  //   printf("Card: %s\nDescription: %s\n", deck.cards[index].name, deck.cards[index].description);
   reset_col();
 }
 
@@ -97,9 +72,7 @@ void displayDesiredStable(void) {
   printPlayers();
   do {
     printf("Choose the index associated with the player whose stable you'd like to see: ");
-    fgets(buf, sizeof buf, stdin);
-    buf[strlen(buf) - 1] = 0;
-    index = strtol(buf, &end, 10) - 1;
+    index = numinput(buf, &end, sizeof buf) - 1;
   } while (index < 0 || index >= current_players || end != (buf + strlen(buf)));
 
   printStable(index);
@@ -123,59 +96,209 @@ int checkClass(int desired_class, int card_class) {
   return 0;
 }
 
-// randomize deck between specific indices
-void shuffleDeck(int start, int size) {
-  int index = 0;
+// // randomize deck between specific indices
+// void shuffleDeck(int start, int size) {
+//   int index = 0;
+// 
+//   // randomize deck with the Fisher-Yates algorithm; starts from the end
+//   // because the "taken" cards are pushed towards the beginning, which is
+//   // outside of deck_index's or start's range
+//   if (start >= 0) {
+//     for (int i = size - 1; i > start; i--) {
+//       int j = rand() % (i + 1 - start) + start;
+//       index = deck_ref[i];
+//       deck_ref[i] = deck_ref[j];
+//       deck_ref[j] = index;
+//     }
+//   }
+// 
+//   if (deck_flag) {
+//     blue();
+//     printDeck(index, DECK_SIZE, ANY, ANY);
+//     reset_col();
+//   }
+// }
+
+// randomize deck
+void shuffleDeck(struct Deck *d) {
+  struct Unicorn tmp;
 
   // randomize deck with the Fisher-Yates algorithm; starts from the end
   // because the "taken" cards are pushed towards the beginning, which is
   // outside of deck_index's or start's range
-  if (start >= 0) {
-    for (int i = size - 1; i > start; i--) {
-      int j = rand() % (i + 1 - start) + start;
-      index = deck_ref[i];
-      deck_ref[i] = deck_ref[j];
-      deck_ref[j] = index;
-    }
+  for (int i = d->size - 1; i > 0; i--) {
+    int j = rand() % (i + 1);
+    tmp = d->cards[i];
+    d->cards[i] = d->cards[j];
+    d->cards[j] = tmp;
   }
 
   if (deck_flag) {
     blue();
-    printDeck(index, DECK_SIZE, ANY, ANY);
+    printPile(*d);
     reset_col();
   }
 }
 
-// shuffles the indexed car out of the nursery's range
-// (so the nursery_index only keeps track of the cards within
-// nursery_ref that are still inside the nursery and not taken out)
-void rearrangeNursery(int index) {
-  int tmp;
-
-  if (index >= 0) {
-    for (size_t i = index; i > nursery_index; i--) {
-      tmp = nursery_ref[i];
-      nursery_ref[i] = nursery_ref[i - 1];
-      nursery_ref[i - 1] = tmp;
-    }
-    nursery_index++;
-    dnurse_size--;
+// shuffles the discard pile into the deck, then shuffles the entire deck
+void shuffleDiscard(void) {
+  for (int i = discardpile.size - 1; i >= 0; i--) {
+    deck.cards[deck.size] = discardpile.cards[i];
+    deck.size++;
+    discardpile.size--;
   }
+
+  shuffleDeck(&deck);
+
+  blue();
+  printPile(deck);
+  reset_col();
 }
 
-// nursery_index points to the top most card of the ones available in the
-// nursery at the time. this function basically lowers the index by one and
-// overwrites previous data to include the newly added card. order doesn't
-// matter
-void addNursery(int cardid) {
-  nursery_index--;
-  nursery_ref[nursery_index] = cardid;
-  dnurse_size++;
+// shuffles the indexed card out of the deck, nursery, or discard pile's range
+void rearrangePile(struct Deck *d, int index) {
+  struct Unicorn tmp;
+
+  if (index < 0 || index >= d->size)
+    return;
+
+  for (int i = index; i < d->size - 1; i++) {
+    tmp = d->cards[i];
+    d->cards[i] = d->cards[i + 1];
+    d->cards[i + 1] = tmp;
+  }
+
+  d->size--;
 }
 
-void addStable(int pnum, int cardid) {
-  player[pnum].stable.unicorns[player[pnum].stable.size++] = cardid;
-  if (deck[cardid].species != NOSPECIES) {
+// shuffles the indexed card out of the hand's range
+void rearrangeHand(int pnum, int index) {
+  struct Unicorn tmp;
+
+  for (int i = index; i < player[pnum].hand.num_cards - 1; i++) {
+    tmp = player[pnum].hand.cards[i];
+    player[pnum].hand.cards[i] = player[pnum].hand.cards[i + 1];
+    player[pnum].hand.cards[i + 1] = tmp;
+  }
+  player[pnum].hand.num_cards--;
+}
+
+// shuffles the indexed card out of the stable's range
+void rearrangeStable(int pnum, int index) {
+  struct Unicorn tmp;
+
+  // toggle special flags off
+  toggleFlags(pnum, player[pnum].stable.unicorns[index].effect);
+
+  if (player[pnum].stable.unicorns[index].species != NOSPECIES) {
+    player[pnum].stable.num_unicorns--;
+
+    // barbed wire check; this doesn't trigger for pandas when leaving the stable unlike
+    // in the add function when they enter (since they enter as unicorns before "transforming")
+    if ((player[pnum].flags & barbed_wire) != 0 && (player[pnum].flags & pandamonium) == 0) {
+      discard(pnum, 1, ANY);
+    }
+  }
+
+  // unicorn lasso check; make sure this gets disabled if the card leaves the stable in any way
+  // before the end of the turn (e.g. it gets sacrificed/destroyed, returned to hand, swapped, etc.).
+  // this is so that it doesn't return an incorrect card (or effect) back to the victim
+  if (pnum == uni_lasso_flag[1]) {
+    if (index == uni_lasso_flag[0])
+      uni_lasso_flag[0] = -1;
+    else if (index < uni_lasso_flag[0]) {
+      uni_lasso_flag[0]--;
+    } // if index is greater than the unicorn_lasso_index, then it doesn't affect the position of the card
+  }
+
+  // puppicorn check; make sure it shifts down by 1 if the index that got
+  // deleted is less than puppicorn_index
+  if (puppicorn_index[1] == pnum) {
+    if (puppicorn_index[0] > index)
+      puppicorn_index[0]--;
+    // theoretically don't need to check if the puppicorn index is the same as the selected card index
+    // because it should never get triggered like this, but it shall stay in just in case
+    else if (puppicorn_index[0] == index) {
+      puppicorn_index[0] = -1;
+    }
+  }
+
+  for (int i = index; i < player[pnum].stable.size - 1; i++) {
+    tmp = player[pnum].stable.unicorns[i];
+    player[pnum].stable.unicorns[i] = player[pnum].stable.unicorns[i + 1];
+    player[pnum].stable.unicorns[i + 1] = tmp;
+  }
+  player[pnum].stable.size--;
+}
+
+// searching through the deck or discard pile for a specific card
+// 0 = return failed
+// 1 = return successful
+int searchPile(int pnum, struct Deck* d, int class, int species) {
+  int index, count = 0;
+  char* end, buf[LINE_MAX];
+
+  // check if there are actually available cards to take
+  for (int i = 0; i < d->size; i++) {
+    if ((species == ANY || species == d->cards[i].species) &&
+        checkClass(class, d->cards[i].class))
+      count++;
+  }
+
+  // no valid cards are available
+  if (count == 0)
+    return 0;
+
+  blue();
+  printPileFilter(*d, class, species);
+  reset_col();
+
+  for (;;) {
+    printf("Pick a valid card number to add to your hand: ");
+    index = numinput(buf, &end, sizeof buf) - 1;
+
+    // index validation
+    if (index < 0 || index >= d->size || end != (buf + strlen(buf)))
+      continue;
+
+    if ((species == ANY || species == d->cards[index].species) &&
+        checkClass(class, d->cards[index].class))
+      break;
+  }
+
+  player[pnum].hand.cards[player[pnum].hand.num_cards++] = d->cards[index];
+  rearrangePile(d, index);
+
+  return 1;
+}
+
+void addNursery(struct Unicorn corn) {
+  if (nursery.size == NURSERY_SIZE) {
+    // the nursery is already full, so some cards must've been duplicated for this to happen?
+    // the cardid check already takes place before this function
+    // TODO: should maybe return an integer upon failure in the rare instance that it happens...
+    return;
+  }
+  nursery.cards[nursery.size] = corn;
+  nursery.size++;
+}
+
+void addDiscard(struct Unicorn corn) {
+  if (discardpile.size == DECK_SIZE) {
+    // this seems impossible unless there's a card that returns everyone's hand to the discard
+    // pile, AND everyone's stables are empty, AND the deck is empty; if the deck was empty then
+    // it's game over anyways
+    return;
+  }
+  discardpile.cards[discardpile.size] = corn;
+  discardpile.size++;
+}
+
+void addStable(int pnum, struct Unicorn corn) {
+  player[pnum].stable.unicorns[player[pnum].stable.size] = corn;
+  player[pnum].stable.size++;
+
+  if (corn.species != NOSPECIES) {
     player[pnum].stable.num_unicorns++;
 
     // barbed wire check
@@ -190,154 +313,35 @@ void addStable(int pnum, int cardid) {
       sacrifice(pnum, ANYUNICORN);
     }
   }
-}
 
-// shuffles the indexed card out of the hand's range
-void rearrangeHand(int pnum, int index) {
-  int tmp;
-
-  for (int i = index; i < player[pnum].hand.num_cards - 1; i++) {
-    tmp = player[pnum].hand.cards[i];
-    player[pnum].hand.cards[i] = player[pnum].hand.cards[i + 1];
-    player[pnum].hand.cards[i + 1] = tmp;
+  // puppicorn tracker
+  if (strcmp(corn.name, "Puppicorn") == 0) {
+    puppicorn_index[0] = player[pnum].stable.size - 1;
+    puppicorn_index[1] = pnum;
   }
-  player[pnum].hand.num_cards--;
 }
 
-// shuffles the indexed card out of the stable's range
-// OPTIMIZE: put toggleFlags here instead of writing it out a few times like
-// when cards are stolen or returned to someone's hand?
-void rearrangeStable(int pnum, int index) {
-  int tmp;
-
-  if (deck[player[pnum].stable.unicorns[index]].species != NOSPECIES) {
-    player[pnum].stable.num_unicorns--;
-
-    // barbed wire check; this doesn't trigger for pandas when leaving the stable unlike
-    // in the add function when they enter (since they enter as unicorns before "transforming")
-    if ((player[pnum].flags & barbed_wire) != 0 && (player[pnum].flags & pandamonium) == 0) {
-      discard(pnum, 1, ANY);
+// return card from stable to hand, or the nursery if it's a baby
+void returnCardToHand(int pnum, int cindex) {
+  // return babies to the nursery
+  if (player[pnum].stable.unicorns[cindex].class == BABYUNICORN)
+    addNursery(player[pnum].stable.unicorns[cindex]);
+  else {
+    // "disable" the puppicorn swap since it was returned to someone's hand
+    if (strcmp(player[pnum].stable.unicorns[cindex].name, "Puppicorn") == 0) {
+      puppicorn_index[0] = -1;
     }
+    player[pnum].hand.cards[player[pnum].hand.num_cards] =
+      player[pnum].stable.unicorns[cindex];
+    player[pnum].hand.num_cards++;
   }
 
-  for (int i = index; i < player[pnum].stable.size - 1; i++) {
-    tmp = player[pnum].stable.unicorns[i];
-    player[pnum].stable.unicorns[i] = player[pnum].stable.unicorns[i + 1];
-    player[pnum].stable.unicorns[i + 1] = tmp;
-  }
-  player[pnum].stable.size--;
+  rearrangeStable(pnum, cindex);
 }
 
-// OPTIMIZE: combine this with rearrangeNursery for cleanup purposes; basically it
-// is the same thing (except the indexes are arranged differently?)
-void rearrangeDiscard(int index) {
-  int tmp;
-
-  for (size_t i = index; i < discard_index - 1; i++) {
-    tmp = discard_ref[i];
-    discard_ref[i] = discard_ref[i + 1];
-    discard_ref[i + 1] = tmp;
-  }
-  discard_index--;
-}
-
-// shuffles the indexed card out of the deck's range
-void rearrangeDeck(int index) {
-  int tmp;
-
-  for (size_t i = index; i > deck_index; i--) {
-    tmp = deck_ref[i];
-    deck_ref[i] = deck_ref[i - 1];
-    deck_ref[i - 1] = tmp;
-  }
-  deck_index++;
-}
-
-// shuffles the discard pile into the deck, then shuffles the entire deck
-void shuffleDiscard(void) {
-  // printf("deck_index = %u; discard_index = %u\n", deck_index, discard_index);
-  for (; discard_index > 0; discard_index--) {
-    // decrements the deck index so it is referencing the card that is being
-    // added instead of overwriting the top card in the deck
-    deck_ref[--deck_index] = discard_ref[discard_index - 1];
-  }
-
-  shuffleDeck(deck_index, DECK_SIZE);
-
-  blue();
-  printDeck(deck_index, DECK_SIZE, ANY, ANY);
-  reset_col();
-}
-
-// searching through the discard pile for a specific card
-void searchDiscard(int pnum, int class) {
-  int index, count = 0;
-  char* end, buf[LINE_MAX];
-
-  // check if there are actually cards available to take
-  for (size_t i = 0; i < discard_index; i++) {
-    if (checkClass(class, deck[discard_ref[i]].class)) count++;
-  }
-
-  // no valid cards are available
-  if (count == 0) return;
-
-  printDiscard(class);
-  do {
-    printf("Pick a valid card number to add to your hand: ");
-    fgets(buf, sizeof buf, stdin);
-    buf[strlen(buf) - 1] = 0;
-    index = strtol(buf, &end, 10) - 1;
-
-    if (index >= 0 && index < (int)discard_index && end == (buf + strlen(buf))) {
-      if (!checkClass(class, deck[discard_ref[index]].class)) {
-        index = -1;
-      }
-    }
-  } while (index < 0 || index >= (int)discard_index || end != (buf + strlen(buf)));
-
-  player[pnum].hand.cards[player[pnum].hand.num_cards++] = discard_ref[index];
-  rearrangeDiscard(index);
-}
-
-// searching through the deck for a specific card, then shuffles the deck
-void searchDeck(int pnum, int class, int species) {
-  int index, count = 0;
-  char* end, buf[LINE_MAX];
-
-  // check if there are actually cards available to take
-  for (int i = deck_index; i < DECK_SIZE; i++) {
-    if (checkClass(class, deck[deck_ref[i]].class) ||
-      species == deck[deck_ref[i]].species) {
-      count++;
-    }
-  }
-
-  // no valid cards are available
-  if (count == 0) return;
-
-  blue();
-  printDeck(deck_index, DECK_SIZE, class, species);
-  reset_col();
-  do {
-    printf("Pick a valid card number to add to your hand: ");
-    fgets(buf, sizeof buf, stdin);
-    buf[strlen(buf) - 1] = 0;
-    index = strtol(buf, &end, 10) - 1;
-
-    // check if the card actually matches with the specified class or species
-    if (index >= (int)deck_index && index < DECK_SIZE && index > 0 && end == (buf + strlen(buf)))
-      if (!checkClass(class, deck[deck_ref[index]].class) &&
-        species != deck[deck_ref[index]].species)
-        index = -1;
-  } while (index < (int)deck_index || index >= DECK_SIZE || index < 0 || end != (buf + strlen(buf)));
-
-  // check for index < 0 in case deck_index is a negative number
-  player[pnum].hand.cards[player[pnum].hand.num_cards++] = deck_ref[index];
-  // take the card out of the deck (by rearranging it) before shuffling
-  rearrangeDeck(index);
-  shuffleDeck(deck_index, DECK_SIZE);
-}
+// ********************************************************************************
+// **************************** Boolean Check Functions ***************************
+// ********************************************************************************
 
 // check for flags that make the player immune to Neigh cards
 int canBeNeighed(int pnum) {
@@ -365,26 +369,100 @@ int canNeighOthers(int pnum) {
   return 1;
 }
 
+int canBeDestroyed(int pindex, int cindex, int class, int isMagicCard) {
+  // class doesn't match
+  if (!checkClass(class, player[pindex].stable.unicorns[cindex].class))
+    return 0;
+
+  // player[pindex]'s unicorn cards can't be destroyed
+  if (((player[pindex].flags & rainbow_aura) != 0) &&
+      ((player[pindex].flags & pandamonium) == 0) &&
+      player[pindex].stable.unicorns[cindex].species != NOSPECIES)
+    return 0;
+
+  // player[pindex]'s unicorns are pandas and can't be destroyed by cards targeting unicorns
+  // no need to check for spces != NOSPECIES because those cards should have been filtered
+  // out already if class == ANYUNICORN
+  if (((player[pindex].flags & pandamonium) != 0) &&
+      class == ANYUNICORN)
+    return 0;
+
+  // puppicorn can't be destroyed
+  if (strcmp(player[pindex].stable.unicorns[cindex].name, "Puppicorn") == 0)
+    return 0;
+
+  // magical kittencorn can't be destroyed by magic cards
+  if (isMagicCard &&
+      strcmp(player[pindex].stable.unicorns[cindex].name, "Magical Kittencorn") == 0)
+    return 0;
+
+  // unicorn phoenix can stay in the stable so long the owner has at least
+  // one card in their hand
+  // TODO: this might not be necessary because the unicorn phoenix could probably
+  // take some W's if they only have 1 card
+  if (strcmp(player[pindex].stable.unicorns[cindex].name, "Unicorn Phoenix") == 0 &&
+      player[pindex].hand.num_cards >= 1)
+    return 0;
+
+  return 1;
+}
+
+int checkNumCardsToDestroy(int pnum, int class, int isMagicCard) {
+  int isvalid = 0;
+
+  // check if there are actual cards to destroy
+  for (int i = 0; i < current_players; i++) {
+    if (i == pnum) continue;
+
+    for (int j = 0; j < player[i].stable.size; j++) {
+      if (canBeDestroyed(i, j, class, isMagicCard))
+        isvalid++;
+    }
+  }
+
+  return isvalid;
+}
+
+int canBeSacrificed(int pindex, int cindex, int class) {
+  // class doesn't match
+  if (!checkClass(class, player[pindex].stable.unicorns[cindex].class))
+    return 0;
+
+  // puppicorn can't be sacrificed
+  if (strcmp(player[pindex].stable.unicorns[cindex].name, "Puppicorn") == 0)
+    return 0;
+
+  // pandas aren't unicorns, so they can't be sacrificed in place of a unicorn card
+  // no need to check for spces != NOSPECIES because those cards should have been filtered
+  // out already if class == ANYUNICORN
+  if ((player[pindex].flags & pandamonium) != 0 &&
+      class == ANYUNICORN)
+    return 0;
+
+  return 1;
+}
+
 // ********************************************************************************
 // ************************** Basic Card Effect Functions *************************
 // ********************************************************************************
 
-void draw(int pnum, int num_drawn) {
-  // accounting for edge cases where it could be 1-4 cards left to draw after
-  // the deck is reshuffled; writing it this way makes it so that it's not
-  // constantly checking in the for statement
-  if (deck_index + num_drawn >= DECK_SIZE) {
-    while (deck_index < DECK_SIZE) {
-      player[pnum].hand.cards[player[pnum].hand.num_cards++] =
-        deck_ref[deck_index++];
-      num_drawn--;
-    }
-    shuffleDiscard();
+int draw(int pnum, int num_drawn) {
+  // game is over when the deck is empty
+  // TODO: add a variable here or something to keep track, because a function wouldn't
+  // work unless it's linked to the networking code
+  if (deck.size - num_drawn < 0) {
+    return -1;
   }
   for (int i = 0; i < num_drawn; i++) {
-    player[pnum].hand.cards[player[pnum].hand.num_cards++] =
-      deck_ref[deck_index++];
+    player[pnum].hand.cards[player[pnum].hand.num_cards] = deck.cards[deck.size - 1];
+    player[pnum].hand.num_cards++;
+    deck.size--;
   }
+
+  if (deck.size == 0)
+    return -1;
+
+  return 0;
 }
 
 void discard(int pnum, int num_discard, int class) {
@@ -394,316 +472,176 @@ void discard(int pnum, int num_discard, int class) {
   // repeat for num_discard times or until the number of cards in hand is zero
   while (player[pnum].hand.num_cards > 0 && num_discard > 0) {
     printHand(pnum);
-    do {
+    for (;;) {
       printf("Pick a valid card number to discard: ");
-      fgets(buf, sizeof buf, stdin);
-      buf[strlen(buf) - 1] = 0;
-      index = strtol(buf, &end, 10) - 1;
-      if (index >= 0 && index < player[pnum].hand.num_cards && end == (buf + strlen(buf))) {
-        if (!checkClass(class, deck[player[pnum].hand.cards[index]].class)) {
-          index = -1;
-        }
-      }
-    } while (index < 0 || index >= player[pnum].hand.num_cards || end != (buf + strlen(buf)));
+      index = numinput(buf, &end, sizeof buf) - 1;
 
-    discard_ref[discard_index++] = player[pnum].hand.cards[index];
+      // index validation
+      if (index < 0 || index >= player[pnum].hand.num_cards || end != (buf + strlen(buf)))
+        continue;
+
+      // class check
+      if (checkClass(class, player[pnum].hand.cards[index].class))
+        break;
+    }
+
+    addDiscard(player[pnum].hand.cards[index]);
     rearrangeHand(pnum, index);
     num_discard--;
   }
 }
 
-void sacrifice(int pnum, int class) {
+int sacrifice(int pnum, int class) {
   int index, isvalid = 0;
   char* end, buf[LINE_MAX];
 
   for (int i = 0; i < player[pnum].stable.size; i++) {
-    if (checkClass(class, deck[player[pnum].stable.unicorns[i]].class) &&
-      strcmp(deck[player[pnum].stable.unicorns[i]].name, "Puppicorn") != 0) {
-      isvalid++;
+    if (canBeSacrificed(pnum, i, class)) {
+      isvalid = 1;
+      break;
     }
   }
 
-  if ((class == ANYUNICORN && (player[pnum].flags & pandamonium) != 0) || !isvalid) {
+  if (!isvalid) {
     red();
     printf("%s;", player[pnum].username);
     reset_col();
     printf("There are no available cards to sacrifice\n");
-    return;
+    return 0;
   }
 
   printStable(pnum);
-  do {
+  for (;;) {
     printf("Pick a valid card number to sacrifice: ");
-    fgets(buf, sizeof buf, stdin);
-    buf[strlen(buf) - 1] = 0;
-    index = strtol(buf, &end, 10) - 1;
+    index = numinput(buf, &end, sizeof buf) - 1;
 
-    // check for class stuff
-    if (index >= 0 && index < player[pnum].stable.size && end == (buf + strlen(buf))) {
-      if (!checkClass(class, deck[player[pnum].stable.unicorns[index]].class) ||
-        strcmp(deck[player[pnum].stable.unicorns[index]].name, "Puppicorn") == 0 ||
-        (class == ANYUNICORN && (player[pnum].flags & pandamonium) != 0)) {
-        index = -1;
-      }
-    }
-  } while (index < 0 || index >= player[pnum].stable.size || end != (buf + strlen(buf)));
+    // index validation
+    if (index < 0 || index >= player[pnum].stable.size || end != (buf + strlen(buf)))
+      continue;
 
-  // for edge cases where the person who used unicorn lasso sacrifices a unicorn;
-  // this is so that it doesn't return an incorrect card (or effect) back to the victim
-  if (pnum == uni_lasso_flag[1]) {
-    if (index == uni_lasso_flag[0])
-      uni_lasso_flag[0] = -1;
-    else if (index < uni_lasso_flag[0]) {
-      uni_lasso_flag[0]--;
-    } // if it's greater than, then it doesn't affect the position of the card
+    // condition met :)
+    if (canBeSacrificed(pnum, index, class))
+      break;
   }
 
-  sacrificeDestroyEffects(pnum, index,
-    deck[player[pnum].stable.unicorns[index]].effect);
+  sacrificeDestroyEffects(pnum, index, player[pnum].stable.unicorns[index].effect);
+  return 1;
 }
 
 // treat ANYUNICORN as all unicorns when checking class for Unicorn cards
-void destroy(int pnum, int class) {
-  int pindex, cindex, isvalid = 0;
-  char ans, * end, buf[LINE_MAX], buf2[LINE_MAX];
-
-  // commenting out because it should check before it gets destroyed anyways
-  // and even though this could be a "just-in-case" thing, there is no 
-  // current way to know which card was lost in order to destroy, if there
-  // even was a card that was sacrificed or used up
-  //for (int pindex = 0; pindex < current_players; pindex++) {
-  //  for (int cindex = 0; cindex < player[pindex].stable.size; cindex++) {
-  //    if (checkClass(class, deck[player[pindex].stable.unicorns[pindex]].class)) {
-  //      // check for Rainbow Aura and Pandemonium flag (where unicorn
-  //      // cards/pandas can't be destroyed)
-  //      if (!((player[pindex].flags & rainbow_aura) != 0 &&
-  //        deck[player[pindex].stable.unicorns[cindex]].species != NOSPECIES) &&
-  //        !((player[pindex].flags & pandamonium) != 0 &&
-  //          class == ANYUNICORN) &&
-  //        strcmp(deck[player[pindex].stable.unicorns[cindex]].name, "Puppicorn") != 0) {
-  //        isvalid++;
-  //        cindex = DESC_SIZE;
-  //        pindex = DESC_SIZE;
-  //      }
-  //    }
-  //  }
-  //}
-
-  //if (!isvalid) {
-  //  printf("There are no available cards for Player %s to destroy\n", player[pnum].username);
-  //  // place where player[pnum] gets their card back maybe
-  //  return;
-  //}
-
-  printPlayers();
-  do {
-    printf("Choose a player to destroy from: ");
-    fgets(buf, sizeof buf, stdin);
-    buf[strlen(buf) - 1] = 0;
-    pindex = strtol(buf, &end, 10) - 1;
-
-    // check if player has any valid unicorns to destroy
-    if (pindex >= 0 && pindex < current_players && pindex != pnum && end == (buf + strlen(buf))) {
-      for (int i = 0; i < player[pindex].stable.size; i++) {
-        if (checkClass(class, deck[player[pindex].stable.unicorns[i]].class)) {
-          // check for Rainbow Aura and Pandemonium flag (where unicorn
-          // cards/pandas can't be destroyed)
-          if (!((player[pindex].flags & rainbow_aura) != 0 &&
-            deck[player[pindex].stable.unicorns[i]].species != NOSPECIES) &&
-            !((player[pindex].flags & pandamonium) != 0 &&
-              deck[player[pindex].stable.unicorns[i]].species != NOSPECIES) &&
-            strcmp(deck[player[pindex].stable.unicorns[i]].name, "Puppicorn") != 0) {
-            isvalid++;
-            i = DESC_SIZE;
-          }
-        }
-      }
-      if (!isvalid) pindex = -1;
-    }
-  } while (pindex < 0 || pindex >= current_players || pindex == pnum ||
-    end != (buf + strlen(buf)));
-
-  printStable(pindex);
-  do {
-    printf("Choose the card number to destroy: ");
-    fgets(buf, sizeof buf, stdin);
-    buf[strlen(buf) - 1] = 0;
-    cindex = strtol(buf, &end, 10) - 1;
-
-    // check for class stuff
-    if (cindex >= 0 && cindex < player[pindex].stable.size && end == (buf + strlen(buf))) {
-      if (!checkClass(class,
-        deck[player[pindex].stable.unicorns[cindex]].class) ||
-        ((player[pindex].flags & rainbow_aura) != 0 &&
-          deck[player[pindex].stable.unicorns[cindex]].species != NOSPECIES) ||
-        ((player[pindex].flags & pandamonium) != 0 &&
-          deck[player[pindex].stable.unicorns[cindex]].species != NOSPECIES) ||
-        strcmp(deck[player[pindex].stable.unicorns[cindex]].name, "Puppicorn") == 0) {
-        cindex = -1;
-      }
-      else if (deck[player[pindex].stable.unicorns[cindex]].species != NOSPECIES &&
-        (player[pindex].flags & black_knight_unicorn) != 0 &&
-        (player[pindex].flags & blinding_light) == 0) {
-        // blinding light isn't active but the black knight unicorn is
-        // ask player pindex if they'd like to sacrifice bku instead of cindex (unicorn)
-        do {
-          printf(
-            "Would you like to sacrifice 'Black Knight Unicorn' instead of "
-            "card '%s' (y/n)?: ",
-            deck[player[pindex].stable.unicorns[cindex]].name);
-          fgets(buf2, sizeof buf2, stdin);
-          ans = buf2[0];
-        } while (ans != 'y' && ans != 'n' && strlen(buf2) != 2);
-        if (ans == 'y') {
-          for (int i = 0; i < player[pindex].stable.size; i++) {
-            if (strcmp(deck[player[pindex].stable.unicorns[i]].name,
-              "Black Knight Unicorn") == 0) {
-              cindex = i;
-              break;
-            }
-          }
-        }
-      }
-    }
-  } while (cindex < 0 || cindex >= player[pindex].stable.size || end != (buf + strlen(buf)));
-
-  sacrificeDestroyEffects(pindex, cindex,
-    deck[player[pindex].stable.unicorns[cindex]].effect);
-}
-
-// treat ANYUNICORN as all unicorns when checking class for Unicorn cards;
-// this is for edge cases where Magic cards are being used to destroy cards
-// that cannot be destroyed by those specifically
-void destroyMagic(int pnum, int class) {
+void destroy(int pnum, int class, int isMagicCard) {
   int pindex, cindex, isvalid = 0;
   char ans, * end, buf[LINE_MAX], buf2[LINE_MAX];
 
   printPlayers();
   do {
     printf("Choose a player to destroy from: ");
-    fgets(buf, sizeof buf, stdin);
-    buf[strlen(buf) - 1] = 0;
-    pindex = strtol(buf, &end, 10) - 1;
+    pindex = numinput(buf, &end, sizeof buf) - 1;
 
-    // check if player has any valid unicorns to destroy
-    if (pindex >= 0 && pindex < current_players && pindex != pnum && end == (buf + strlen(buf))) {
-      for (int i = 0; i < player[pindex].stable.size; i++) {
-        if (checkClass(class, deck[player[pindex].stable.unicorns[i]].class)) {
-          // check for Rainbow Aura, Pandemonium flag (where unicorn
-          // cards/pandas can't be destroyed), and the cards Puppicorn and
-          // Magical Kittencorn since those cannot be destroyed
-          if (!((player[pindex].flags & rainbow_aura) != 0 &&
-            deck[player[pindex].stable.unicorns[i]].species != NOSPECIES) &&
-            !((player[pindex].flags & pandamonium) != 0 &&
-              deck[player[pindex].stable.unicorns[i]].species != NOSPECIES) &&
-            strcmp(deck[player[pindex].stable.unicorns[i]].name, "Puppicorn") != 0 &&
-            strcmp(deck[player[pindex].stable.unicorns[i]].name, "Magical Kittencorn") != 0) {
-            isvalid++;
-            i = DESC_SIZE;
-          }
-        }
+    // index validation
+    if (pindex < 0 || pindex >= current_players || pindex == pnum ||
+        end != (buf + strlen(buf)))
+      continue;
+
+    for (int i = 0; i < player[pindex].stable.size; i++) {
+      if (canBeDestroyed(pindex, i, class, isMagicCard)) {
+        isvalid = 1;
+        break;
       }
-      if (!isvalid) pindex = -1;
     }
-  } while (pindex < 0 || pindex >= current_players || pindex == pnum ||
-    end != (buf + strlen(buf)));
+  } while (!isvalid);
 
   printStable(pindex);
   do {
     printf("Choose the card number to destroy: ");
-    fgets(buf, sizeof buf, stdin);
-    buf[strlen(buf) - 1] = 0;
-    cindex = strtol(buf, &end, 10) - 1;
+    cindex = numinput(buf, &end, sizeof buf) - 1;
+
+    // input validation
+    if (cindex < 0 || cindex >= player[pindex].stable.size || end != (buf + strlen(buf)))
+      continue;
 
     // check for class stuff
-    if (cindex >= 0 && cindex < player[pindex].stable.size && end == (buf + strlen(buf))) {
-      if (!checkClass(class,
-        deck[player[pindex].stable.unicorns[cindex]].class) ||
-        ((player[pindex].flags & rainbow_aura) != 0 &&
-          deck[player[pindex].stable.unicorns[cindex]].species != NOSPECIES) ||
-        ((player[pindex].flags & pandamonium) != 0 &&
-          deck[player[pindex].stable.unicorns[cindex]].species != NOSPECIES) ||
-        strcmp(deck[player[pindex].stable.unicorns[cindex]].name, "Puppicorn") == 0 ||
-        strcmp(deck[player[pindex].stable.unicorns[cindex]].name, "Magical Kittencorn") == 0) {
-        cindex = -1;
-      }
-      else if (deck[player[pindex].stable.unicorns[cindex]].species != NOSPECIES &&
-        (player[pindex].flags & black_knight_unicorn) != 0 &&
-        (player[pindex].flags & blinding_light) == 0) {
-        // blinding light isn't active but the black knight unicorn is
-        // ask player pindex if they'd like to sacrifice bku instead of cindex
-        do {
-          printf(
-            "Would you like to sacrifice 'Black Knight Unicorn' instead of "
-            "card '%s' (y/n)?: ",
-            deck[player[pindex].stable.unicorns[cindex]].name);
-          fgets(buf2, sizeof buf2, stdin);
-          ans = buf2[0];
-        } while (ans != 'y' && ans != 'n' && strlen(buf2) != 2);
-        if (ans == 'y') {
-          for (int i = 0; i < player[pindex].stable.num_unicorns; i++) {
-            if (strcmp(deck[player[pindex].stable.unicorns[i]].name,
-              "Black Knight Unicorn") == 0) {
-              cindex = i;
-              i = DESC_SIZE;
-            }
+    if (!canBeDestroyed(pindex, cindex, class, isMagicCard)) {
+      cindex = -1;
+    }
+    // TODO: (maybe) create a function for "martyr" cards that sacrifice themselves upon
+    // another card getting destroyed
+    else if (player[pindex].stable.unicorns[cindex].species != NOSPECIES &&
+      (player[pindex].flags & black_knight_unicorn) != 0 &&
+      (player[pindex].flags & blinding_light) == 0 &&
+      (player[pindex].flags & pandamonium) == 0 &&
+      strcmp(player[pindex].stable.unicorns[cindex].name, "Black Knight Unicorn") != 0) {
+      // blinding light and pandamonium aren't active, but the black knight unicorn is
+      // ask player pindex if they'd like to sacrifice bku instead of cindex (unicorn)
+      //
+      // TODO: since this is asking the chosen victim, this should be sent through the network
+      do {
+        printf(
+          "Would you like to sacrifice 'Black Knight Unicorn' instead of "
+          "card '%s' (y/n)?: ",
+          player[pindex].stable.unicorns[cindex].name);
+        ans = charinput(buf2, sizeof buf2);
+      } while (ans != 'y' && ans != 'n' && strlen(buf2) != 2);
+
+      if (ans == 'y') {
+        for (int i = 0; i < player[pindex].stable.size; i++) {
+          if (strcmp(player[pindex].stable.unicorns[i].name,
+            "Black Knight Unicorn") == 0) {
+            cindex = i;
+            break;
           }
         }
       }
     }
   } while (cindex < 0 || cindex >= player[pindex].stable.size || end != (buf + strlen(buf)));
 
-  sacrificeDestroyEffects(pindex, cindex,
-    deck[player[pindex].stable.unicorns[cindex]].effect);
+  sacrificeDestroyEffects(pindex, cindex, player[pindex].stable.unicorns[cindex].effect);
 }
 
 // treat ANYUNICORN as all unicorns when checking class for Unicorn cards
 void steal(int pnum, int class) {
-  int pindex, cindex, isvalid = 0;
+  int pindex = -1, cindex, isvalid = 0;
   char* end, buf[LINE_MAX];
 
   printPlayers();
   do {
     printf("Choose a player to steal from: ");
-    fgets(buf, sizeof buf, stdin);
-    buf[strlen(buf) - 1] = 0;
-    pindex = strtol(buf, &end, 10) - 1;
+    pindex = numinput(buf, &end, sizeof buf) - 1;
+
+    // index validation
+    if (pindex < 0 || pindex >= current_players || pindex == pnum || end != (buf + strlen(buf)))
+      continue;
 
     // check if player has any valid unicorns to steal
-    if (pindex >= 0 && pindex < current_players && pindex != pnum && end == (buf + strlen(buf))) {
-      for (int i = 0; i < player[pindex].stable.size; i++) {
-        if (checkClass(class, deck[player[pindex].stable.unicorns[i]].class)) {
-          isvalid++;
-          i = DESC_SIZE;
-        }
+    for (int i = 0; i < player[pindex].stable.size; i++) {
+      if (checkClass(class, player[pindex].stable.unicorns[i].class)) {
+        isvalid = 1;
+        break;
       }
-      if (!isvalid) pindex = -1;
     }
-  } while (pindex < 0 || pindex >= current_players || pindex == pnum || end != (buf + strlen(buf)));
+  } while (!isvalid);
 
   printStable(pindex);
-  do {
+  for (;;) {
     printf("Choose the card number to steal: ");
-    fgets(buf, sizeof buf, stdin);
-    buf[strlen(buf) - 1] = 0;
-    cindex = strtol(buf, &end, 10) - 1;
+    cindex = numinput(buf, &end, sizeof buf) - 1;
+
+    // index validation
+    if (cindex < 0 || cindex >= player[pindex].stable.size || end != (buf + strlen(buf)))
+      continue;
 
     // check for class stuff
-    if (cindex >= 0 && cindex < player[pindex].stable.size && end == (buf + strlen(buf))) {
-      if (!checkClass(class,
-        deck[player[pindex].stable.unicorns[cindex]].class)) {
-        cindex = -1;
-      }
+    if (checkClass(class, player[pindex].stable.unicorns[cindex].class)) {
+      break;
     }
-  } while (cindex < 0 || cindex >= player[pindex].stable.size || end != (buf + strlen(buf)));
+  }
 
-  // assign card from chosen player's stable (pindex) to the current player's
-  // stable (pnum); trigger any effects and toggle any flags from the chosen
-  // player since the card is no longer in play for them (pindex)
-  addStable(pnum, player[pindex].stable.unicorns[cindex]);
+  // assign card from chosen player's stable (pindex) to the current player's stable (pnum)
+  struct Unicorn tmp = player[pindex].stable.unicorns[cindex];
   rearrangeStable(pindex, cindex);
-  enterStableEffects(pnum, deck[player[pnum].stable.unicorns[player[pnum].stable.size - 1]].effect);
-  toggleFlags(pindex, deck[player[pnum].stable.unicorns[player[pnum].stable.size - 1]].effect);
+
+  addStable(pnum, tmp);
+  enterStableEffects(pnum, tmp.effect);
 }
 
 // ********************************************************************************
@@ -711,104 +649,119 @@ void steal(int pnum, int class) {
 // ********************************************************************************
 
 // codes the part where players are able to use an instant card against a play
-// 0 = nobody used Neigh/Super Neigh or Neigh's cancelled out; 1 = card is gone
+// 0 = nobody used Neigh/Super Neigh or Neigh's cancelled out
+// 1 = card is gone
+// 
 // TODO: bug where Neigh remained in player's hand that last refuted it (e.g. 3
 // neighs were used in total and when player 3 used americorn on player 1 to get
 // a random card, it picked the same Neigh ID that was in the discard pile)
-int refutePhase(int pnum, int cindex) {
-  int index, index2, oldpindex, isvalid = 0, oddcheck = 0;
+int refutePhase(int orig_pnum, int *orig_cindex) {
+  int pindex = -2, cindex, oldpindex, isvalid = 0, oddcheck = 0;
   char* end, buf[LINE_MAX];
 
   red();
-  printf("%s is about to play card %s.\n", player[pnum].username,
-    deck[player[pnum].hand.cards[cindex]].name);
+  printf("%s is about to play card %s.\n", player[orig_pnum].username,
+    player[orig_pnum].hand.cards[*orig_cindex].name);
   reset_col();
 
   do {
     printf(
       "If a player would like to Neigh this card, then please type in the "
       "player number. Otherwise enter 0 to quit: ");
-    fgets(buf, sizeof buf, stdin);
-    buf[strlen(buf) - 1] = 0;
-    index = strtol(buf, &end, 10) - 1;
+    pindex = numinput(buf, &end, sizeof buf) - 1;
 
-    if (index >= 0 && index < current_players && index != pnum && end == (buf + strlen(buf)) && // valid input check
-        canNeighOthers(index)) { // neigh check
-      for (int i = 0; i < player[index].hand.num_cards; i++) {
-        if (deck[player[index].hand.cards[i]].class == INSTANT) {
-          isvalid++;
+    // quit
+    if (pindex == -1)
+      return 0;
+
+    // index validation
+    if (pindex < -1 || pindex >= current_players || pindex == orig_pnum || end != (buf + strlen(buf)))
+      continue;
+
+    // neigh check
+    if (canNeighOthers(pindex) && canBeNeighed(orig_pnum)) {
+      for (int i = 0; i < player[pindex].hand.num_cards; i++) {
+        if (player[pindex].hand.cards[i].class == INSTANT) {
+          isvalid = 1;
+          break;
         }
       }
     }
+  } while (!isvalid);
 
-    if (!isvalid && index != -1) index = -2;
-  } while (index < -1 || index >= current_players || index == pnum || end != (buf + strlen(buf)));
+  printHand(pindex);
+  for (;;) {
+    printf("Pick the specific Neigh card to use: ");
+    cindex = numinput(buf, &end, sizeof buf) - 1;
 
-  if (index == -1) {
-    return 0;
+    // index validation
+    if (cindex < 0 || cindex >= player[pindex].hand.num_cards || end != (buf + strlen(buf)))
+      continue;
+
+    // make sure it's actually a Neigh or Super Neigh
+    if (player[pindex].hand.cards[cindex].class == INSTANT)
+      break;
   }
 
-  printHand(index);
-  do {
-    printf("Pick the specific Neigh card to use: ");
-    fgets(buf, sizeof buf, stdin);
-    buf[strlen(buf) - 1] = 0;
-    index2 = strtol(buf, &end, 10) - 1;
-    // make sure it's actually a Neigh or Super Neigh
-    if (index2 >= 0 && index2 < player[index].hand.num_cards && end == (buf + strlen(buf)))
-      if (deck[player[index].hand.cards[index2]].class != INSTANT)
-        index2 = -1;
-  } while (index2 < 0 || index2 >= player[index].hand.num_cards || end != (buf + strlen(buf)));
-
-  discard_ref[discard_index++] = player[index].hand.cards[index2];
-  rearrangeHand(index, index2);
+  addDiscard(player[pindex].hand.cards[cindex]);
+  rearrangeHand(pindex, cindex);
 
   oddcheck++;
 
-  // card ID of 128 is a Super Neigh, which cannot be refuted; loop until
-  // Neigh's have been exhausted
-  // TODO: the magic number is kind of disgusting...
-  while (discard_ref[discard_index - 1] != 128 && index != -1) {
+  // loop until Neigh's have been exhausted; Super Neighs can't be refuted
+  while (strcmp(discardpile.cards[discardpile.size - 1].name, "Super Neigh") != 0 && pindex != -1) {
     isvalid = 0;
-    oldpindex = index;
+    oldpindex = pindex;
     do {
       printf(
         "If a player would like to negate the previous Neigh card, then "
         "please type in the player number. \nOtherwise enter 0 to quit: ");
-      fgets(buf, sizeof buf, stdin);
-      buf[strlen(buf) - 1] = 0;
-      index = strtol(buf, &end, 10) - 1;
+      pindex = numinput(buf, &end, sizeof buf) - 1;
 
-      // flags 2 and 64 indicate new player index cannot use a Neigh card,
-      // while flag 4 indicates the previous player oldpindex is unable to be
-      // Neigh'd; flag 64 is negated if blinding light (128) is enabled since
-      // that renders it a basic unicorn
-      if (index != oldpindex && index >= 0 && index < current_players && end == (buf + strlen(buf)) && // valid input check
-        canNeighOthers(index) && canBeNeighed(oldpindex)) { // neigh check
-        for (int i = 0; i < player[index].hand.num_cards; i++) {
-          if (deck[player[index].hand.cards[i]].class == INSTANT) {
-            isvalid++;
+      // quit
+      if (pindex == -1)
+        break;
+
+      // index validation
+      if (pindex == oldpindex || pindex < -1 || pindex >= current_players || end != (buf + strlen(buf)))
+        continue;
+
+      // neigh check
+      if (canNeighOthers(pindex) && canBeNeighed(oldpindex)) {
+        for (int i = 0; i < player[pindex].hand.num_cards; i++) {
+          if (player[pindex].hand.cards[i].class == INSTANT) {
+            isvalid = 1;
+            break;
           }
         }
       }
-      if (!isvalid && index != -1) index = -2;
-    } while (index < -1 || index >= current_players || end != (buf + strlen(buf)));
 
-    if (index != -1) {
-      printHand(index);
-      do {
+    } while (!isvalid);
+
+    if (pindex != -1) {
+      printHand(pindex);
+      for (;;) {
         printf("Pick the specific Neigh card to use: ");
-        fgets(buf, sizeof buf, stdin);
-        buf[strlen(buf) - 1] = 0;
-        index2 = strtol(buf, &end, 10) - 1;
-        // make sure it's actually a Neigh or Super Neigh
-        if (index2 >= 0 && index2 < player[index].hand.num_cards && end == (buf + strlen(buf)))
-          if (deck[player[index].hand.cards[index2]].class != INSTANT)
-            index2 = -1;
-      } while (index2 < 0 || index2 >= player[index].hand.num_cards || end != (buf + strlen(buf)));
+        cindex = numinput(buf, &end, sizeof buf) - 1;
 
-      discard_ref[discard_index++] = player[index].hand.cards[index2];
-      rearrangeHand(index, index2);
+        // index validation
+        if (cindex < 0 || cindex >= player[pindex].hand.num_cards || end != (buf + strlen(buf)))
+          continue;
+
+        // make sure it's actually a Neigh or Super Neigh
+        if (player[pindex].hand.cards[cindex].class == INSTANT)
+          break;
+      }
+      // check if the player in this part of the loop is the same as the original pnum
+      // if so, it needs to adjust the original card index based off of where the neigh was
+      if (pindex == orig_pnum) {
+        // it only needs to be adjusted if the new cindex is lower
+        if (cindex < *orig_cindex)
+          *orig_cindex -= 1;
+      }
+
+      addDiscard(player[pindex].hand.cards[cindex]);
+      rearrangeHand(pindex, cindex);
 
       oddcheck++;
     }
@@ -816,8 +769,8 @@ int refutePhase(int pnum, int cindex) {
 
   // the neigh went through
   if (oddcheck & 1) {
-    discard_ref[discard_index++] = player[pnum].hand.cards[cindex];
-    rearrangeHand(pnum, cindex);
+    addDiscard(player[orig_pnum].hand.cards[*orig_cindex]);
+    rearrangeHand(orig_pnum, *orig_cindex);
     return 1;
   }
 
@@ -825,32 +778,37 @@ int refutePhase(int pnum, int cindex) {
 }
 
 void playCard(int pnum) {
-  int index, index2;
+  int index, target_pindex;
   char* end, buf[LINE_MAX];
 
-  do {
+  for (;;) {
     printf("Pick the card number you'd like to play (non-instant card): ");
-    // fgets(buf, sizeof buf, stdin);
-    // buf[strlen(buf) - 1] = 0;
-    // index = strtol(buf, &end, 10) - 1;
-    index = numinput(buf, &end, sizeof buf);
+    index = numinput(buf, &end, sizeof buf) - 1;
 
-    if (index >= 0 && index < player[pnum].hand.num_cards && end == (buf + strlen(buf)))
-      if (deck[player[pnum].hand.cards[index]].class == INSTANT)
-        index = -1;
-  } while (index < 0 || index >= player[pnum].hand.num_cards || end != (buf + strlen(buf)));
+    // index validation
+    if (index < 0 || index >= player[pnum].hand.num_cards || end != (buf + strlen(buf)))
+      continue;
 
+    // check for instant cards
+    if (player[pnum].hand.cards[index].class != INSTANT)
+      break;
+  }
+
+  // TODO: add this after verifying that the card is actually playable, or else
+  // people might waste their neigh cards on an impossible play
+  // 
   // check if the player cannot be Neigh'd first before initiating the func
   if (canBeNeighed(pnum))
-    if (refutePhase(pnum, index)) return;
+    if (refutePhase(pnum, &index)) return;
 
   // get the card ID before rearranging the hand so that when you discard
   // cards it doesn't show the one you just used when you're doing the
   // effect
-  int cardid = player[pnum].hand.cards[index];
+  struct Unicorn corn = player[pnum].hand.cards[index];
 
-  // depending on class, decide whether it goes to stable or discard pile
-  if (deck[cardid].class == BASICUNICORN) {
+  switch (corn.class) {
+  case BASICUNICORN:
+  {
     if ((player[pnum].flags & queen_bee_unicorn) != 0) {
       printf("%s is unable to play Basic Unicorns due to someone else's "
         "Queen Bee Unicorn\n", player[pnum].username);
@@ -858,21 +816,21 @@ void playCard(int pnum) {
       return;
     }
     rearrangeHand(pnum, index);
-    addStable(pnum, cardid);
+    addStable(pnum, corn);
+    break;
   }
-  else if (deck[cardid].class == BABYUNICORN ||
-    deck[cardid].class == MAGICUNICORN) {
+  case MAGICUNICORN:
+  {
     rearrangeHand(pnum, index);
-    addStable(pnum, cardid);
-    if (strcmp(deck[cardid].name, "Puppicorn") == 0) {
-      puppicorn_index = player[pnum].stable.size - 1;
-    }
+    addStable(pnum, corn);
+    break;
   }
-  else if (deck[cardid].class == UPGRADE ||
-    deck[cardid].class == DOWNGRADE) {
+  case UPGRADE:
+  case DOWNGRADE:
+  {
     // check for Broken Stable flag
     if (((player[pnum].flags & broken_stable) != 0) &&
-      deck[cardid].class == UPGRADE) {
+        corn.class == UPGRADE) {
       printf(
         "Player %d is unable to play Upgrade cards due to the effect of "
         "'Broken Stable'\n",
@@ -883,31 +841,38 @@ void playCard(int pnum) {
     printPlayers();
     do {
       printf("Choose a player to give the upgrade/downgrade card: ");
-      fgets(buf, sizeof buf, stdin);
-      buf[strlen(buf) - 1] = 0;
-      index2 = strtol(buf, &end, 10) - 1;
-    } while (index2 < 0 || index2 >= current_players || end != (buf + strlen(buf)));
+      target_pindex = numinput(buf, &end, sizeof buf) - 1;
+    } while (target_pindex < 0 || target_pindex >= current_players || end != (buf + strlen(buf)));
 
     // Upgrade/Downgrade card effects here since they may affect a different
-    // stable; index2 is the affected player while pnum is current player
-    toggleFlags(index2, deck[cardid].effect);
+    // stable; target_pindex is the affected player while pnum is current player
+    toggleFlags(target_pindex, corn.effect);
 
-    // assign card from current player's hand (pnum) to the chosen stable
-    // (index2)
-    if (conditionalEffects(pnum, deck[cardid].effect, cardid, index, index2) == 2) {
-      player[index2].stable.unicorns[player[index2].stable.size++] =
-        cardid;
+    // assign card from current player's hand (pnum) to the chosen stable (target_pindex); 
+    // conditionalEffects does all of the card management/discarding, so only update and
+    // add to the stable if it's been skipped over
+    if (conditionalEffects(pnum, corn, index, target_pindex) == 2) {
+      player[target_pindex].stable.unicorns[player[target_pindex].stable.size] = corn;
+      player[target_pindex].stable.size++;
       rearrangeHand(pnum, index);
     }
+    break;
   }
-  else {
+  case MAGIC:
     // magic cards go to the discard pile!
-    if (conditionalEffects(pnum, deck[cardid].effect, cardid, index, pnum) == 2) {
-      discard_ref[discard_index++] = cardid;
+    if (conditionalEffects(pnum, corn, index, pnum) == 2) {
+      addDiscard(corn);
       rearrangeHand(pnum, index);
-      magicEffects(pnum, deck[cardid].effect);
+      magicEffects(pnum, corn.effect);
     }
+    break;
+  default:
+    // something went wrong here... there should be no baby unicorns, instant, or classless cards
+    printf("unicorn classification error, please choose a different card\n");
+    turn_count++;
+    return;
   }
 
-  enterStableEffects(pnum, deck[cardid].effect);
+  // TODO: move this to addStable??
+  enterStableEffects(pnum, corn.effect);
 }

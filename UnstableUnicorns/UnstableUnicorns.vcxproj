@@ -149,21 +149,21 @@
     <ClCompile Include="basedeck.c" />
     <ClCompile Include="client.c" />
     <ClCompile Include="gamemechanics.c" />
+    <ClCompile Include="gamephase.c" />
     <ClCompile Include="globals.c" />
     <ClCompile Include="networkfuncs.c" />
     <ClCompile Include="server.c" />
-    <ClCompile Include="unittests.c" />
     <ClCompile Include="uu_cmd_demo.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="basedeck.h" />
     <ClInclude Include="client.h" />
     <ClInclude Include="gamemechanics.h" />
+    <ClInclude Include="gamephase.h" />
     <ClInclude Include="globals.h" />
     <ClInclude Include="networkfuncs.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="server.h" />
-    <ClInclude Include="unittests.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="UnstableUnicorns.rc" />

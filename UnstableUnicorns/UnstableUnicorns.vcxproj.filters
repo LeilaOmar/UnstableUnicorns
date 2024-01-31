@@ -6,8 +6,7 @@
       <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
     </Filter>
     <Filter Include="Header Files">
-      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
-      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+      <UniqueIdentifier>{40afbd5c-798f-4604-af01-fb8d23d6b432}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -29,37 +28,37 @@
     <ClCompile Include="networkfuncs.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="unittests.c">
+    <ClCompile Include="basedeck.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="basedeck.c">
+    <ClCompile Include="gamephase.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="globals.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="server.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="client.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="gamemechanics.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="networkfuncs.h">
+    <ClInclude Include="globals.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="unittests.h">
+    <ClInclude Include="networkfuncs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="server.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="gamephase.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="basedeck.h">
-      <Filter>Source Files</Filter>
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
