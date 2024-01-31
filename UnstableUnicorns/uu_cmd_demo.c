@@ -34,10 +34,6 @@
 // - for glitter tornado, the user chooses the cards to return to each player's
 // hand
 //
-// *** Don't forget to optimize and rewrite the heck out of this!
-// *** Looks like effect #22 is blank
-// *** Combine some functions together and maybe use more define variables to
-// make the code clearer
 // *** TODO (maybe?): move the potentially unplayable cards (i.e. the ones that
 // increase turncount and move the card back to the bottom of the player's hand
 // after being removed from the stable) to a different function that gets
@@ -45,21 +41,11 @@
 // leave the hand and briefly enter the stable, and that may also cause a bug
 // if it's a unicorn card and that would bring the number of unicorns up to 7
 // if I ever put that in the addStable function
-// *** TODO: Change all the "i = DESC_SIZE" or other type of constant
-// assignments to breaks or returns instead
-// *** TODO (maybe): replace "isvalid++" with "isvalid = 1" in most places tbh
 // *** TODO: find a way to deal with edge cases in unicorn lasso where the
 // beginning effect or action phase card has some way to sacrifice the stolen
 // card, thus making it unable to be given back to the original owner (currently
 // it would probably bug out and pass over an incorrect card from the "original
-// index")
-// *** TODO: When a card effect requires multiple actions, those actions are
-// sometimes separated by “then”(ex. “SACRIFICE a Unicorn card, then DRAW a
-// card”). If a card says “then, ” you may only perform the second action if you
-// successfully perform the first action.In the example listed, if you do not
-// have a Unicorn card to SACRIFICE, you may not DRAW a card
-//    ^ i actually did not know this... so i may need to edit edge cases as
-//    described above
+// index") [i think this is fixed already?]
 // *** TODO: do not actually shuffle the discard pile into the deck if the
 // deck is empty. that's actually game-over, and the person with the most
 // unicorns in their stable at that time wins. tiebreakers are decided through
@@ -73,7 +59,6 @@
 
 #include "client.h"
 #include "server.h"
-#include "unittests.h"
 #include "windowsapp.h"
 
 // ******************** Deck List and IDs ********************
@@ -369,31 +354,11 @@ int mainlet(int argc, char* argv[]) {
     }
   }
 
-  // unit testing :')
-  int result;
-  char buf[LINE_MAX];
-  
-  do {
-    printf("Enter \"test\" or \"1\" if you would like to perform unit tests, or\n"
-      "Enter \"game\" or \"2\" if you wish to start a real game\n"
-      "Option: ");
-    fgets(buf, sizeof buf, stdin);
-    buf[strlen(buf) - 1] = 0;
-  } while (strncmp(buf, "test", 4) != 0 && strncmp(buf, "game", 4) != 0 &&
-    strncmp(buf, "1", 1) != 0 && strncmp(buf, "2", 1) != 0);
+  // initialize the deck here for now
+  init_deck(&nursery, &deck, &discardpile);
 
-  if (strncmp(buf, "test", 4) == 0 || strncmp(buf, "1", 1) == 0) {
-    if ((result = test_main()) == 0) {
-      green();
-      printf("\nAll tests have successfully passed! :D\n");
-      reset_col();
-    }
-    else {
-      printf("\nA total of %d tests have failed :(\n", result);
-    }
-
-    exit(0);
-  }
+  // file stream pointer to use as a placeholder for stdin or the test input files
+  fpinput = stdin;
 
   // create a log file for all input
   /*char filename[40];
@@ -418,6 +383,8 @@ int mainlet(int argc, char* argv[]) {
   // ***************** Networking Set-up *****************
   // *****************************************************
   WSADATA wsa;
+  int result;
+  char buf[LINE_MAX];
 
   // set up winsock with TDP communication (SOCK_STREAM) on IPv4 (AF_INET)
   if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) {

@@ -1,0 +1,224 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>16.0</VCProjectVersion>
+    <Keyword>Win32Proj</Keyword>
+    <ProjectGuid>{9eaa49a9-0a42-4ddf-8a2e-896a06a7ff0e}</ProjectGuid>
+    <RootNamespace>UnstableUnicornsTest</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>../UnstableUnicorns</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="..\UnstableUnicorns\basedeck.c" />
+    <ClCompile Include="..\UnstableUnicorns\gamemechanics.c" />
+    <ClCompile Include="..\UnstableUnicorns\gamephase.c" />
+    <ClCompile Include="..\UnstableUnicorns\globals.c" />
+    <ClCompile Include="resetfns.c" />
+    <ClCompile Include="Tests\AlluringNarwhalTest.c" />
+    <ClCompile Include="Tests\AmericornTest.c" />
+    <ClCompile Include="Tests\AngelUnicornTest.c" />
+    <ClCompile Include="Tests\AnnoyingFlyingUnicornTest.c" />
+    <ClCompile Include="Tests\BackKickTest.c" />
+    <ClCompile Include="Tests\BarbedWireTest.c" />
+    <ClCompile Include="Tests\BlackKnightUnicornTest.c" />
+    <ClCompile Include="Tests\BlatantThieveryTest.c" />
+    <ClCompile Include="Tests\BlindingLightTest.c" />
+    <ClCompile Include="Tests\BrokenStableTest.c" />
+    <ClCompile Include="Tests\ChainsawUnicornTest.c" />
+    <ClCompile Include="Tests\ChangeOfLuckTest.c" />
+    <ClCompile Include="Tests\ClassyNarwhalTest.c" />
+    <ClCompile Include="Tests\DoubleDutchTest.c" />
+    <ClCompile Include="Tests\ExtraTailTest.c" />
+    <ClCompile Include="Tests\ExtremelyDestructiveUnicornTest.c" />
+    <ClCompile Include="Tests\ExtremelyFertileUnicornTest.c" />
+    <ClCompile Include="Tests\GinormousUnicornTest.c" />
+    <ClCompile Include="Tests\GlitterBombTest.c" />
+    <ClCompile Include="Tests\GlitterTornadoTest.c" />
+    <ClCompile Include="Tests\GoodDealTest.c" />
+    <ClCompile Include="Tests\GreedyFlyingUnicornTest.c" />
+    <ClCompile Include="Tests\LlamacornTest.c" />
+    <ClCompile Include="Tests\MagicalFlyingUnicornTest.c" />
+    <ClCompile Include="Tests\MagicalKittencornTest.c" />
+    <ClCompile Include="Tests\MajesticFlyingUnicornTest.c" />
+    <ClCompile Include="Tests\MermaidUnicornTest.c" />
+    <ClCompile Include="Tests\MysticalVortexTest.c" />
+    <ClCompile Include="Tests\NannyCamTest.c" />
+    <ClCompile Include="Tests\NarwhalTorpedoTest.c" />
+    <ClCompile Include="Tests\NeighTest.c" />
+    <ClCompile Include="Tests\PandamoniumTest.c" />
+    <ClCompile Include="Tests\PuppicornTest.c" />
+    <ClCompile Include="Tests\QueenBeeUnicornTest.c" />
+    <ClCompile Include="Tests\RainbowAuraTest.c" />
+    <ClCompile Include="Tests\RainbowManeTest.c" />
+    <ClCompile Include="Tests\RainbowUnicornTest.c" />
+    <ClCompile Include="Tests\ResetButtonTest.c" />
+    <ClCompile Include="Tests\ReTargetTest.c" />
+    <ClCompile Include="Tests\RhinocornTest.c" />
+    <ClCompile Include="Tests\SadisticRitualTest.c" />
+    <ClCompile Include="Tests\SeductiveUnicornTest.c" />
+    <ClCompile Include="Tests\ShabbyTheNarwhalTest.c" />
+    <ClCompile Include="Tests\ShakeUpTest.c" />
+    <ClCompile Include="Tests\SharkWithAHornTest.c" />
+    <ClCompile Include="Tests\SlowdownTest.c" />
+    <ClCompile Include="Tests\StabbyTheUnicornTest.c" />
+    <ClCompile Include="Tests\SummoningRitualTest.c" />
+    <ClCompile Include="Tests\SuperNeighTest.c" />
+    <ClCompile Include="Tests\SwiftFlyingUnicornTest.c" />
+    <ClCompile Include="Tests\TargetedDestructionTest.c" />
+    <ClCompile Include="Tests\TheGreatNarwhalTest.c" />
+    <ClCompile Include="Tests\TinyStableTest.c" />
+    <ClCompile Include="Tests\TwoForOneTest.c" />
+    <ClCompile Include="Tests\UnfairBargainTest.c" />
+    <ClCompile Include="Tests\UnicornLassoTest.c" />
+    <ClCompile Include="Tests\UnicornOnTheCobTest.c" />
+    <ClCompile Include="Tests\UnicornPhoenixTest.c" />
+    <ClCompile Include="Tests\UnicornPoisonTest.c" />
+    <ClCompile Include="Tests\UnicornShrinkrayTest.c" />
+    <ClCompile Include="Tests\UnicornSwapTest.c" />
+    <ClCompile Include="Tests\YayTest.c" />
+    <ClCompile Include="Tests\ZombieUnicornTest.c" />
+    <ClCompile Include="unittests.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="resetfns.h" />
+    <ClInclude Include="Tests\DowngradeTests.h" />
+    <ClInclude Include="Tests\InstantTests.h" />
+    <ClInclude Include="Tests\MagicTests.h" />
+    <ClInclude Include="Tests\MagicUnicornTests.h" />
+    <ClInclude Include="Tests\UpgradeTests.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
