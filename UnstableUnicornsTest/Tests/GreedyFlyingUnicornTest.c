@@ -5,11 +5,9 @@ int greedy_basic_check() {
 	int num_fails = 0;
 	struct Unicorn greedy_tmp = basedeck[52];
 
-	addStable(0, greedy_tmp);
-
 	assert(player[0].hand.num_cards == 0);
 
-	enterStableEffects(0, greedy_tmp.effect);
+	addStable(0, greedy_tmp);
 
 	if (player[0].hand.num_cards != 1) {
 		num_fails++;
@@ -20,7 +18,7 @@ int greedy_basic_check() {
 	reset_players();
 
 	// check the sacrifice/destroy effects
-	addStable(0, greedy_tmp);
+	player[0].stable.unicorns[0] = greedy_tmp;
 
 	assert(player[0].hand.num_cards == 0);
 	sacrificeDestroyEffects(0, 0, greedy_tmp.effect);

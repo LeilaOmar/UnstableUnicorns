@@ -128,7 +128,6 @@ int endOfTurn(int pnum) {
     rearrangeStable(thief, cindex);
 
     addStable(owner, tmp);
-    enterStableEffects(owner, tmp.effect);
   }
 
   // puppicorn swap

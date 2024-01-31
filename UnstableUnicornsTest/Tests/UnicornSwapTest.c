@@ -103,8 +103,6 @@ int unicorn_swap_toggle_check() {
 	current_players = 3;
 	addStable(0, queen_tmp);
 	addStable(1, ginormous_tmp);
-	toggleFlags(0, queen_tmp.effect);
-	toggleFlags(1, ginormous_tmp.effect);
 	player[0].hand.cards[player[0].hand.num_cards++] = swap_tmp;
 
 	assert((player[0].flags & queen_bee_unicorn) == 0); // this flag is set backwards
@@ -232,8 +230,6 @@ int unicorn_swap_unicorn_lasso_check() {
 	addStable(1, ginormous_tmp);
 	addStable(2, basic_tmp2);
 	addStable(2, queen_tmp);
-	enterStableEffects(1, ginormous_tmp.effect);
-	enterStableEffects(2, queen_tmp.effect);
 
 	assert(player[0].hand.num_cards == 1);
 	assert(player[0].stable.size == 2);

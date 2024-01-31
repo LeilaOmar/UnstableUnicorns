@@ -8,34 +8,32 @@ int destructive_basic_check() {
 	struct Unicorn destructive_tmp = basedeck[44];
 
 	current_players = 3;
-	addStable(0, destructive_tmp);
 	addStable(1, basic_tmp);
 	addStable(2, barbed_wire_tmp);
 
-	int ncorn0 = player[0].stable.num_unicorns;
-	int nsize0 = player[0].stable.size;
-	int ncorn1 = player[1].stable.num_unicorns;
-	int nsize1 = player[1].stable.size;
-	int ncorn2 = player[2].stable.num_unicorns;
-	int nsize2 = player[2].stable.size;
+	assert(player[0].stable.size == 0);
+	assert(player[1].stable.size == 1);
+	assert(player[2].stable.size == 1);
+	assert(player[0].stable.num_unicorns == 0);
+	assert(player[1].stable.num_unicorns == 1);
+	assert(player[2].stable.num_unicorns == 0);
+	addStable(0, destructive_tmp);
 
-	enterStableEffects(0, destructive_tmp.effect);
-
-	if (player[0].stable.num_unicorns != (ncorn0 - 1) || player[0].stable.size != (nsize0 - 1)) {
+	if (player[0].stable.num_unicorns != 0 || player[0].stable.size != 0) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    sanity test: player[0] stable size failed\n");
 		reset_col();
 	}
 
-	if (player[1].stable.num_unicorns != (ncorn1 - 1) || player[1].stable.size != (nsize1 - 1)) {
+	if (player[1].stable.num_unicorns != 0 || player[1].stable.size != 0) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    sanity test: player[1] stable size failed\n");
 		reset_col();
 	}
 
-	if (player[2].stable.num_unicorns != ncorn2 || player[2].stable.size != nsize2) {
+	if (player[2].stable.num_unicorns != 0 || player[2].stable.size != 1) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    sanity test: player[2] stable size failed\n");
@@ -66,15 +64,14 @@ int destructive_pandamonium_check() {
 
 	current_players = 3;
 	addStable(0, panda_tmp);
-	addStable(0, destructive_tmp);
 	addStable(1, basic_tmp);
 	toggleFlags(0, panda_tmp.effect);
 
-	assert(player[0].stable.size == 2);
+	assert(player[0].stable.size == 1);
 	assert(player[1].stable.size == 1);
 	assert(player[2].stable.size == 0);
 	assert(player[0].flags == pandamonium);
-	enterStableEffects(0, destructive_tmp.effect);
+	addStable(0, destructive_tmp);
 
 	if (player[0].stable.num_unicorns != 1 || player[0].stable.size != 2 ||
 			strcmp(player[0].stable.unicorns[0].name, panda_tmp.name) != 0 ||
