@@ -8,12 +8,11 @@ int alluring_basic_check() {
 
 	current_players = 2;
 	addStable(0, yay_tmp);
-	addStable(1, alluring_tmp);
 
 	assert(player[0].stable.size == 1);
-	assert(player[1].stable.num_unicorns == 1);
-	assert(player[1].stable.size == 1);
-	enterStableEffects(1, alluring_tmp.effect);
+	assert(player[1].stable.num_unicorns == 0);
+	assert(player[1].stable.size == 0);
+	addStable(1, alluring_tmp);
 
 	if (player[0].stable.size != 0 || player[0].stable.num_unicorns != 0 ||
 			player[1].stable.size != 2 || player[1].stable.num_unicorns != 1) {
@@ -43,14 +42,13 @@ int alluring_empty_check() {
 	struct Unicorn basic_tmp = basedeck[13];
 
 	current_players = 2;
-	addStable(0, alluring_tmp);
 	addStable(0, yay_tmp);
 	addStable(1, basic_tmp);
 
-	assert(player[0].stable.num_unicorns == 1);
-	assert(player[0].stable.size == 2);
+	assert(player[0].stable.num_unicorns == 0);
+	assert(player[0].stable.size == 1);
 	assert(player[1].stable.size == 1);
-	enterStableEffects(0, alluring_tmp.effect);
+	addStable(0, alluring_tmp);
 
 	if (player[0].stable.size != 2 || player[0].stable.num_unicorns != 1 ||
 			player[1].stable.size != 1 || player[1].stable.num_unicorns != 1) {

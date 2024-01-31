@@ -86,7 +86,6 @@ int poison_special_check() {
 	current_players = 2;
 	addStable(0, basic_tmp);
 	addStable(1, ginormous_tmp);
-	toggleFlags(1, ginormous_unicorn_effect);
 	player[0].hand.cards[player[0].hand.num_cards++] = poison_tmp;
 
 	assert((player[1].flags & ginormous_unicorn) == ginormous_unicorn);

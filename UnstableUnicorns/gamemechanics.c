@@ -319,6 +319,9 @@ void addStable(int pnum, struct Unicorn corn) {
     puppicorn_index[0] = player[pnum].stable.size - 1;
     puppicorn_index[1] = pnum;
   }
+
+  // enter stable effects if applicable; notably not the same as toggleflags
+  enterStableEffects(pnum, corn.effect);
 }
 
 // return card from stable to hand, or the nursery if it's a baby
@@ -641,7 +644,6 @@ void steal(int pnum, int class) {
   rearrangeStable(pindex, cindex);
 
   addStable(pnum, tmp);
-  enterStableEffects(pnum, tmp.effect);
 }
 
 // ********************************************************************************
@@ -872,7 +874,4 @@ void playCard(int pnum) {
     turn_count++;
     return;
   }
-
-  // TODO: move this to addStable??
-  enterStableEffects(pnum, corn.effect);
 }

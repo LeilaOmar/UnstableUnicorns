@@ -8,13 +8,12 @@ int cob_basic_check() {
 
 	int tmp_size = deck.size;
 
-	addStable(0, cob_tmp);
 	player[0].hand.cards[player[0].hand.num_cards++] = basic_tmp;
 
 	assert(discardpile.size == 0);
 	assert(player[0].hand.num_cards == 1);
 
-	enterStableEffects(0, cob_tmp.effect);
+	addStable(0, cob_tmp);
 
 	if (player[0].hand.num_cards != 2) {
 		num_fails++;

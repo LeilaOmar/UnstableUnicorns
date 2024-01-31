@@ -898,7 +898,6 @@ int conditionalEffects(int pnum, struct Unicorn corn, int hindex, int upgrade_ta
     rearrangeStable(pnum, index2);
 
     addStable(index, tmp);
-    enterStableEffects(index, tmp.effect);
 
     // steal a unicorn from the chosen player's stable
     printStable(index);
@@ -920,7 +919,6 @@ int conditionalEffects(int pnum, struct Unicorn corn, int hindex, int upgrade_ta
     rearrangeStable(index, index2);
 
     addStable(pnum, tmp);
-    enterStableEffects(pnum, tmp.effect);
     return 1;
   }
   case mystical_vortex:
@@ -1980,13 +1978,9 @@ void beginningTurnEffects(int pnum, struct Unicorn corn) {
             discardpile.cards[index].class == MAGICUNICORN)
           break;
       }
-      int fx = discardpile.cards[index].effect;
-      addStable(pnum, discardpile.cards[index]);
+      struct Unicorn tmp = discardpile.cards[index];
       rearrangePile(&discardpile, index);
-
-      // TODO: this was originally missed -.- so i should reallyyy add enterStableEffects inside addStable
-      // do this after rearranging the discard pile to avoid dupes in case any effects bring stuff from the discard pile
-      enterStableEffects(pnum, fx); 
+      addStable(pnum, tmp);
     }
     break;
   }
@@ -2028,7 +2022,7 @@ void beginningTurnEffects(int pnum, struct Unicorn corn) {
 
       // keep track of the angel unicorn card so that it's filtered outside of
       // the discard pile. there would be no point in taking the card back
-      struct Unicorn tmp = player[pnum].stable.unicorns[index2];
+      struct Unicorn angel_tmp = player[pnum].stable.unicorns[index2];
       rearrangeStable(pnum, index2);
 
       printPileFilter(discardpile, ANYUNICORN, ANY);
@@ -2043,12 +2037,14 @@ void beginningTurnEffects(int pnum, struct Unicorn corn) {
         if (discardpile.cards[index].class == BASICUNICORN ||
             discardpile.cards[index].class == MAGICUNICORN)
           break;
-      } 
+      }
+      // add it to the discard before bringing the other unicorn over in case
+      // it has a special enter stable effect that can bring unicorns from
+      // the discard pile
+      addDiscard(angel_tmp);
 
       addStable(pnum, discardpile.cards[index]);
-      enterStableEffects(pnum, discardpile.cards[index].effect);
       rearrangePile(&discardpile, index);
-      addDiscard(tmp);
     }
     break;
   }
@@ -2192,7 +2188,6 @@ void beginningTurnEffects(int pnum, struct Unicorn corn) {
       rearrangeStable(index, index2);
 
       addStable(pnum, tmp);
-      enterStableEffects(pnum, tmp.effect);
     }
     break;
   }
