@@ -85,9 +85,13 @@ struct Player {
   short filler; // padding for prev variable
 };
 
+enum NetworkEvents { player_join = 1, incoming_msg, start_game, end_turn, neigh_event, discard_event, sacrifice_event, enter_stable_event, end_game };
+
+SOCKET clientsockfd[MAX_PLAYERS - 1];
 SOCKET sockfd;
 SOCKET udpfd;
-extern unsigned int isclient; // 0 = server, 1 = client
+extern int isclient; // 0 = server, 1 = client
+extern int network_events;
 
 extern struct Deck deck;
 extern struct Deck nursery;

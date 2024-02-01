@@ -2,21 +2,10 @@
 #include <time.h>
 #include "globals.h"
 
-struct nurseryPacket {
-	unsigned int index; // nursery_index (points to top-most baby)
-	unsigned int size;  // total number of babies left
-	int ref[NURSERY_SIZE]; // reference array for the nursery
-};
+#define MSGBUF 1024
 
-struct discardPacket {
-	unsigned int index;
-	int ref[DECK_SIZE];
-};
-
-struct deckPacket {
-	unsigned int index;
-	int ref[DECK_SIZE];
-};
+extern char stdinbuf[MSGBUF];
+extern int bufindex;
 
 // hash functions for scrambling IP addresses
 // https://stackoverflow.com/questions/664014/what-integer-hash-function-are-good-that-accepts-an-integer-hash-key
@@ -34,13 +23,21 @@ void HexCodetoIP(char* code, char* dest);
 
 int sendInt(int num, int fd);
 int receiveInt(int* num, int fd);
-int sendPlayer(struct Player p, int fd);
+
+// sends the entire player structure up to current_players
+int sendPlayers(int fd);
+int receivePlayers(int fd);
+
+// sends the entire unicorn array
 int sendUnicorns(struct Unicorn* corns, int size, int fd);
 int receiveUnicorns(struct Unicorn* corns, int size, int fd);
 
-int sendNurseryInfo(struct nurseryPacket info, int fd);
-int receiveNurseryInfo(struct nurseryPacket info, int fd);
-int sendDiscardInfo(struct discardPacket info, int fd);
-int receiveDiscardInfo(struct discardPacket info, int fd);
-int sendDeckInfo(struct deckPacket info, int fd);
-int receiveDeckInfo(struct deckPacket info, int fd);
+// sends deck, nursery, discard pile, and player info
+int sendGamePacket(int fd);
+int receiveGamePacket(int fd);
+
+void receiveMsg(int fd);
+
+// handles stdin events and filters everything but keydown presses
+// https://stackoverflow.com/questions/19955617/win32-read-from-stdin-with-timeout
+void processStdin(void);

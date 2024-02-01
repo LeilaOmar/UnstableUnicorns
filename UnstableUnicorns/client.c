@@ -57,9 +57,17 @@ int clientMain(void) {
     }
   } while (isvalid == 1);
 
+  receiveInt(&clientpnum, sockfd);
+
+  printf(
+    "\n********************************************************************************"
+    "\n********************************* Waiting Room *********************************"
+    "\n********************************************************************************"
+  );
+
   red();
-  puts("You have successfully joined the party!"
-    "\nPlease wait until the host starts the game...");
+  printf("\n\nYou have successfully joined the lobby!"
+    "\nType and enter any messages you wish to send to your party.");
   reset_col();
 
   // *****************************************************
@@ -73,17 +81,69 @@ int clientMain(void) {
   pfd[1].fd = sockfd;
   pfd[1].events = POLLIN | POLLOUT;
 
+  for (;;) {
+    ret = WSAPoll(pfd, 2, -1);
+    if (ret == SOCKET_ERROR) {
+      fprintf(stderr, "ERROR: poll() failed. Error code : %d", WSAGetLastError());
+      closesocket(sockfd);
+      return 2;
+    }
+    else if (ret == 0) {
+      fprintf(stderr, "ERROR: server timed out. Error code : %d", WSAGetLastError());
+      closesocket(sockfd);
+      return 2;
+    }
+
+
+    if (WaitForSingleObject(GetStdHandle(STD_INPUT_HANDLE), 0) == WAIT_OBJECT_0) {
+      processStdin();
+      if (bufindex >= (sizeof(stdinbuf) - 1) || stdinbuf[bufindex - 1] == '\r' || stdinbuf[bufindex - 1] == '\n') {
+
+        sendInt(incoming_msg, sockfd);
+        sendInt(clientpnum, sockfd);
+        send(sockfd, stdinbuf, MSGBUF, 0);
+
+        memset(stdinbuf, '\0', sizeof stdinbuf);
+        bufindex = 0;
+      }
+    }
+
+    if (pfd[1].revents & POLLIN) {
+      receiveInt(&network_events, sockfd);
+
+      if (network_events == player_join) {
+        receivePlayers(sockfd);
+        printf("\nCurrent list of players:\n");
+        for (int i = 0; i < current_players; i++) {
+          printf("  %d: %s\n", i + 1, player[i].username);
+        }
+      }
+      else if (network_events == incoming_msg) {
+        receiveMsg(stdinbuf, sockfd);
+        memset(stdinbuf, '\0', MSGBUF);
+      }
+      else if (network_events == start_game) {
+        break;
+      }
+    }
+  }
+
+  rainbow(
+    "\n*********************************"
+    "\n*** Choose your baby unicorn! ***"
+    "\n*********************************\n\n");
+
+  red();
+  puts("Waiting for other players to pick their Baby Unicorn...");
+  reset_col();
+
   // TODO: serialize this for later; also check the amount of bytes received!
   receiveInt(&current_players, sockfd);
-  receiveInt(&clientpnum, sockfd);
-  recv(sockfd, (void*)&player[clientpnum], sizeof(struct Player), 0);
-  receiveInt(&nursery.size, sockfd);
+  // recv(sockfd, (void*)&player[clientpnum], sizeof(struct Player), 0);
   // recv(sockfd, (void*)nursery.cards, sizeof(struct Unicorn) * NURSERY_SIZE, 0);
+  receivePlayers(sockfd);
+  receiveInt(&nursery.size, sockfd);
   receiveUnicorns(nursery.cards, nursery.size, sockfd);
-
-  rainbow("\n*******************"
-          "\n*** Game Start! ***"
-          "\n*******************\n\n");
 
   // pick your chosen baby unicorn :D
   printPile(nursery);
@@ -103,47 +163,74 @@ int clientMain(void) {
     reset_col();
   }
 
-  rc = recv(sockfd, (void*)player, sizeof(player), 0);
-  if (rc != sizeof(player)) {
-    puts("data wasn't fully received for the full player structure");
-  }
+  // receive final list of players/nursery
+  receivePlayers(sockfd);
+  receiveInt(&nursery.size, sockfd);
+  receiveUnicorns(nursery.cards, nursery.size, sockfd);
 
   // *****************************************************
   // ******************** Game Start! ********************
   // *****************************************************
 
-  puts("\n**********\n");
-  for (int i = 0; i < current_players; i++) {
-    printHand(i);
-    printStable(i);
-    puts("\n**********\n");
-  }
+
+  printf("\n\n"
+    "                 &(,    _____                         _____ _             _     \n"
+    "               &%%(     / ____|                       / ____| |           | |    \n"
+    "         #&&&&,       | |  __  __ _ _ __ ___   ___  | (___ | |_ __ _ _ __| |_   \n"
+    "         &&&&#(       | | |_ |/ _` | '_ ` _ \\ / _ \\  \\___ \\| __/ _` | '__| __|  \n"
+    "  &&&&&&              | |__| | (_| | | | | | |  __/  ____) | || (_| | |  | |_   \n"
+    "  (&&&&&&%%             \\_____|\\__,_|_| |_| |_|\\___| |_____/ \\__\\__,_|_|   \\__|  \n"
+    "     &&&#(                                                                      \n"
+    "\n");
 
   int counter = 0, isevent = 0;
 
   // loop until win condition occurs (7 unicorns in stable)
   for (;;) {
+    printf("\n********************************************************************************\n");
+    red();
+    printf("\nPlayer Stables\n");
+    reset_col();
+    printStableGrid();
+
     red();
     printf("\n*** %s's turn ***\n\n", player[counter].username);
     reset_col();
 
-    // it's your turn! do your thing :>
     if (counter == clientpnum) {
-
+      // it's your turn! do your thing :>
       beginningOfTurn(counter);
 
       actionPhase(counter);
 
       int didWin = 0;
       didWin = endOfTurn(counter);
-      if (didWin == 1)
+      if (didWin == 1) {
+        sendInt(end_game, sockfd);
+        sendGamePacket(sockfd);
         break;
+      }
 
       // send updates of stuff
+      sendInt(end_turn, sockfd);
+      sendGamePacket(sockfd);
     }
     else {
       printf("waiting for %s to make a move...\n", player[counter].username);
 
+      receiveInt(&network_events, sockfd);
+
+      if (network_events == end_turn) {
+        receiveGamePacket(sockfd);
+      }
+      else if (network_events == neigh_event) {
+        // receive neigh
+      }
+      else if (network_events == end_game) {
+        receiveInt(&counter, sockfd);
+        receiveGamePacket(sockfd);
+        break;
+      }
       // checks to see if it's possible to neigh the card
       // receiveInt(&isevent, sockfd);
       // 
@@ -169,10 +256,33 @@ int clientMain(void) {
     counter = (counter < current_players - 1) ? counter + 1 : 0;
   }
 
+  printf("\n********************************************************************************\n");
+  red();
+  printf("\nPlayer Stables\n");
+  reset_col();
+  printStableGrid();
+
+  // https://www.asciiart.eu/mythology/unicorns
+  printf("\n\n"
+    "                    /  \n"
+    "               ,.. /   \n"
+    "             ,'   ';        _____                         _____      _   _ \n"
+    "  ,,.__    _,' /';  .      / ____|                       / ____|    | | | |\n"
+    " :','  ~~~~    '. '~      | |  __  __ _ _ __ ___   ___  | (___   ___| |_| |\n"
+    ":' (   )         )::,     | | |_ |/ _` | '_ ` _ \\ / _ \\  \\___ \\ / _ \\ __| |\n"
+    "'. '. .=----=..-~  .;'    | |__| | (_| | | | | | |  __/  ____) |  __/ |_|_|\n"
+    " '  ;'  ::   ':.  '\"       \\_____|\\__,_|_| |_| |_|\\___| |_____/ \\___|\\__(_)\n"
+    "   (:   ':    ;)       \n"
+    "    \\\\   '\"  ./        \n"
+    "     '\"      '\"     *unicorn by Dr J   \n"
+    "\n");
+
   char winmsg[DESC_SIZE];
   sprintf_s(winmsg, NAME_SIZE + 18, "%s won the game!!!\n", player[counter].username);
   rainbow(winmsg);
-  getch();
+
+  printf("\nPress any key to close the window...");
+  _getch();
 
 	return 0;
 }
