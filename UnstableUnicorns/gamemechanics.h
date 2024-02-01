@@ -12,6 +12,7 @@ void printHand(int pnum);
 void printStable(int pnum);
 void displayCardDesc(void);
 void displayDesiredStable(void);
+void printStableGrid(void);
 
 // ********************************************************************************
 // ******************************* Utility Functions ******************************

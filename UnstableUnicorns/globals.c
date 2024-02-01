@@ -1,7 +1,8 @@
 #include "globals.h"
 #include "basedeck.h"
 
-unsigned int isclient; // 0 = server, 1 = client
+int isclient; // 0 = server, 1 = client
+int network_events;
 
 struct Deck deck;
 struct Deck nursery;

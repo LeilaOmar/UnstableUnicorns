@@ -20,7 +20,6 @@ void beginningOfTurn(int pnum) {
 
   // drawing comes after the beginning turn effects
   draw(pnum, 1);
-  printHand(pnum);
 }
 
 // choose between drawing or playing a card
@@ -32,6 +31,7 @@ void actionPhase(int pnum) {
   char* end, buf[LINE_MAX];
 
   while (turn_count > 0) {
+    printHand(pnum);
     do {
       printf(
         "\nAction phase options:"

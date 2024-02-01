@@ -4,6 +4,9 @@
 
 #define BUFSIZE 200
 
+char stdinbuf[MSGBUF];
+int bufindex = 0;
+
 void serialize_int(unsigned char* buffer, int num) {
   buffer[0] = num >> 24;
   buffer[1] = num >> 16;
@@ -26,7 +29,7 @@ void serialize_short(unsigned char* buffer, int num) {
   buffer[1] = num;
 }
 
-void deserialize_short(unsigned char* buffer) {
+short deserialize_short(unsigned char* buffer) {
   int num = 0;
 
   num |= buffer[0] << 8;
@@ -96,7 +99,87 @@ int receiveInt(int* num, int fd) {
   return 0;
 }
 
-int sendPlayer(struct Player p, int fd) {
+int sendPlayers(int fd) {
+  int count = sizeof(struct Player) * current_players;
+  int rc;
+
+  static char data[sizeof(struct Player) * MAX_PLAYERS];
+  int offset = 0;
+
+  sendInt(current_players, fd);
+
+  for (int i = 0; i < current_players; i++) {
+    // cards in hand
+    sendInt(player[i].hand.num_cards, fd);
+    sendUnicorns(player[i].hand.cards, player[i].hand.num_cards, fd);
+
+    // stable
+    sendInt(player[i].stable.size, fd);
+    sendInt(player[i].stable.num_unicorns, fd);
+    sendUnicorns(player[i].stable.unicorns, player[i].stable.size, fd);
+
+    // username
+    for (int j = 0; j < sizeof player[i].username; j++) {
+      data[offset++] = player[i].username[j];
+    }
+
+    // flags
+    serialize_short(data + offset, player[i].flags);
+    offset += 2;
+  }
+
+  count = offset;
+  sendInt(count, fd);
+  offset = 0;
+  do {
+    rc = send(fd, data + offset, count, 0);
+    if (rc >= 0) {
+      offset += rc;
+      count -= rc;
+    }
+  } while (count > 0);
+
+  return 0;
+}
+
+int receivePlayers(int fd) {
+  int count;
+  int rc;
+
+  static char data[sizeof(struct Player) * MAX_PLAYERS];
+  int offset = 0;
+
+  receiveInt(&current_players, fd);
+
+  for (int i = 0; i < current_players; i++) {
+    // cards in hand
+    receiveInt(&player[i].hand.num_cards, fd);
+    receiveUnicorns(player[i].hand.cards, player[i].hand.num_cards, fd);
+
+    // stable
+    receiveInt(&player[i].stable.size, fd);
+    receiveInt(&player[i].stable.num_unicorns, fd);
+    receiveUnicorns(player[i].stable.unicorns, player[i].stable.size, fd);
+  }
+
+  receiveInt(&count, fd);
+  while (count > 0) {
+    rc = recv(fd, data + offset, count, 0);
+    if (rc >= 0) {
+      offset += rc;
+      count -= rc;
+    }
+  }
+
+  offset = 0;
+
+  for (int i = 0; i < current_players; i++) {
+    for (int j = 0; j < sizeof player[i].username; j++) {
+      player[i].username[j] = data[offset++];
+    }
+    player[i].flags = deserialize_short(data + offset);
+    offset += 2;
+  }
 
   return 0;
 }
@@ -117,7 +200,7 @@ int sendUnicorns(struct Unicorn* corns, int size, int fd) {
     for (int j = 0; j < sizeof corns[i].description; j++) {
       data[offset++] = corns[i].description[j];
     }
-    serialize_int(data + offset, corns[i].effect);
+    serialize_short(data + offset, corns[i].effect);
     offset += 2;
     serialize_int(data + offset, corns[i].id);
     offset += 4;
@@ -161,7 +244,7 @@ int receiveUnicorns(struct Unicorn* corns, int size, int fd) {
     for (int j = 0; j < sizeof corns[i].description; j++) {
       corns[i].description[j] = data[offset++];
     }
-    corns[i].effect = deserialize_int(data + offset);
+    corns[i].effect = deserialize_short(data + offset);
     offset += 2;
     corns[i].id = deserialize_int(data + offset);
     offset += 4;
@@ -170,29 +253,116 @@ int receiveUnicorns(struct Unicorn* corns, int size, int fd) {
   return 0;
 }
 
-int sendNurseryInfo(struct nurseryPacket info, int fd) {
-  int32_t tmp_index = htonl(info.index);
-  int32_t tmp_size = htonl(info.size);
-  int count = sizeof(tmp_index) + sizeof(tmp_size) + sizeof(info.ref);
+int sendGamePacket(int fd) {
+  sendInt(deck.size, fd);
+  sendUnicorns(deck.cards, deck.size, fd);
+
+  sendInt(nursery.size, fd);
+  sendUnicorns(nursery.cards, nursery.size, fd);
+
+  sendInt(discardpile.size, fd);
+  sendUnicorns(discardpile.cards, discardpile.size, fd);
+
+  sendPlayers(fd);
+
   return 0;
 }
 
-int receiveNurseryInfo(struct nurseryPacket info, int fd) {
+int receiveGamePacket(int fd) {
+  receiveInt(&deck.size, fd);
+  receiveUnicorns(deck.cards, deck.size, fd);
+
+  receiveInt(&nursery.size, fd);
+  receiveUnicorns(nursery.cards, nursery.size, fd);
+
+  receiveInt(&discardpile.size, fd);
+  receiveUnicorns(discardpile.cards, discardpile.size, fd);
+
+  receivePlayers(fd);
+
   return 0;
 }
 
-int sendDiscardInfo(struct discardPacket info, int fd) {
-  return 0;
+void receiveMsg(char* str, int fd) {
+  int pnum;
+  int offset = 0;
+  int rc;
+  int count = MSGBUF;
+
+  receiveInt(&pnum, fd);
+
+  while (count > 0) {
+    rc = recv(fd, str + offset, count, 0);
+    if (rc >= 0) {
+      offset += rc;
+      count -= rc;
+    }
+  }
+
+  red();
+  printf("%s: ", player[pnum].username);
+  reset_col();
+  printf("%s\n", str);
 }
 
-int receiveDiscardInfo(struct discardPacket info, int fd) {
-  return 0;
-}
+// handles stdin events and filters everything but keydown presses
+// https://stackoverflow.com/questions/19955617/win32-read-from-stdin-with-timeout
+void processStdin(void) {
+  INPUT_RECORD record[128];
+  DWORD numRead;
 
-int sendDeckInfo(struct deckPacket info, int fd) {
-  return 0;
-}
+  if (!ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), record, 128, &numRead)) {
+    return;
+  }
 
-int receiveDeckInfo(struct deckPacket info, int fd) {
-  return 0;
+  if (record->EventType != KEY_EVENT) {
+    // don't care about mouse move
+    return;
+  }
+
+  if (!record->Event.KeyEvent.bKeyDown) {
+    // only care about key down
+    return;
+  }
+
+  // use printf \b when backspacing
+  if (record->Event.KeyEvent.wVirtualScanCode == VK_BACK) {
+    printf("\b ");
+    stdinbuf[bufindex] = '\0';
+    bufindex--;
+  }
+
+  // ascii input
+  if (record->Event.KeyEvent.uChar.AsciiChar) {
+    // printf("%c", record[0].Event.KeyEvent.uChar.UnicodeChar);
+    // stdinbuf[bufindex] = getchar();
+
+    // bufindex = ToUnicode(record->Event.KeyEvent.wVirtualKeyCode, record->Event.KeyEvent.wVirtualScanCode, record->Event.KeyEvent.dwControlKeyState, stdinbuf + bufindex, MSGBUF, 0);
+    // // ToAscii(record->Event.KeyEvent.wVirtualKeyCode, record->Event.KeyEvent.wVirtualScanCode, record->Event.KeyEvent.dwControlKeyState, &stdinbuf[bufindex], 0);
+    // 
+    // char c = (char)record->Event.KeyEvent.wVirtualKeyCode;
+    // 
+    // for (int i = old; i < bufindex; i++) {
+    //   if (stdinbuf[i] == '\r' || stdinbuf[i] == '\n') {
+    //     printf("\n");
+    //   }
+    //   else {
+    //     printf("%c", stdinbuf[i]);
+    //   }
+    // }
+    // old = bufindex;
+
+    for (int i = 0; i < numRead; i++) {
+      stdinbuf[bufindex] = tolower((record->Event.KeyEvent.wVirtualScanCode));
+      // char c = record[0].Event.KeyEvent.uChar.AsciiChar;
+
+      if (stdinbuf[bufindex] == '\r' || stdinbuf[bufindex] == '\n') {
+        printf("\n");
+      }
+      else {
+        printf("%c", stdinbuf[bufindex]);
+      }
+      bufindex++;
+    }
+  }
 }

@@ -78,6 +78,67 @@ void displayDesiredStable(void) {
   printStable(index);
 }
 
+// prints stables of all players in two columns
+void printStableGrid(void) {
+  char gridbuf[50] = { 0 };
+  char spacebuf[50] = { 0 };
+  int colsize = 48;
+
+  for (int k = 0; k < current_players; k += 2) {
+    printf("\n");
+
+    printf("%s's stable", player[k].username);
+    memset(spacebuf, ' ', colsize - strlen(player[k].username) - 7);
+    printf("%s", spacebuf);
+    memset(spacebuf, '\0', sizeof spacebuf);
+
+    if ((k + 1) < current_players)
+    {
+      printf("%s's stable", player[k + 1].username);
+      memset(spacebuf, ' ', colsize - strlen(player[k + 1].username) - 7);
+      printf("%s", spacebuf);
+      memset(spacebuf, '\0', sizeof spacebuf);
+    }
+
+    int large = max(player[k].stable.size, player[k + 1].stable.size);
+
+    printf("\n");
+    for (int i = 0; i < large; i++) {
+      if (player[k].stable.size > i) {
+        if (player[k].stable.unicorns[i].class == UPGRADE)
+          green();
+        else if (player[k].stable.unicorns[i].class == DOWNGRADE)
+          yellow();
+
+        sprintf_s(gridbuf, sizeof gridbuf, "    %d. %s [ID: %d]", i + 1, player[k].stable.unicorns[i].name, player[k].stable.unicorns[i].id);
+        memset(spacebuf, ' ', colsize - strlen(gridbuf));
+        printf("%s%s", gridbuf, spacebuf);
+        memset(gridbuf, '\0', sizeof gridbuf);
+        memset(spacebuf, '\0', sizeof spacebuf);
+
+        reset_col();
+      }
+      else {
+        memset(spacebuf, ' ', colsize);
+        printf("%s", spacebuf);
+      }
+
+      if ((k + 1) < current_players && player[k + 1].stable.size > i)
+      {
+        if (player[k + 1].stable.unicorns[i].class == UPGRADE)
+          green();
+        else if (player[k + 1].stable.unicorns[i].class == DOWNGRADE)
+          yellow();
+        printf("    %d: %s [ID: %d]", i + 1, player[k + 1].stable.unicorns[i].name, player[k + 1].stable.unicorns[i].id);
+        reset_col();
+      }
+
+      memset(spacebuf, '\0', sizeof spacebuf);
+      printf("\n");
+    }
+  }
+}
+
 // ********************************************************************************
 // ******************************* Utility Functions ******************************
 // ********************************************************************************
