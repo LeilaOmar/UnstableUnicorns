@@ -52,13 +52,20 @@ int serverMain(void) {
 
   listen(sockfd, MAX_PLAYERS);
 
-  puts("Waiting for new players...");
+  printf(
+    "\n********************************************************************************"
+    "\n********************************* Waiting Room *********************************"
+    "\n********************************************************************************"
+  );
+
+  red();
+  printf("\n\nOnce two or more people are in a lobby, you may type and enter 'start' to start the game!"
+    "\nOther messages get sent to your entire party.\n\n");
+  reset_col();
 
   // *****************************************************
   // ******************** Poll Set-up ********************
-  // *****************************************************
-
-  SOCKET clientsockfd[MAX_PLAYERS - 1];
+  // ****************************************************
 
   // server should be in non-blocking mode
   unsigned long on = 1;
@@ -108,22 +115,76 @@ int serverMain(void) {
     //if (pfd[0].revents & POLLIN) {
     //if (ret) {
     //WaitForSingleObject(GetStdHandle(STD_INPUT_HANDLE), INFINITE);
-    if (WaitForSingleObject(GetStdHandle(STD_INPUT_HANDLE), 1) == WAIT_OBJECT_0) {
-      memset(buf, '\0', sizeof buf);
-      fgets(buf, sizeof buf, stdin);
-      buf[strlen(buf) - 1] = 0;
+    // if (WaitForSingleObject(GetStdHandle(hStdIn), 1) == WAIT_OBJECT_0) {
+    //   memset(buf, '\0', sizeof buf);
+    //   fgets(buf, sizeof buf, stdin);
+    //   buf[strlen(buf) - 1] = 0;
+    // 
+    //   //puts("inside stdin POLLIN");
+    // 
+    //   if (strncmp(buf, "start", 5) == 0 && current_players >= 2) {
+    //     break;
+    //   }
+    // }
+    
+    // unsigned int length = 0;
+    // DWORD bytesAvailable = 0;
+    // PeekNamedPipe(hStdin, NULL, 0, NULL, &bytesAvailable, NULL);
+    // if (bytesAvailable > 0) {
+    // 
+    //   for (int i = 0; i < 4; i++)
+    //   {
+    //     unsigned int read_char = getchar();
+    //     length = length | (read_char << i * 8);
+    //   }
+    // 
+    //   for (int i = 0; i < length; i++)
+    //   {
+    //     stdinbuf[bufindex++] = getchar();
+    //   }
+    // 
+    //   if (stdinbuf[bufindex - 1] == '\n') {
+    //     if (strncmp(stdinbuf, "start", 5) == 0 && current_players >= 2) {
+    //       break;
+    //     }
+    //     memset(stdinbuf, '\0', sizeof stdinbuf);
+    //     bufindex = 0;
+    //   }
+    // 
+    //   if (strncmp(buf, "start", 5) == 0 && current_players >= 2) {
+    //     break;
+    //   }
+    // }
 
-      //puts("inside stdin POLLIN");
 
-      if (strncmp(buf, "start", 5) == 0 && current_players >= 2) {
-        break;
+    if (WaitForSingleObject(GetStdHandle(STD_INPUT_HANDLE), 0) == WAIT_OBJECT_0) {
+      processStdin();
+      if (bufindex >= (sizeof(stdinbuf) - 1) || stdinbuf[bufindex - 1] == '\r' || stdinbuf[bufindex - 1] == '\n') {
+        if (strncmp(stdinbuf, "start", 5) == 0 && current_players >= 2) {
+          network_events = start_game;
+          for (int i = 0; i < current_players - 1; i++) {
+            sendInt(network_events, clientsockfd[i]);
+          }
+          break;
+        }
+
+        network_events = incoming_msg;
+        for (int i = 0; i < current_players - 1; i++) {
+          sendInt(network_events, clientsockfd[i]);
+          sendInt(0, clientsockfd[i]);
+          send(clientsockfd[i], stdinbuf, MSGBUF, 0);
+        }
+
+        memset(stdinbuf, '\0', sizeof stdinbuf);
+        bufindex = 0;
       }
     }
 
     // IO operation came in from a client socket (username check!)
     for (int i = 0; i < current_players - 1; i++) {
       if (pfd[i + 2].revents & POLLIN && clientsockfd[i] != -1) {
-        do {
+        // new player
+        if (player[i + 1].username[0] == '\0') {
           memset(buf, '\0', sizeof buf);
           isvalid = 0;
           recv(clientsockfd[i], buf, LINE_MAX, 0);
@@ -136,24 +197,51 @@ int serverMain(void) {
           }
           // send(clientsockfd[i], (char*)&isvalid, sizeof isvalid, 0);
           sendInt(isvalid, clientsockfd[i]);
-        } while (isvalid == 1);
 
-        strcpy_s(player[i + 1].username, sizeof player[i + 1].username, buf);
-        printf("Player ");
-        red();
-        printf("%s", player[i + 1].username);
-        reset_col();
-        puts(" has joined the game!\n");
+          if (!isvalid) {
+            sendInt(i + 1, clientsockfd[i]);
+
+            strcpy_s(player[i + 1].username, sizeof player[i + 1].username, buf);
+            printf("Player ");
+            red();
+            printf("%s", player[i + 1].username);
+            reset_col();
+            puts(" has joined the game!\n");
+
+            network_events = player_join;
+            for (int j = 0; j < current_players - 1; j++) {
+              sendInt(network_events, clientsockfd[j]);
+              sendPlayers(clientsockfd[j]);
+            }
+          }
+        }
+        else {
+          receiveInt(&network_events, clientsockfd[i]);
+          if (network_events == incoming_msg) {
+            receiveMsg(stdinbuf, clientsockfd[i]);
+
+            // the pnum in receiveMsg is the same as the client socket number (i.e. clientsockfd[i])
+            for (int j = 0; j < current_players - 1; j++) {
+              if (j == i) continue;
+              sendInt(network_events, clientsockfd[j]);
+              sendInt(i + 1, clientsockfd[j]);
+              send(clientsockfd[j], stdinbuf, MSGBUF, 0);
+            }
+
+            memset(stdinbuf, '\0', MSGBUF);
+          }
+        }
       }
 
       if (pfd[i + 2].revents & (POLLHUP | POLLERR)) {
         puts("ERROR: Server received POLLHUP or POLLERR signal");
-        printf("Player %s disconnected :(\n", player[i].username);
+        printf("Player %s disconnected :(\n", player[i + 1].username);
         closesocket(clientsockfd[i]);
         // return 2;
       }
     }
   }
+
   // *****************************************************
   // ******************** Game Set-up ********************
   // *****************************************************
@@ -161,23 +249,10 @@ int serverMain(void) {
   int index, index2, result, rc;
   char *end2, buf2[LINE_MAX];
 
-  rainbow("\n*******************"
-    "\n*** Game Start! ***"
-    "\n*******************\n\n");
-
-  shuffleDeck(&deck);
-
-  if (deck_flag) {
-    blue();
-    printPile(deck);
-    reset_col();
-  }
-
-  // initialize variables, draw 5 cards and "pick" username
-  for (int i = 0; i < current_players; i++) {
-    player[i].hand.num_cards = 0;
-    draw(i, HAND_START);
-  }
+  rainbow(
+    "\n*********************************"
+    "\n*** Choose your baby unicorn! ***"
+    "\n*********************************\n\n");
 
   printPile(nursery);
   do {
@@ -202,10 +277,10 @@ int serverMain(void) {
   // TODO: watch out for EWOULDBLOCK; this works on my local machine, but what about online?
   for (int i = 1; i < current_players; i++) {
     sendInt(current_players, clientsockfd[i - 1]);
-    sendInt(i, clientsockfd[i - 1]);
-    send(clientsockfd[i - 1], (void*)&player[i], sizeof(struct Player), 0);
-    sendInt(nursery.size, clientsockfd[i - 1]);
+    // send(clientsockfd[i - 1], (void*)&player[i], sizeof(struct Player), 0);
     // send(clientsockfd[i - 1], (void*)nursery.cards, sizeof(struct Unicorn) * NURSERY_SIZE, 0);
+    sendPlayers(clientsockfd[i - 1]);
+    sendInt(nursery.size, clientsockfd[i - 1]);
     sendUnicorns(nursery.cards, nursery.size, clientsockfd[i - 1]);
 
     receiveInt(&index, clientsockfd[i - 1]);
@@ -216,48 +291,124 @@ int serverMain(void) {
     rearrangePile(&nursery, index);
   }
 
+  // all of the baby unicorns have been chosen, now initialize the hands/deck
+  shuffleDeck(&deck);
+
+  if (deck_flag) {
+    blue();
+    printPile(deck);
+    reset_col();
+  }
+
+  // initialize variables, draw 5 cards and "pick" username
+  for (int i = 0; i < current_players; i++) {
+    player[i].hand.num_cards = 0;
+    draw(i, HAND_START);
+  }
+
   // player[0].hand.cards[player[0].hand.num_cards++] = 94;
   // player[1].hand.cards[player[1].hand.num_cards++] = 49;
   // player[2].hand.cards[player[2].hand.num_cards++] = 102;
 
-  for (int i = 1; i < current_players; i++) {
-    ret = send(clientsockfd[i - 1], (void*)player, sizeof(player), 0);
-    if (ret != sizeof(player)) {
-      printf("data wasn't fully sent for player[%d]\n", i);
-    }
-  }
+  player[0].hand.cards[0] = basedeck[104];
 
-  puts("\n**********\n");
-  for (int i = 0; i < current_players; i++) {
-    printHand(i);
-    printStable(i);
-    puts("\n**********\n");
+  // just have to trust that pepole don't cheat by examining the code mid-game lol
+  for (int i = 1; i < current_players; i++) {
+    sendPlayers(clientsockfd[i - 1]);
+    sendInt(nursery.size, clientsockfd[i - 1]);
+    sendUnicorns(nursery.cards, nursery.size, clientsockfd[i - 1]);
   }
 
   // *****************************************************
   // ******************** Game Start! ********************
   // *****************************************************
 
+  printf("\n\n"
+    "                 &(,    _____                         _____ _             _     \n"
+    "               &%%(     / ____|                       / ____| |           | |    \n"
+    "         #&&&&,       | |  __  __ _ _ __ ___   ___  | (___ | |_ __ _ _ __| |_   \n"
+    "         &&&&#(       | | |_ |/ _` | '_ ` _ \\ / _ \\  \\___ \\| __/ _` | '__| __|  \n"
+    "  &&&&&&              | |__| | (_| | | | | | |  __/  ____) | || (_| | |  | |_   \n"
+    "  (&&&&&&%%             \\_____|\\__,_|_| |_| |_|\\___| |_____/ \\__\\__,_|_|   \\__|  \n"
+    "     &&&#(                                                                      \n"
+    "\n");
+
   int counter = 0;
   // asynch stuff: http://archive.gamedev.net/archive/reference/articles/article1297.html22
 
   // loop until win condition occurs (7 unicorns in stable)
   for (;;) {
+    printf("\n********************************************************************************\n");
+    red();
+    printf("\nPlayer Stables\n");
+    reset_col();
+    printStableGrid();
+
     red();
     printf("\n*** %s's turn ***\n\n", player[counter].username);
     reset_col();
 
-    // it's your turn! do your thing :>
-    //if (counter == 0) {
-    beginningOfTurn(counter);
+    if (counter == 0) {
+      // it's your turn! do your thing :>
+      beginningOfTurn(counter);
 
-    actionPhase(counter);
+      actionPhase(counter);
 
-    int didWin = 0;
-    didWin = endOfTurn(counter);
-    if (didWin == 1)
-      break;
-    //}
+      int didWin = 0;
+      didWin = endOfTurn(counter);
+      if (didWin == 1) {
+        for (int i = 0; i < current_players - 1; i++) {
+          sendInt(end_game, clientsockfd[i]);
+          sendInt(counter, clientsockfd[i]);
+        }
+        break;
+      }
+
+
+      for (int i = 0; i < current_players - 1; i++) {
+        sendInt(end_turn, clientsockfd[i]);
+
+        sendInt(deck.size, clientsockfd[i]);
+        sendUnicorns(deck.cards, deck.size, clientsockfd[i]);
+
+        sendInt(nursery.size, clientsockfd[i]);
+        sendUnicorns(nursery.cards, nursery.size, clientsockfd[i]);
+
+        sendInt(discardpile.size, clientsockfd[i]);
+        sendUnicorns(discardpile.cards, discardpile.size, clientsockfd[i]);
+
+        sendPlayers(clientsockfd[i]);
+      }
+    }
+    else {
+      printf("waiting for %s to make a move...\n", player[counter].username);
+
+      receiveInt(&network_events, clientsockfd[counter - 1]);
+
+      if (network_events == end_turn) {
+        receiveGamePacket(clientsockfd[counter - 1]);
+
+        for (int i = 0; i < current_players - 1; i++) {
+          if ((i + 1) == counter) continue;
+
+          sendInt(end_turn, clientsockfd[i]);
+          sendGamePacket(clientsockfd[i]);
+        }
+      }
+      else if (network_events == end_game) {
+        receiveGamePacket(clientsockfd[counter - 1]);
+
+        for (int i = 0; i < current_players - 1; i++) {
+          if ((i + 1) == counter) continue;
+
+          sendInt(end_game, clientsockfd[i]);
+          sendInt(counter, clientsockfd[i]);
+          sendGamePacket(clientsockfd[i]);
+        }
+        break;
+      }
+
+    }
 
     // print state of nursery and discard piles
     if (nursery_flag) {
@@ -274,10 +425,33 @@ int serverMain(void) {
     counter = (counter < current_players - 1) ? counter + 1 : 0;
   }
 
+  printf("\n********************************************************************************\n");
+  red();
+  printf("\nPlayer Stables\n");
+  reset_col();
+  printStableGrid();
+
+  // https://www.asciiart.eu/mythology/unicorns
+  printf("\n\n"
+    "                    /  \n"
+    "               ,.. /   \n"
+    "             ,'   ';        _____                         _____      _   _ \n"
+    "  ,,.__    _,' /';  .      / ____|                       / ____|    | | | |\n"
+    " :','  ~~~~    '. '~      | |  __  __ _ _ __ ___   ___  | (___   ___| |_| |\n"
+    ":' (   )         )::,     | | |_ |/ _` | '_ ` _ \\ / _ \\  \\___ \\ / _ \\ __| |\n"
+    "'. '. .=----=..-~  .;'    | |__| | (_| | | | | | |  __/  ____) |  __/ |_|_|\n"
+    " '  ;'  ::   ':.  '\"       \\_____|\\__,_|_| |_| |_|\\___| |_____/ \\___|\\__(_)\n"
+    "   (:   ':    ;)       \n"
+    "    \\\\   '\"  ./        \n"
+    "     '\"      '\"     *unicorn by Dr J   \n"
+    "\n");
+
   char winmsg[DESC_SIZE];
   sprintf_s(winmsg, NAME_SIZE + 18, "%s won the game!!!\n", player[counter].username);
   rainbow(winmsg);
-  getch();
+
+  printf("\nPress any key to close the window...");
+  _getch();
 
   return 0;
 }
