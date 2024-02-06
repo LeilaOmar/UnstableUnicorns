@@ -4,6 +4,26 @@
 #include "Tests/UpgradeTests.h"
 #include "Tests/DowngradeTests.h"
 #include "Tests/InstantTests.h"
+#include "networkfuncs.h"
+
+// void processStdin_mock(char* stdinbuf, int* bufindex) {
+// 
+// 	fgets(stdinbuf, 1024, fpinput);
+// 	*bufindex = strlen(stdinbuf);
+// 
+// }
+// 
+// DWORD simple(HANDLE hHandle, DWORD dwMilliseconds) {
+// 	return WAIT_OBJECT_0;
+// }
+// 
+// #define processStdin(a, b) processStdin_mock(a, b)
+// #define WaitForSingleObject(a, b) simple(a, b)
+// // #include "networkevents.c"
+// #undef processStdin
+// #undef WaitForSingleObject
+
+// #pragma comment(lib, "MockLib.lib")
 
 int num_fails = 0;
 
@@ -37,13 +57,13 @@ void check_class_tests() {
 	}
 }
 
-// a lot of potential checks here are actually checked for in code surrounding
+// a lot of potential checks here are actually checked for in the code surrounding
 // the function call
 void rearrange_pile_tests() {
 	int tmp_size = nursery.size;
 	int start = 5;
 
-	rainbow_error("Starting rearrangePile tests...\n");
+	rainbow_error("\nStarting rearrangePile tests...\n");
 
 	// sanity check
 	rearrangePile(&nursery, start);
@@ -90,7 +110,7 @@ void add_nursery_tests() {
 	struct Unicorn corn = basedeck[12];
 	int tmp_size = nursery.size;
 
-	rainbow_error("Starting addNursery tests...\n");
+	rainbow_error("\nStarting addNursery tests...\n");
 
 	// capacity check; this really shouldn't be called erroneously in the first place,
 	// but at least it wouldn't completely break if sometihng else duplicated or went
@@ -131,7 +151,7 @@ void add_stable_tests() {
 	struct Unicorn broken_stable_tmp = basedeck[111];
 	struct Unicorn basic_tmp = basedeck[13];
 
-	rainbow_error("Starting addStable tests...\n");
+	rainbow_error("\nStarting addStable tests...\n");
 
 	// adding unicorn (technically a Narwhal :V )
 	addStable(0, narwhal_tmp);
@@ -620,7 +640,129 @@ void steal_tests() {
 // ********************************* Main Function ********************************
 // ********************************************************************************
 
-int main() {
+int main(int argc, char* argv[]) {
+
+	// just in case file i/o fails
+	fpinput = stdin;
+
+	// client/server variables
+	isclient = 0;
+	WSADATA wsa;
+	short portno = 1234;
+	struct sockaddr_in addr;
+	struct sockaddr_in server;
+
+	// additional information
+	STARTUPINFOA si;
+	PROCESS_INFORMATION pi;
+
+	// set the size of the structures
+	ZeroMemory(&si, sizeof(si));
+	si.cb = sizeof(si);
+	ZeroMemory(&pi, sizeof(pi));
+
+	// set up winsock with TDP communication (SOCK_STREAM) on IPv4 (AF_INET)
+	if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) {
+		printf("Failed. Error Code : %d", WSAGetLastError());
+		exit(1);
+	}
+
+	if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == INVALID_SOCKET) {
+		printf("Could not create socket : %d", WSAGetLastError());
+		exit(1);
+	}
+
+	if (argc > 1 && strcmp(argv[1], "client") == 0) {
+
+		// ********************************************************************************
+		// ********************************* Client Set-up ********************************
+		// ********************************************************************************
+
+		server.sin_family = AF_INET;
+		server.sin_port = htons(portno);
+		inet_pton(AF_INET, "127.0.0.1", &server.sin_addr.s_addr);
+
+		while (connect(sockfd, (struct sockaddr*)&server, sizeof(server)) < 0) {
+			fprintf(stderr, "Attempt to connect to the server was unsuccessful. Error code : %d\n", WSAGetLastError());
+		}
+
+		// neigh odd test
+		sendInt(2, sockfd);
+		sendInt(4, sockfd);
+
+		// neigh even test
+		sendInt(2, sockfd);
+		sendInt(2, sockfd);
+		sendInt(-1, sockfd);
+
+		// super neigh odd test
+		sendInt(0, sockfd);
+
+		// super neigh even test
+		sendInt(0, sockfd);
+
+		// quit once the server closes the socket
+		WSAPOLLFD pfd;
+		pfd.fd = sockfd;
+		pfd.events = POLLIN | POLLOUT;
+
+		for (;;) {
+			WSAPoll(&pfd, 1, 10000);
+			if (pfd.revents & (POLLHUP | POLLERR | POLLNVAL)) {
+				closesocket(sockfd);
+				exit(1);
+			}
+		}
+
+		closesocket(sockfd);
+		exit(1);
+	}
+	else {
+
+		// ********************************************************************************
+		// ********************************* Server Set-up ********************************
+		// ********************************************************************************
+
+		addr.sin_family = AF_INET;
+		addr.sin_addr.s_addr = INADDR_ANY;
+		addr.sin_port = htons(portno);
+
+		if (bind(sockfd, (struct sockaddr*)&addr, sizeof addr) == SOCKET_ERROR) {
+			fprintf(stderr, "Bind failed with error code : %d.", WSAGetLastError());
+			return 1;
+		}
+
+		listen(sockfd, MAX_PLAYERS);
+
+		// start the program up
+		CreateProcessA (
+			NULL,   // the path
+			"..\\Debug\\UnstableUnicornsTest.exe client",		// Full command line (includes argv[0])
+			NULL,                 // Process handle not inheritable
+			NULL,                 // Thread handle not inheritable
+			FALSE,                // Set handle inheritance to FALSE
+			CREATE_NO_WINDOW,			// Process Create Flags; could do CREATE_NEW_CONSOLE to show separately
+			NULL,									// Use parent's environment block
+			NULL,									// Use parent's starting directory 
+			&si,									// Pointer to STARTUPINFO structure
+			&pi										// Pointer to PROCESS_INFORMATION structure
+		);
+
+		struct sockaddr_in client_addr;
+		socklen_t client_addr_size = sizeof(client_addr);
+
+		clientsockfd[0] = accept(sockfd, (struct sockaddr*)&client_addr, &client_addr_size);
+
+	}
+
+	// ********************************************************************************
+	// **************************** Unit/Integration Tests ****************************
+	// ********************************************************************************
+
+	// redirect general output to make the cmd line cleaner and easier to parse through
+	FILE* fp;
+	freopen_s(&fp, "NUL", "w", stdout);
+
 	// initialize the deck
 	init_deck(&nursery, &deck, &discardpile);
 	srand(0);
@@ -630,9 +772,6 @@ int main() {
 	strcpy_s(player[0].username, sizeof player[0].username, "one");
 	strcpy_s(player[1].username, sizeof player[1].username, "two");
 	strcpy_s(player[2].username, sizeof player[2].username, "three");
-
-	// just in case file i/o fails
-	fpinput = stdin;
 
 	fprintf(stderr, "Commencing testing for the ");
 	rainbow_error("Unstable Unicorns");
@@ -728,6 +867,10 @@ int main() {
 	num_fails += super_neigh_tests();
 
 
+	// ********************************************************************************
+	// ***************************** Results and Clean-up *****************************
+	// ********************************************************************************
+
 	if (num_fails == 0) {
 		green();
 		fprintf(stderr, "\nAll tests have successfully passed! :D\n");
@@ -739,5 +882,12 @@ int main() {
 		reset_col();
 	}
 
+	// Close process and thread handles. 
+	CloseHandle(pi.hProcess);
+	CloseHandle(pi.hThread);
+
+	closesocket(clientsockfd[0]);
+	closesocket(sockfd);
+	if (fp != NULL) fclose(fp);
 	exit(0);
 }

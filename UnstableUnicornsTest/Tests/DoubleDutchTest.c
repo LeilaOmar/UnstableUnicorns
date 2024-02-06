@@ -7,6 +7,7 @@ int dutch_basic_check() {
 	struct Unicorn basic_tmp = basedeck[13];
 
 	addStable(0, dutch_tmp);
+	player[0].flags = yay;
 	assert(player[0].stable.size == 1);
 	beginningTurnEffects(0, dutch_tmp);
 

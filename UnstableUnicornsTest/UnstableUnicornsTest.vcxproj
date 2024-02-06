@@ -86,7 +86,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;TEST_RUN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>../UnstableUnicorns</AdditionalIncludeDirectories>
     </ClCompile>
@@ -144,6 +144,8 @@
     <ClCompile Include="..\UnstableUnicorns\gamemechanics.c" />
     <ClCompile Include="..\UnstableUnicorns\gamephase.c" />
     <ClCompile Include="..\UnstableUnicorns\globals.c" />
+    <ClCompile Include="..\UnstableUnicorns\networkevents.c" />
+    <ClCompile Include="..\UnstableUnicorns\networkfuncs.c" />
     <ClCompile Include="resetfns.c" />
     <ClCompile Include="Tests\AlluringNarwhalTest.c" />
     <ClCompile Include="Tests\AmericornTest.c" />

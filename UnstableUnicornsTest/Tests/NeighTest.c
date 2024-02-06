@@ -13,52 +13,52 @@ int neigh_odd_check() {
 	struct Unicorn basic_tmp2 = basedeck[17];
 	struct Unicorn basic_tmp3 = basedeck[20];
 
-	player[0].hand.cards[player[0].hand.num_cards++] = fertile_tmp;
-	player[0].hand.cards[player[0].hand.num_cards++] = rainbow_tmp;
+	player[0].hand.cards[player[0].hand.num_cards++] = basic_tmp;
 	player[0].hand.cards[player[0].hand.num_cards++] = neigh_tmp;
-	player[0].hand.cards[player[0].hand.num_cards++] = neigh_tmp;
-	player[0].hand.cards[player[0].hand.num_cards++] = ginormous_tmp;
-	player[0].hand.cards[player[0].hand.num_cards++] = neigh_tmp;
-	player[0].hand.cards[player[0].hand.num_cards++] = puppicorn_tmp;
+	player[0].hand.cards[player[0].hand.num_cards++] = basic_tmp2;
+	player[0].hand.cards[player[0].hand.num_cards++] = basic_tmp3;
 
-	player[1].hand.cards[player[1].hand.num_cards++] = basic_tmp;
+	player[1].hand.cards[player[1].hand.num_cards++] = fertile_tmp;
+	player[1].hand.cards[player[1].hand.num_cards++] = rainbow_tmp;
 	player[1].hand.cards[player[1].hand.num_cards++] = neigh_tmp;
-	player[1].hand.cards[player[1].hand.num_cards++] = basic_tmp2;
-	player[1].hand.cards[player[1].hand.num_cards++] = basic_tmp3;
+	player[1].hand.cards[player[1].hand.num_cards++] = neigh_tmp;
+	player[1].hand.cards[player[1].hand.num_cards++] = ginormous_tmp;
+	player[1].hand.cards[player[1].hand.num_cards++] = neigh_tmp;
+	player[1].hand.cards[player[1].hand.num_cards++] = puppicorn_tmp;
 	current_players = 2;
 
 	assert(discardpile.size == 0);
-	assert(player[0].hand.num_cards == 7);
-	assert(player[1].hand.num_cards == 4);
+	assert(player[0].hand.num_cards == 4);
+	assert(player[1].hand.num_cards == 7);
 	assert(player[0].stable.size == 0);
 	assert(player[1].stable.size == 0);
 
-	playCard(1);
+	playCard(0);
 
-	// player[0] lost 2 neighs
-	// player[1] lost 1 neigh and the card they originally tried to play
-	if (player[0].hand.num_cards != 5 || player[1].hand.num_cards != 2) {
+	// player[0] lost 1 neigh and the card they originally tried to play
+	// player[1] lost 2 neighs
+	if (player[0].hand.num_cards != 2 || player[1].hand.num_cards != 5) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    odd test: hand size failed\n");
 		reset_col();
 	}
 
-	// this technically doesn't fully check for dupes because the neigh's
-	// could have swapped, but it is good enough for now
-	if (strcmp(player[0].hand.cards[0].name, fertile_tmp.name) != 0 ||
-			strcmp(player[0].hand.cards[1].name, rainbow_tmp.name) != 0 ||
-			strcmp(player[0].hand.cards[2].name, neigh_tmp.name) != 0 ||
-			strcmp(player[0].hand.cards[3].name, ginormous_tmp.name) != 0 ||
-			strcmp(player[0].hand.cards[4].name, puppicorn_tmp.name) != 0) {
+	if (strcmp(player[0].hand.cards[0].name, basic_tmp2.name) != 0 ||
+			strcmp(player[0].hand.cards[1].name, basic_tmp3.name) != 0) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    odd test: player[0] hand verification failed\n");
 		reset_col();
 	}
 
-	if (strcmp(player[1].hand.cards[0].name, basic_tmp2.name) != 0 ||
-			strcmp(player[1].hand.cards[1].name, basic_tmp3.name) != 0) {
+	// this technically doesn't fully check for dupes because the neigh's
+	// could have swapped, but it is good enough for now
+	if (strcmp(player[1].hand.cards[0].name, fertile_tmp.name) != 0 ||
+			strcmp(player[1].hand.cards[1].name, rainbow_tmp.name) != 0 ||
+			strcmp(player[1].hand.cards[2].name, neigh_tmp.name) != 0 ||
+			strcmp(player[1].hand.cards[3].name, ginormous_tmp.name) != 0 ||
+			strcmp(player[1].hand.cards[4].name, puppicorn_tmp.name) != 0) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    odd test: player[1] hand verification failed\n");
@@ -102,61 +102,62 @@ int neigh_even_check() {
 	struct Unicorn basic_tmp2 = basedeck[17];
 	struct Unicorn basic_tmp3 = basedeck[20];
 
-	player[0].hand.cards[player[0].hand.num_cards++] = fertile_tmp;
-	player[0].hand.cards[player[0].hand.num_cards++] = rainbow_tmp;
+	player[0].hand.cards[player[0].hand.num_cards++] = basic_tmp;
 	player[0].hand.cards[player[0].hand.num_cards++] = neigh_tmp;
+	player[0].hand.cards[player[0].hand.num_cards++] = basic_tmp2;
 	player[0].hand.cards[player[0].hand.num_cards++] = neigh_tmp;
-	player[0].hand.cards[player[0].hand.num_cards++] = ginormous_tmp;
-	player[0].hand.cards[player[0].hand.num_cards++] = neigh_tmp;
-	player[0].hand.cards[player[0].hand.num_cards++] = puppicorn_tmp;
+	player[0].hand.cards[player[0].hand.num_cards++] = basic_tmp3;
 
-	player[1].hand.cards[player[1].hand.num_cards++] = basic_tmp;
+	player[1].hand.cards[player[1].hand.num_cards++] = fertile_tmp;
+	player[1].hand.cards[player[1].hand.num_cards++] = rainbow_tmp;
 	player[1].hand.cards[player[1].hand.num_cards++] = neigh_tmp;
-	player[1].hand.cards[player[1].hand.num_cards++] = basic_tmp2;
 	player[1].hand.cards[player[1].hand.num_cards++] = neigh_tmp;
-	player[1].hand.cards[player[1].hand.num_cards++] = basic_tmp3;
+	player[1].hand.cards[player[1].hand.num_cards++] = ginormous_tmp;
+	player[1].hand.cards[player[1].hand.num_cards++] = neigh_tmp;
+	player[1].hand.cards[player[1].hand.num_cards++] = puppicorn_tmp;
 	current_players = 2;
 
 	assert(discardpile.size == 0);
-	assert(player[0].hand.num_cards == 7);
-	assert(player[1].hand.num_cards == 5);
+	assert(player[0].hand.num_cards == 5);
+	assert(player[1].hand.num_cards == 7);
 	assert(player[0].stable.size == 0);
 	assert(player[1].stable.size == 0);
 
-	playCard(1);
+	playCard(0);
 
-	// player[0] lost 2 neighs
-	// player[1] lost 2 neighs and the card they originally tried to play
-	if (player[0].hand.num_cards != 5 || player[1].hand.num_cards != 2) {
+	// player[0] lost 2 neighs and brought the original card to their stable
+	// player[1] lost 2 neighs
+	if (player[0].hand.num_cards != 2 || player[1].hand.num_cards != 5) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    even test: hand size failed\n");
 		reset_col();
 	}
 
-	// this technically doesn't fully check for dupes because the neigh's
-	// could have swapped, but it is good enough for now
-	if (strcmp(player[0].hand.cards[0].name, fertile_tmp.name) != 0 ||
-			strcmp(player[0].hand.cards[1].name, rainbow_tmp.name) != 0 ||
-			strcmp(player[0].hand.cards[2].name, ginormous_tmp.name) != 0 ||
-			strcmp(player[0].hand.cards[3].name, neigh_tmp.name) != 0 ||
-			strcmp(player[0].hand.cards[4].name, puppicorn_tmp.name) != 0) {
+	if (strcmp(player[0].hand.cards[0].name, basic_tmp2.name) != 0 ||
+			strcmp(player[0].hand.cards[1].name, basic_tmp3.name) != 0) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    even test: player[0] hand verification failed\n");
 		reset_col();
 	}
 
-	if (strcmp(player[1].hand.cards[0].name, basic_tmp2.name) != 0 ||
-			strcmp(player[1].hand.cards[1].name, basic_tmp3.name) != 0) {
+	// this technically doesn't fully check for dupes because the neigh's
+	// could have swapped, but it is good enough for now
+	if (strcmp(player[1].hand.cards[0].name, fertile_tmp.name) != 0 ||
+			strcmp(player[1].hand.cards[1].name, rainbow_tmp.name) != 0 ||
+			strcmp(player[1].hand.cards[2].name, ginormous_tmp.name) != 0 ||
+			strcmp(player[1].hand.cards[3].name, neigh_tmp.name) != 0 ||
+			strcmp(player[1].hand.cards[4].name, puppicorn_tmp.name) != 0) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    even test: player[1] hand verification failed\n");
 		reset_col();
 	}
 
-	if (player[1].stable.size != 1 || player[1].stable.num_unicorns != 1 ||
-			strcmp(player[1].stable.unicorns[0].name, basic_tmp.name) != 0) {
+
+	if (player[0].stable.size != 1 || player[0].stable.num_unicorns != 1 ||
+			strcmp(player[0].stable.unicorns[0].name, basic_tmp.name) != 0) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    even test: stable size failed\n");
@@ -199,7 +200,7 @@ int neigh_tests() {
 	}
 	fpinput = fp;
 
-	// already tested with yay and ginormous unicorn
+	// already tested with yay, slowdown, and ginormous unicorn
 	num_fails += neigh_odd_check();
 	num_fails += neigh_even_check();
 

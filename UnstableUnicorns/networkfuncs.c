@@ -3,8 +3,6 @@
 #include "gamemechanics.h"
 #include "windowsapp.h"
 
-#define BUFSIZE 200
-
 char stdinbuf[MSGBUF];
 int bufindex = 0;
 
@@ -573,11 +571,14 @@ void receiveMsg(char* str, int fd) {
 
 // handles stdin events and filters everything but keydown presses
 // https://stackoverflow.com/questions/19955617/win32-read-from-stdin-with-timeout
-void processStdin(void) {
-  INPUT_RECORD record[128];
+void processStdin(char* stdinbuf, int* bufindex) {
+  INPUT_RECORD record[8];
   DWORD numRead;
 
-  if (!ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), record, 128, &numRead)) {
+  // TODO: (bug) try and analyze this another day
+  // stack corruption occurs if record is only a singular static struct;
+  // this is related to the wVirtualKeyCode issue :/
+  if (!ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), record, 1, &numRead)) {
     return;
   }
 
@@ -590,45 +591,34 @@ void processStdin(void) {
     // only care about key down
     return;
   }
+  
+  if (record->Event.KeyEvent.wVirtualKeyCode == VK_LBUTTON) {
+    // for whatever reason, record's struct members get displaced/shifted by 1
+    // and this ONLY happens in the main program, not the test one
+    record->Event.KeyEvent.wVirtualKeyCode = record->Event.KeyEvent.wVirtualScanCode;
+    record[0].Event.KeyEvent.uChar.AsciiChar = (char)record[0].Event.KeyEvent.dwControlKeyState;
+  }
 
   // use printf \b when backspacing
-  if (record->Event.KeyEvent.wVirtualScanCode == VK_BACK) {
-    printf("\b ");
-    stdinbuf[bufindex] = '\0';
-    bufindex--;
+  if (record->Event.KeyEvent.wVirtualKeyCode == VK_BACK) {
+    if (bufindex > 0) {
+      printf("\b \b");
+      stdinbuf[*bufindex] = '\0';
+      (*bufindex)--;
+    }
+    return;
   }
 
   // ascii input
   if (record->Event.KeyEvent.uChar.AsciiChar) {
-    // printf("%c", record[0].Event.KeyEvent.uChar.UnicodeChar);
-    // stdinbuf[bufindex] = getchar();
+    stdinbuf[*bufindex] = record[0].Event.KeyEvent.uChar.AsciiChar;
 
-    // bufindex = ToUnicode(record->Event.KeyEvent.wVirtualKeyCode, record->Event.KeyEvent.wVirtualScanCode, record->Event.KeyEvent.dwControlKeyState, stdinbuf + bufindex, MSGBUF, 0);
-    // // ToAscii(record->Event.KeyEvent.wVirtualKeyCode, record->Event.KeyEvent.wVirtualScanCode, record->Event.KeyEvent.dwControlKeyState, &stdinbuf[bufindex], 0);
-    // 
-    // char c = (char)record->Event.KeyEvent.wVirtualKeyCode;
-    // 
-    // for (int i = old; i < bufindex; i++) {
-    //   if (stdinbuf[i] == '\r' || stdinbuf[i] == '\n') {
-    //     printf("\n");
-    //   }
-    //   else {
-    //     printf("%c", stdinbuf[i]);
-    //   }
-    // }
-    // old = bufindex;
-
-    for (int i = 0; i < numRead; i++) {
-      stdinbuf[bufindex] = tolower((record->Event.KeyEvent.wVirtualScanCode));
-      // char c = record[0].Event.KeyEvent.uChar.AsciiChar;
-
-      if (stdinbuf[bufindex] == '\r' || stdinbuf[bufindex] == '\n') {
-        printf("\n");
-      }
-      else {
-        printf("%c", stdinbuf[bufindex]);
-      }
-      bufindex++;
+    if (stdinbuf[*bufindex] == '\r' || stdinbuf[*bufindex] == '\n') {
+      printf("\n");
     }
+    else {
+      printf("%c", stdinbuf[*bufindex]);
+    }
+    (*bufindex)++;
   }
 }

@@ -11,6 +11,7 @@ int broken_basic_check() {
 	player[0].hand.cards[player[0].hand.num_cards++] = yay_tmp;
 	assert(player[0].flags == broken_stable);
 
+	player[0].flags |= yay;
 	playCard(0);
 
 	if (turn_count != 2) {

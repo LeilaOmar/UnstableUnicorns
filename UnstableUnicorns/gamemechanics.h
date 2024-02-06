@@ -12,14 +12,12 @@ void printHand(int pnum);
 void printStable(int pnum);
 void displayCardDesc(void);
 void displayDesiredStable(void);
-void printStableGrid(void);
+void printStableGrid(void); // prints stables of all players in two columns
 
 // ********************************************************************************
 // ******************************* Utility Functions ******************************
 // ********************************************************************************
 
-// OPTIMIZE: use species UNICORN instead of class ANYUNICORN and then combine
-// this with checking for species too
 // return 0 = FALSE, the card's class does not equal the desired class
 // return 1 = TRUE, card match!
 int checkClass(int desired_class, int card_class);
@@ -95,13 +93,5 @@ void steal(int pnum, int class);
 // ********************************************************************************
 // *************************** Core Game Loop Functions ***************************
 // ********************************************************************************
-
-// codes the part where players are able to use an instant card against a play
-// 0 = nobody used Neigh/Super Neigh or Neigh's cancelled out
-// 1 = card is gone
-// TODO: bug where Neigh remained in player's hand that last refuted it (e.g. 3
-// neighs were used in total and when player 3 used americorn on player 1 to get
-// a random card, it picked the same Neigh ID that was in the discard pile)
-int refutePhase(int orig_pnum, int orig_cindex);
 
 void playCard(int pnum);
