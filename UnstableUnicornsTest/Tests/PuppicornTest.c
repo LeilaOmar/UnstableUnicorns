@@ -4,19 +4,31 @@
 int puppicorn_basic_check() {
 	int num_fails = 0;
 	struct Unicorn basic_tmp = basedeck[13];
+	struct Unicorn basic_tmp2 = basedeck[17];
+	struct Unicorn basic_tmp3 = basedeck[20];
+	struct Unicorn basic_tmp4 = basedeck[23];
+	struct Unicorn basic_tmp5 = basedeck[26];
+	struct Unicorn basic_tmp6 = basedeck[29];
 	struct Unicorn puppicorn_tmp = basedeck[41];
 
 	reset_players();
 
 	// does it move?
 	current_players = 2;
+	addStable(0, basic_tmp);
+	addStable(0, basic_tmp2);
+	addStable(0, basic_tmp3);
 	addStable(0, puppicorn_tmp);
-	addStable(1, basic_tmp);
-	addStable(1, basic_tmp);
+	addStable(1, basic_tmp4);
+	addStable(1, basic_tmp5);
 
+	assert(player[0].stable.size == 4);
+	assert(player[1].stable.size == 2);
+	assert(puppicorn_index[0] == 3);
+	assert(puppicorn_index[1] == 0);
 	endOfTurn(0);
 
-	if (player[0].stable.num_unicorns != 0 || player[0].stable.size != 0) {
+	if (player[0].stable.num_unicorns != 3 || player[0].stable.size != 3) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    sanity test: player[0] stable size failed\n");
@@ -30,11 +42,79 @@ int puppicorn_basic_check() {
 		reset_col();
 	}
 
+	if (strcmp(player[0].stable.unicorns[0].name, basic_tmp.name) != 0 ||
+			strcmp(player[0].stable.unicorns[1].name, basic_tmp2.name) != 0 ||
+			strcmp(player[0].stable.unicorns[2].name, basic_tmp3.name) != 0) {
+		num_fails++;
+		red();
+		fprintf(stderr, "    sanity test: player[0] stable verification failed\n");
+		reset_col();
+	}
+
+	if (strcmp(player[1].stable.unicorns[0].name, basic_tmp4.name) != 0 ||
+			strcmp(player[1].stable.unicorns[1].name, basic_tmp5.name) != 0 ||
+			strcmp(player[1].stable.unicorns[2].name, puppicorn_tmp.name) != 0) {
+		num_fails++;
+		red();
+		fprintf(stderr, "    sanity test: player[1] stable verification failed\n");
+		reset_col();
+	}
+
 	if (puppicorn_index[0] != 2 || puppicorn_index[1] != 1 ||
 			strcmp(player[1].stable.unicorns[2].name, puppicorn_tmp.name) != 0) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    sanity test: puppicorn index failed\n");
+		reset_col();
+	}
+
+	// cycle 2
+	addStable(1, basic_tmp6);
+
+	assert(player[0].stable.size == 3);
+	assert(player[1].stable.size == 4);
+	assert(puppicorn_index[0] == 2);
+	assert(puppicorn_index[1] == 1);
+	endOfTurn(1);
+
+	if (player[0].stable.num_unicorns != 4 || player[0].stable.size != 4) {
+		num_fails++;
+		red();
+		fprintf(stderr, "    sanity test (round 2): player[0] stable size failed\n");
+		reset_col();
+	}
+
+	if (player[1].stable.num_unicorns != 3 || player[1].stable.size != 3) {
+		num_fails++;
+		red();
+		fprintf(stderr, "    sanity test (round 2): player[1] stable size failed\n");
+		reset_col();
+	}
+
+	if (strcmp(player[0].stable.unicorns[0].name, basic_tmp.name) != 0 ||
+			strcmp(player[0].stable.unicorns[1].name, basic_tmp2.name) != 0 ||
+			strcmp(player[0].stable.unicorns[2].name, basic_tmp3.name) != 0 ||
+			strcmp(player[0].stable.unicorns[3].name, puppicorn_tmp.name) != 0) {
+		num_fails++;
+		red();
+		fprintf(stderr, "    sanity test (round 2): player[0] stable verification failed\n");
+		reset_col();
+	}
+
+	if (strcmp(player[1].stable.unicorns[0].name, basic_tmp4.name) != 0 ||
+			strcmp(player[1].stable.unicorns[1].name, basic_tmp5.name) != 0 ||
+			strcmp(player[1].stable.unicorns[2].name, basic_tmp6.name) != 0) {
+		num_fails++;
+		red();
+		fprintf(stderr, "    sanity test (round 2): player[1] stable verification failed\n");
+		reset_col();
+	}
+
+	if (puppicorn_index[0] != 3 || puppicorn_index[1] != 0 ||
+			strcmp(player[0].stable.unicorns[3].name, puppicorn_tmp.name) != 0) {
+		num_fails++;
+		red();
+		fprintf(stderr, "    sanity test (round 2): puppicorn index failed\n");
 		reset_col();
 	}
 
@@ -142,11 +222,18 @@ int puppicorn_swap_check() {
 	endOfTurn(2);
 
 	if (player[0].stable.num_unicorns != 4 || player[0].stable.size != 4 ||
-			puppicorn_index[0] != 3 ||
+			player[2].stable.num_unicorns != 0 || player[2].stable.size != 0) {
+		num_fails++;
+		red();
+		fprintf(stderr, "    swap test: stable size failed\n");
+		reset_col();
+	}
+
+	if (puppicorn_index[0] != 3 || puppicorn_index[1] != 0 ||
 			strcmp(player[0].stable.unicorns[3].name, puppicorn_tmp.name) != 0) {
 		num_fails++;
 		red();
-		fprintf(stderr, "    swap test: stable size & puppicorn name check failed\n");
+		fprintf(stderr, "    swap test: puppicorn index failed\n");
 		reset_col();
 	}
 

@@ -118,9 +118,9 @@ int endOfTurn(int pnum) {
   if (uni_lasso_flag[0] != -1) {
     // uni_lasso_flag[2] represents proper owner, and the thief [1] has the
     // card removed from their stable
-    int owner = uni_lasso_flag[2];
-    int thief = uni_lasso_flag[1];
     int cindex = uni_lasso_flag[0];
+    int thief = uni_lasso_flag[1];
+    int owner = uni_lasso_flag[2];
     struct Unicorn tmp = player[thief].stable.unicorns[cindex];
 
     // rearrange the player's stable and toggle any flags before swapping the card to the other stable;
@@ -132,17 +132,17 @@ int endOfTurn(int pnum) {
 
   // puppicorn swap
   if (puppicorn_index[0] != -1) {
+    int tmp_cindex = puppicorn_index[0]; // this gets changed in addStable
+    
     if (pnum == current_players - 1) {
       addStable(0, player[pnum].stable.unicorns[puppicorn_index[0]]);
-      rearrangeStable(pnum, puppicorn_index[0]);
-      puppicorn_index[0] = player[0].stable.size - 1;
     }
     else {
       // puppicorn should be removed first before adding it to the stable
       addStable(pnum + 1, player[pnum].stable.unicorns[puppicorn_index[0]]);
-      rearrangeStable(pnum, puppicorn_index[0]);
-      puppicorn_index[0] = player[pnum + 1].stable.size - 1;
     }
+    
+    rearrangeStable(pnum, tmp_cindex);
   }
 
   return 0;

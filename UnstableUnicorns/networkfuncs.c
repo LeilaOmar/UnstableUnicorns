@@ -261,6 +261,9 @@ int sendGamePacket(int fd) {
   sendInt(discardpile.size, fd);
   sendUnicorns(discardpile.cards, discardpile.size, fd);
 
+  sendInt(puppicorn_index[0], fd);
+  sendInt(puppicorn_index[1], fd);
+
   sendPlayers(fd);
 
   return 0;
@@ -275,6 +278,9 @@ int receiveGamePacket(int fd) {
 
   receiveInt(&discardpile.size, fd);
   receiveUnicorns(discardpile.cards, discardpile.size, fd);
+
+  receiveInt(&puppicorn_index[0], fd);
+  receiveInt(&puppicorn_index[1], fd);
 
   receivePlayers(fd);
 

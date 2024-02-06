@@ -306,6 +306,7 @@ int serverMain(void) {
         for (int i = 0; i < current_players - 1; i++) {
           sendInt(end_game, clientsockfd[i]);
           sendInt(counter, clientsockfd[i]);
+          sendGamePacket(clientsockfd[i]);
         }
         winningpnum = 0;
         break;
