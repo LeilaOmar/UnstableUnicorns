@@ -228,6 +228,12 @@
     <ClCompile Include="Tests\SuperNeighTest.c">
       <Filter>Source Files\Tests</Filter>
     </ClCompile>
+    <ClCompile Include="..\UnstableUnicorns\networkevents.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\UnstableUnicorns\networkfuncs.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Tests\DowngradeTests.h">

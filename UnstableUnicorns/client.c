@@ -1,6 +1,7 @@
 #include "client.h"
 #include "gamemechanics.h"
 #include "gamephase.h"
+#include <conio.h>
 
 #define ERRORBUF 256
 
@@ -29,7 +30,7 @@ int clientMain(void) {
     server.sin_port = htons(portno);
 
     if (connect(sockfd, (struct sockaddr*)&server, sizeof(server)) < 0) {
-      printf("Attempt to connect to the server was unsuccessful. Error code : %d\n", WSAGetLastError());
+      fprintf(stderr, "Attempt to connect to the server was unsuccessful. Error code : %d\n", WSAGetLastError());
     }
     else {
       printf("Connection attempt successful! Yay\n");
@@ -57,6 +58,7 @@ int clientMain(void) {
   } while (isvalid == 1);
 
   receiveInt(&clientpnum, sockfd);
+  isclient = 1;
 
   printf(
     "\n********************************************************************************"
@@ -95,7 +97,7 @@ int clientMain(void) {
 
 
     if (WaitForSingleObject(GetStdHandle(STD_INPUT_HANDLE), 0) == WAIT_OBJECT_0) {
-      processStdin();
+      processStdin(stdinbuf, &bufindex);
       if (bufindex >= (sizeof(stdinbuf) - 1) || stdinbuf[bufindex - 1] == '\r' || stdinbuf[bufindex - 1] == '\n') {
 
         sendInt(incoming_msg, sockfd);
@@ -136,10 +138,7 @@ int clientMain(void) {
   puts("Waiting for other players to pick their Baby Unicorn...");
   reset_col();
 
-  // TODO: serialize this for later; also check the amount of bytes received!
   receiveInt(&current_players, sockfd);
-  // recv(sockfd, (void*)&player[clientpnum], sizeof(struct Player), 0);
-  // recv(sockfd, (void*)nursery.cards, sizeof(struct Unicorn) * NURSERY_SIZE, 0);
   receivePlayers(sockfd);
   receiveInt(&nursery.size, sockfd);
   receiveUnicorns(nursery.cards, nursery.size, sockfd);
@@ -182,10 +181,11 @@ int clientMain(void) {
     "     &&&#(                                                                      \n"
     "\n");
 
-  int counter = 0, isevent = 0;
+  int counter = 0;
+  int didWin = 0, winningpnum = 0;
 
   // loop until win condition occurs (7 unicorns in stable)
-  for (;;) {
+  do {
     printf("\n********************************************************************************\n");
     red();
     printf("\nPlayer Stables\n");
@@ -202,11 +202,11 @@ int clientMain(void) {
 
       actionPhase(counter);
 
-      int didWin = 0;
       didWin = endOfTurn(counter);
       if (didWin == 1) {
         sendInt(end_game, sockfd);
         sendGamePacket(sockfd);
+        winningpnum = counter;
         break;
       }
 
@@ -217,27 +217,41 @@ int clientMain(void) {
     else {
       printf("waiting for %s to make a move...\n", player[counter].username);
 
-      receiveInt(&network_events, sockfd);
+      for (;;) {
+        ret = WSAPoll(pfd, 2, -1);
+        if (ret == SOCKET_ERROR) {
+          fprintf(stderr, "ERROR: poll() failed. Error code : %d", WSAGetLastError());
+          closesocket(sockfd);
+          return 2;
+        }
+        else if (ret == 0) {
+          fprintf(stderr, "ERROR: server timed out. Error code : %d", WSAGetLastError());
+          closesocket(sockfd);
+          return 2;
+        }
 
-      if (network_events == end_turn) {
-        receiveGamePacket(sockfd);
+        if (pfd[1].revents & POLLIN) {
+          receiveInt(&network_events, sockfd);
+
+          if (network_events == neigh_event) {
+            int orig_pnum, orig_cindex;
+            receiveInt(&orig_pnum, sockfd);
+            receiveInt(&orig_cindex, sockfd);
+
+            clientNeigh(clientpnum, orig_pnum, &orig_cindex);
+          }
+          else if (network_events == end_turn) {
+            receiveGamePacket(sockfd);
+            break;
+          }
+          else if (network_events == end_game) {
+            receiveInt(&winningpnum, sockfd);
+            receiveGamePacket(sockfd);
+            didWin = 1;
+            break;
+          }
+        }
       }
-      else if (network_events == neigh_event) {
-        // receive neigh
-      }
-      else if (network_events == end_game) {
-        receiveInt(&counter, sockfd);
-        receiveGamePacket(sockfd);
-        break;
-      }
-      // checks to see if it's possible to neigh the card
-      // receiveInt(&isevent, sockfd);
-      // 
-      // // timeout after 5 seconds
-      // ret = WSAPoll(pfd, MAX_PLAYERS + 1, 5000);
-      // if (pfd[1].revents & POLLOUT) {
-      // 
-      // }
     }
 
     // print state of nursery and discard piles
@@ -253,7 +267,7 @@ int clientMain(void) {
     }
 
     counter = (counter < current_players - 1) ? counter + 1 : 0;
-  }
+  } while (!didWin);
 
   printf("\n********************************************************************************\n");
   red();
@@ -273,11 +287,11 @@ int clientMain(void) {
     " '  ;'  ::   ':.  '\"       \\_____|\\__,_|_| |_| |_|\\___| |_____/ \\___|\\__(_)\n"
     "   (:   ':    ;)       \n"
     "    \\\\   '\"  ./        \n"
-    "     '\"      '\"     *unicorn by Dr J   \n"
+    "     '\"      '\"     *ASCII unicorn by Dr J   \n"
     "\n");
 
   char winmsg[DESC_SIZE];
-  sprintf_s(winmsg, NAME_SIZE + 18, "%s won the game!!!\n", player[counter].username);
+  sprintf_s(winmsg, NAME_SIZE + 18, "%s won the game!!!\n", player[winningpnum].username);
   rainbow(winmsg);
 
   printf("\nPress any key to close the window...");

@@ -1,5 +1,5 @@
 #pragma once
-#include "networkfuncs.h"
+#include "networkevents.h"
 
 int newConnection(SOCKET *cfd);
 int serverMain(void);

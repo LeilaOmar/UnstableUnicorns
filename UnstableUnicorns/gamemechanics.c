@@ -1,5 +1,5 @@
 #include "gamemechanics.h"
-#include "networkfuncs.h"
+#include "networkevents.h"
 
 // ********************************************************************************
 // **************************** Print/Display Functions ***************************
@@ -156,29 +156,6 @@ int checkClass(int desired_class, int card_class) {
   }
   return 0;
 }
-
-// // randomize deck between specific indices
-// void shuffleDeck(int start, int size) {
-//   int index = 0;
-// 
-//   // randomize deck with the Fisher-Yates algorithm; starts from the end
-//   // because the "taken" cards are pushed towards the beginning, which is
-//   // outside of deck_index's or start's range
-//   if (start >= 0) {
-//     for (int i = size - 1; i > start; i--) {
-//       int j = rand() % (i + 1 - start) + start;
-//       index = deck_ref[i];
-//       deck_ref[i] = deck_ref[j];
-//       deck_ref[j] = index;
-//     }
-//   }
-// 
-//   if (deck_flag) {
-//     blue();
-//     printDeck(index, DECK_SIZE, ANY, ANY);
-//     reset_col();
-//   }
-// }
 
 // randomize deck
 void shuffleDeck(struct Deck *d) {
@@ -711,135 +688,6 @@ void steal(int pnum, int class) {
 // *************************** Core Game Loop Functions ***************************
 // ********************************************************************************
 
-// codes the part where players are able to use an instant card against a play
-// 0 = nobody used Neigh/Super Neigh or Neigh's cancelled out
-// 1 = card is gone
-// 
-// TODO: bug where Neigh remained in player's hand that last refuted it (e.g. 3
-// neighs were used in total and when player 3 used americorn on player 1 to get
-// a random card, it picked the same Neigh ID that was in the discard pile)
-int refutePhase(int orig_pnum, int *orig_cindex) {
-  int pindex = -2, cindex, oldpindex, isvalid = 0, oddcheck = 0;
-  char* end, buf[LINE_MAX];
-
-  red();
-  printf("%s is about to play card %s.\n", player[orig_pnum].username,
-    player[orig_pnum].hand.cards[*orig_cindex].name);
-  reset_col();
-
-  do {
-    printf(
-      "If a player would like to Neigh this card, then please type in the "
-      "player number. Otherwise enter 0 to quit: ");
-    pindex = numinput(buf, &end, sizeof buf) - 1;
-
-    // quit
-    if (pindex == -1)
-      return 0;
-
-    // index validation
-    if (pindex < -1 || pindex >= current_players || pindex == orig_pnum || end != (buf + strlen(buf)))
-      continue;
-
-    // neigh check
-    if (canNeighOthers(pindex) && canBeNeighed(orig_pnum)) {
-      for (int i = 0; i < player[pindex].hand.num_cards; i++) {
-        if (player[pindex].hand.cards[i].class == INSTANT) {
-          isvalid = 1;
-          break;
-        }
-      }
-    }
-  } while (!isvalid);
-
-  printHand(pindex);
-  for (;;) {
-    printf("Pick the specific Neigh card to use: ");
-    cindex = numinput(buf, &end, sizeof buf) - 1;
-
-    // index validation
-    if (cindex < 0 || cindex >= player[pindex].hand.num_cards || end != (buf + strlen(buf)))
-      continue;
-
-    // make sure it's actually a Neigh or Super Neigh
-    if (player[pindex].hand.cards[cindex].class == INSTANT)
-      break;
-  }
-
-  addDiscard(player[pindex].hand.cards[cindex]);
-  rearrangeHand(pindex, cindex);
-
-  oddcheck++;
-
-  // loop until Neigh's have been exhausted; Super Neighs can't be refuted
-  while (strcmp(discardpile.cards[discardpile.size - 1].name, "Super Neigh") != 0 && pindex != -1) {
-    isvalid = 0;
-    oldpindex = pindex;
-    do {
-      printf(
-        "If a player would like to negate the previous Neigh card, then "
-        "please type in the player number. \nOtherwise enter 0 to quit: ");
-      pindex = numinput(buf, &end, sizeof buf) - 1;
-
-      // quit
-      if (pindex == -1)
-        break;
-
-      // index validation
-      if (pindex == oldpindex || pindex < -1 || pindex >= current_players || end != (buf + strlen(buf)))
-        continue;
-
-      // neigh check
-      if (canNeighOthers(pindex) && canBeNeighed(oldpindex)) {
-        for (int i = 0; i < player[pindex].hand.num_cards; i++) {
-          if (player[pindex].hand.cards[i].class == INSTANT) {
-            isvalid = 1;
-            break;
-          }
-        }
-      }
-
-    } while (!isvalid);
-
-    if (pindex != -1) {
-      printHand(pindex);
-      for (;;) {
-        printf("Pick the specific Neigh card to use: ");
-        cindex = numinput(buf, &end, sizeof buf) - 1;
-
-        // index validation
-        if (cindex < 0 || cindex >= player[pindex].hand.num_cards || end != (buf + strlen(buf)))
-          continue;
-
-        // make sure it's actually a Neigh or Super Neigh
-        if (player[pindex].hand.cards[cindex].class == INSTANT)
-          break;
-      }
-      // check if the player in this part of the loop is the same as the original pnum
-      // if so, it needs to adjust the original card index based off of where the neigh was
-      if (pindex == orig_pnum) {
-        // it only needs to be adjusted if the new cindex is lower
-        if (cindex < *orig_cindex)
-          *orig_cindex -= 1;
-      }
-
-      addDiscard(player[pindex].hand.cards[cindex]);
-      rearrangeHand(pindex, cindex);
-
-      oddcheck++;
-    }
-  }
-
-  // the neigh went through
-  if (oddcheck & 1) {
-    addDiscard(player[orig_pnum].hand.cards[*orig_cindex]);
-    rearrangeHand(orig_pnum, *orig_cindex);
-    return 1;
-  }
-
-  return 0;
-}
-
 void playCard(int pnum) {
   int index, target_pindex;
   char* end, buf[LINE_MAX];
@@ -861,8 +709,20 @@ void playCard(int pnum) {
   // people might waste their neigh cards on an impossible play
   // 
   // check if the player cannot be Neigh'd first before initiating the func
-  if (canBeNeighed(pnum))
-    if (refutePhase(pnum, &index)) return;
+  if (canBeNeighed(pnum)) {
+    int ret;
+    if (isclient) {
+      sendInt(neigh_event, sockfd);
+      sendInt(index, sockfd);
+      sendPlayers(sockfd);
+      ret = clientNeigh(pnum, pnum, &index);
+    }
+    else {
+      ret = serverNeigh(pnum, &index);
+    }
+
+    if (ret & 1) return;
+  }
 
   // get the card ID before rearranging the hand so that when you discard
   // cards it doesn't show the one you just used when you're doing the
