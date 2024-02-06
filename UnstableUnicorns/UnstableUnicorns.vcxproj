@@ -30,14 +30,14 @@
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
-    <CharacterSet>MultiByte</CharacterSet>
+    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
-    <CharacterSet>NotSet</CharacterSet>
+    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -109,7 +109,7 @@
       <BufferSecurityCheck>false</BufferSecurityCheck>
     </ClCompile>
     <Link>
-      <SubSystem>Windows</SubSystem>
+      <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -151,6 +151,7 @@
     <ClCompile Include="gamemechanics.c" />
     <ClCompile Include="gamephase.c" />
     <ClCompile Include="globals.c" />
+    <ClCompile Include="networkevents.c" />
     <ClCompile Include="networkfuncs.c" />
     <ClCompile Include="server.c" />
     <ClCompile Include="uu_cmd_demo.c" />
@@ -162,6 +163,7 @@
     <ClInclude Include="gamemechanics.h" />
     <ClInclude Include="gamephase.h" />
     <ClInclude Include="globals.h" />
+    <ClInclude Include="networkevents.h" />
     <ClInclude Include="networkfuncs.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="server.h" />

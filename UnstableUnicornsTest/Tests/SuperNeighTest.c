@@ -7,30 +7,30 @@ int super_neigh_odd_check() {
 	struct Unicorn super_neigh_tmp = basedeck[128];
 	struct Unicorn basic_tmp = basedeck[13];
 
-	player[0].hand.cards[player[0].hand.num_cards++] = super_neigh_tmp;
+	player[0].hand.cards[player[0].hand.num_cards++] = basic_tmp;
+	player[0].hand.cards[player[0].hand.num_cards++] = neigh_tmp;
 
-	player[1].hand.cards[player[1].hand.num_cards++] = basic_tmp;
-	player[1].hand.cards[player[1].hand.num_cards++] = neigh_tmp;
+	player[1].hand.cards[player[1].hand.num_cards++] = super_neigh_tmp;
 	current_players = 2;
 
 	assert(discardpile.size == 0);
-	assert(player[0].hand.num_cards == 1);
-	assert(player[1].hand.num_cards == 2);
+	assert(player[0].hand.num_cards == 2);
+	assert(player[1].hand.num_cards == 1);
 	assert(player[0].stable.size == 0);
 	assert(player[1].stable.size == 0);
 
-	playCard(1);
+	playCard(0);
 
-	// player[0] lost 1 neigh
-	// player[1] lost the card they originally tried to play
-	if (player[0].hand.num_cards != 0 || player[1].hand.num_cards != 1) {
+	// player[0] lost the card they originally tried to play
+	// player[1] lost 1 neigh
+	if (player[0].hand.num_cards != 1 || player[1].hand.num_cards != 0) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    odd test: hand size failed\n");
 		reset_col();
 	}
 
-	if (strcmp(player[1].hand.cards[0].name, neigh_tmp.name) != 0) {
+	if (strcmp(player[0].hand.cards[0].name, neigh_tmp.name) != 0) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    odd test: player[1] hand verification failed\n");
@@ -67,11 +67,11 @@ int super_neigh_even_check() {
 
 	struct Unicorn basic_tmp = basedeck[13];
 
-	player[0].hand.cards[player[0].hand.num_cards++] = neigh_tmp;
-	player[0].hand.cards[player[0].hand.num_cards++] = neigh_tmp;
+	player[0].hand.cards[player[0].hand.num_cards++] = basic_tmp;
+	player[0].hand.cards[player[0].hand.num_cards++] = super_neigh_tmp;
 
-	player[1].hand.cards[player[1].hand.num_cards++] = basic_tmp;
-	player[1].hand.cards[player[1].hand.num_cards++] = super_neigh_tmp;
+	player[1].hand.cards[player[1].hand.num_cards++] = neigh_tmp;
+	player[1].hand.cards[player[1].hand.num_cards++] = neigh_tmp;
 	current_players = 2;
 
 	assert(discardpile.size == 0);
@@ -80,26 +80,26 @@ int super_neigh_even_check() {
 	assert(player[0].stable.size == 0);
 	assert(player[1].stable.size == 0);
 
-	playCard(1);
+	playCard(0);
 
-	// player[0] lost 1 neigh
-	// player[1] lost 1 neigh and the card they originally tried to play
-	if (player[0].hand.num_cards != 1 || player[1].hand.num_cards != 0) {
+	// player[0] lost 1 neigh and the card they originally tried to play
+	// player[1] lost 1 neigh
+	if (player[0].hand.num_cards != 0 || player[1].hand.num_cards != 1) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    even test: hand size failed\n");
 		reset_col();
 	}
 
-	if (strcmp(player[0].hand.cards[0].name, neigh_tmp.name) != 0) {
+	if (strcmp(player[1].hand.cards[0].name, neigh_tmp.name) != 0) {
 		num_fails++;
 		red();
-		fprintf(stderr, "    even test: player[0] hand verification failed\n");
+		fprintf(stderr, "    even test: player[1] hand verification failed\n");
 		reset_col();
 	}
 
-	if (player[1].stable.size != 1 || player[1].stable.num_unicorns != 1 ||
-			strcmp(player[1].stable.unicorns[0].name, basic_tmp.name) != 0) {
+	if (player[0].stable.size != 1 || player[0].stable.num_unicorns != 1 ||
+			strcmp(player[0].stable.unicorns[0].name, basic_tmp.name) != 0) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    even test: stable size failed\n");
@@ -141,7 +141,7 @@ int super_neigh_tests() {
 	}
 	fpinput = fp;
 
-	// already tested with yay and ginormous unicorn
+	// already tested with yay, slowdown, and ginormous unicorn
 	num_fails += super_neigh_odd_check();
 	num_fails += super_neigh_even_check();
 

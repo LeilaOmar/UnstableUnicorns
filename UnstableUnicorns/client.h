@@ -1,5 +1,5 @@
 #pragma once
-#include "networkfuncs.h"
+#include "networkevents.h"
 
 int clientMain(void);
 int clientJoin(short portno);

@@ -34,6 +34,9 @@
     <ClCompile Include="gamephase.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="networkevents.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="client.h">
@@ -61,6 +64,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="basedeck.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="networkevents.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

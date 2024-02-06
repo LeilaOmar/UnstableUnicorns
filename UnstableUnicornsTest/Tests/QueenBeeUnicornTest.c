@@ -20,6 +20,8 @@ int queen_bee_basic_check() {
 	enterStableEffects(1, player[1].stable.unicorns[0].effect);
 
 	assert(turn_count == 1);
+	player[0].flags |= yay;
+	player[2].flags |= yay;
 
 	playCard(0);
 	playCard(2);
