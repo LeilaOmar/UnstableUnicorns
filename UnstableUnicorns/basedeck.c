@@ -610,7 +610,7 @@ void sacrificeDestroyEffects(int pnum, int cindex, int effect) {
     break;
   }
 
-  if (player[pnum].stable.unicorns[cindex].class == BABYUNICORN)
+  if (player[pnum].stable.unicorns[cindex].cType == BABYUNICORN)
     addNursery(player[pnum].stable.unicorns[cindex]);
   else
     addDiscard(player[pnum].stable.unicorns[cindex]);
@@ -637,7 +637,7 @@ int conditionalEffects(int pnum, struct Unicorn corn, int hindex, int upgrade_ta
     // Playing Extra Tail:
     // can only enter a stable if there is a Basic Unicorn card there
     for (int i = 0; i < player[upgrade_target].stable.size; i++) {
-      if (player[upgrade_target].stable.unicorns[i].class == BASICUNICORN) {
+      if (player[upgrade_target].stable.unicorns[i].cType == BASICUNICORN) {
         addStable(upgrade_target, corn);
         rearrangeHand(pnum, hindex);
         return 1;
@@ -693,10 +693,10 @@ int conditionalEffects(int pnum, struct Unicorn corn, int hindex, int upgrade_ta
 
     for (int j = 0; j < current_players; j++) {
       for (int i = 0; i < player[j].stable.size; i++) {
-        if (j != pnum && player[j].stable.unicorns[i].class == UPGRADE)
+        if (j != pnum && player[j].stable.unicorns[i].cType == UPGRADE)
           isvalid = 1;
         if (j == pnum &&
-          player[j].stable.unicorns[i].class == DOWNGRADE)
+          player[j].stable.unicorns[i].cType == DOWNGRADE)
           isvalid2 = 1;
       }
       // quit if both conditions have been met
@@ -945,7 +945,7 @@ int conditionalEffects(int pnum, struct Unicorn corn, int hindex, int upgrade_ta
     if (isclient) {
       sendInt(discard_event, sockfd);
       sendInt(ANY, sockfd);   // player target; ANY = everyone
-      sendInt(ANY, sockfd);   // class to discard
+      sendInt(ANY, sockfd);   // card type to discard
       sendPlayers(sockfd);    // sending player stuff because other discard events require updates
       clientDiscard(pnum, ANY, ANY);
     }
@@ -953,7 +953,7 @@ int conditionalEffects(int pnum, struct Unicorn corn, int hindex, int upgrade_ta
       for (int i = 0; i < current_players - 1; i++) {
         sendInt(discard_event, clientsockfd[i]);
         sendInt(ANY, clientsockfd[i]);  // player target; ANY = everyone
-        sendInt(ANY, clientsockfd[i]);  // class to discard
+        sendInt(ANY, clientsockfd[i]);  // card type to discard
         sendPlayers(clientsockfd[i]);   // sending player stuff because other discard events require updates
       }
       serverDiscard(ANY, ANY);
@@ -977,8 +977,8 @@ int conditionalEffects(int pnum, struct Unicorn corn, int hindex, int upgrade_ta
       }
 
       for (int j = 0; j < player[i].stable.size; j++) {
-        if (player[i].stable.unicorns[j].class == BASICUNICORN ||
-            player[i].stable.unicorns[j].class == MAGICUNICORN) {
+        if (player[i].stable.unicorns[j].cType == BASICUNICORN ||
+            player[i].stable.unicorns[j].cType == MAGICUNICORN) {
           isvalid++;
         }
       }
@@ -1013,8 +1013,8 @@ int conditionalEffects(int pnum, struct Unicorn corn, int hindex, int upgrade_ta
         continue;
 
       for (int i = 0; i < player[index].stable.size; i++) {
-        if (player[index].stable.unicorns[i].class == BASICUNICORN ||
-            player[index].stable.unicorns[i].class == MAGICUNICORN) {
+        if (player[index].stable.unicorns[i].cType == BASICUNICORN ||
+            player[index].stable.unicorns[i].cType == MAGICUNICORN) {
           isvalid++;
         }
       }
@@ -1025,8 +1025,8 @@ int conditionalEffects(int pnum, struct Unicorn corn, int hindex, int upgrade_ta
     }
 
     for (int i = 0; i < player[index].stable.size; i++) {
-      if ((player[index].stable.unicorns[i].class == BASICUNICORN ||
-            player[index].stable.unicorns[i].class == MAGICUNICORN)) {
+      if ((player[index].stable.unicorns[i].cType == BASICUNICORN ||
+            player[index].stable.unicorns[i].cType == MAGICUNICORN)) {
         // get rid of the puppicorn index if applicable
         if (strcmp(player[index].stable.unicorns[i].name, "Puppicorn") == 0) {
           puppicorn_index[0] = -1;
@@ -1058,8 +1058,8 @@ int conditionalEffects(int pnum, struct Unicorn corn, int hindex, int upgrade_ta
 
     for (int j = 0; j < current_players; j++) {
       for (int i = 0; i < player[j].stable.size; i++) {
-        if (player[j].stable.unicorns[i].class == UPGRADE ||
-            player[j].stable.unicorns[i].class == DOWNGRADE) {
+        if (player[j].stable.unicorns[i].cType == UPGRADE ||
+            player[j].stable.unicorns[i].cType == DOWNGRADE) {
           // quit if either condition was met
           isvalid = 1;
           j = DESC_SIZE;
@@ -1093,8 +1093,8 @@ int conditionalEffects(int pnum, struct Unicorn corn, int hindex, int upgrade_ta
 
       // make sure chosen player has an upgrade or downgrade card
       for (int i = 0; i < player[index].stable.size; i++) {
-        if (player[index].stable.unicorns[i].class == UPGRADE ||
-            player[index].stable.unicorns[i].class == DOWNGRADE) {
+        if (player[index].stable.unicorns[i].cType == UPGRADE ||
+            player[index].stable.unicorns[i].cType == DOWNGRADE) {
           // quit if either condition was met
           isvalid = 1;
           break;
@@ -1111,9 +1111,9 @@ int conditionalEffects(int pnum, struct Unicorn corn, int hindex, int upgrade_ta
       if (index2 < 0 || index2 >= player[index].stable.size || end != (buf + strlen(buf)))
         continue;
 
-      // check if the class aligns
-      if (player[index].stable.unicorns[index2].class == UPGRADE ||
-          player[index].stable.unicorns[index2].class == DOWNGRADE)
+      // check if the card type aligns
+      if (player[index].stable.unicorns[index2].cType == UPGRADE ||
+          player[index].stable.unicorns[index2].cType == DOWNGRADE)
         break;
     }
 
@@ -1185,7 +1185,7 @@ int conditionalEffects(int pnum, struct Unicorn corn, int hindex, int upgrade_ta
     if (isclient) {
       sendInt(discard_event, sockfd);
       sendInt(index, sockfd);   // player target @ index
-      sendInt(ANY, sockfd);     // class to discard
+      sendInt(ANY, sockfd);     // card type to discard
       sendPlayers(sockfd);      // update the player stables/hands since a card was returned
       clientDiscard(pnum, index, ANY);
     }
@@ -1193,7 +1193,7 @@ int conditionalEffects(int pnum, struct Unicorn corn, int hindex, int upgrade_ta
       for (int i = 0; i < current_players - 1; i++) {
         sendInt(discard_event, clientsockfd[i]);
         sendInt(index, clientsockfd[i]);  // player target @ index
-        sendInt(ANY, clientsockfd[i]);    // class to discard
+        sendInt(ANY, clientsockfd[i]);    // card type to discard
         sendPlayers(clientsockfd[i]);     // update the player stables/hands since a card was returned
       }
       serverDiscard(index, ANY);
@@ -1321,10 +1321,10 @@ int conditionalEffects(int pnum, struct Unicorn corn, int hindex, int upgrade_ta
       // current player (pnum)
       if (j == pnum) {
         for (int i = 0; i < player[j].stable.size; i++) {
-          if (player[j].stable.unicorns[i].class == DOWNGRADE) {
+          if (player[j].stable.unicorns[i].cType == DOWNGRADE) {
             isdowngrade = 1;
           }
-          else if (player[j].stable.unicorns[i].class == UPGRADE) {
+          else if (player[j].stable.unicorns[i].cType == UPGRADE) {
             isupgrade = 1;
           }
         }
@@ -1332,8 +1332,8 @@ int conditionalEffects(int pnum, struct Unicorn corn, int hindex, int upgrade_ta
       // everyone else
       else {
         for (int i = 0; i < player[j].stable.size; i++) {
-          if (player[j].stable.unicorns[i].class == DOWNGRADE ||
-              player[j].stable.unicorns[i].class == UPGRADE) {
+          if (player[j].stable.unicorns[i].cType == DOWNGRADE ||
+              player[j].stable.unicorns[i].cType == UPGRADE) {
             isvalid = 1;
           }
         }
@@ -1359,8 +1359,8 @@ int conditionalEffects(int pnum, struct Unicorn corn, int hindex, int upgrade_ta
       // start from the end so that cards/indices don't get skipped upon
       // rearranging the stable
       for (int i = player[j].stable.size - 1; i >= 0; i--) {
-        if (player[j].stable.unicorns[i].class == DOWNGRADE ||
-            player[j].stable.unicorns[i].class == UPGRADE) {
+        if (player[j].stable.unicorns[i].cType == DOWNGRADE ||
+            player[j].stable.unicorns[i].cType == UPGRADE) {
           addDiscard(player[j].stable.unicorns[i]);
           rearrangeStable(j, i);
         }
@@ -1374,7 +1374,7 @@ int conditionalEffects(int pnum, struct Unicorn corn, int hindex, int upgrade_ta
     // Playing Rainbow Mane:
     // can only enter a stable if there is a Basic Unicorn card there
     for (int i = 0; i < player[upgrade_target].stable.size; i++) {
-      if (player[upgrade_target].stable.unicorns[i].class == BASICUNICORN) {
+      if (player[upgrade_target].stable.unicorns[i].cType == BASICUNICORN) {
         addStable(upgrade_target, corn);
         rearrangeHand(pnum, hindex);
         return 1;
@@ -1485,7 +1485,7 @@ void enterStableEffects(int pnum, int effect) {
     if (isclient) {
       sendInt(discard_event, sockfd);
       sendInt(index, sockfd);   // player target @ index
-      sendInt(ANY, sockfd);     // class to discard
+      sendInt(ANY, sockfd);     // card type to discard
       sendPlayers(sockfd);      // sending player stuff because other discard events require updates
       clientDiscard(pnum, index, ANY);
     }
@@ -1493,7 +1493,7 @@ void enterStableEffects(int pnum, int effect) {
       for (int i = 0; i < current_players - 1; i++) {
         sendInt(discard_event, clientsockfd[i]);
         sendInt(index, clientsockfd[i]);  // player target @ index
-        sendInt(ANY, clientsockfd[i]);    // class to discard
+        sendInt(ANY, clientsockfd[i]);    // card type to discard
         sendPlayers(clientsockfd[i]);     // sending player stuff because other discard events require updates
       }
       serverDiscard(index, ANY);
@@ -1537,7 +1537,7 @@ void enterStableEffects(int pnum, int effect) {
     if (isclient) {
       sendInt(discard_event, sockfd);
       sendInt(ANY, sockfd);   // player target; ANY = everyone
-      sendInt(ANY, sockfd);   // class to discard
+      sendInt(ANY, sockfd);   // card type to discard
       sendPlayers(sockfd);    // sending player stuff because other discard events require updates
       clientDiscard(pnum, ANY, ANY);
     }
@@ -1545,7 +1545,7 @@ void enterStableEffects(int pnum, int effect) {
       for (int i = 0; i < current_players - 1; i++) {
         sendInt(discard_event, clientsockfd[i]);
         sendInt(ANY, clientsockfd[i]);  // player target; ANY = everyone
-        sendInt(ANY, clientsockfd[i]);  // class to discard
+        sendInt(ANY, clientsockfd[i]);  // card type to discard
         sendPlayers(clientsockfd[i]);   // sending player stuff because other discard events require updates
       }
       serverDiscard(ANY, ANY);
@@ -1584,7 +1584,7 @@ void enterStableEffects(int pnum, int effect) {
     for (int i = player[pnum].stable.size - 1; i >= 0; i--) {
       // start from the end so that cards/indices don't get skipped upon
       // rearranging the stable
-      if (player[pnum].stable.unicorns[i].class == DOWNGRADE) {
+      if (player[pnum].stable.unicorns[i].cType == DOWNGRADE) {
         addDiscard(player[pnum].stable.unicorns[i]);
         rearrangeStable(pnum, i);
       }
@@ -1622,9 +1622,9 @@ void enterStableEffects(int pnum, int effect) {
     // you may DESTROY an upgrade card or SACRIFICE a downgrade card
     for (int j = 0; j < current_players; j++) {
       for (int i = 0; i < player[j].stable.size; i++) {
-        if (j != pnum && player[j].stable.unicorns[i].class == UPGRADE)
+        if (j != pnum && player[j].stable.unicorns[i].cType == UPGRADE)
           isvalid = 1;
-        if (j == pnum && player[j].stable.unicorns[i].class == DOWNGRADE)
+        if (j == pnum && player[j].stable.unicorns[i].cType == DOWNGRADE)
           isvalid2 = 1;
       }
       // quit if both conditions have been met
@@ -1660,7 +1660,7 @@ void enterStableEffects(int pnum, int effect) {
     // STEAL 1 upgrade card (e.y.s.)
     for (int i = 0; i < current_players; i++) {
       for (int j = 0; j < player[i].stable.size; j++) {
-        if (player[i].stable.unicorns[j].class == UPGRADE && i != pnum) {
+        if (player[i].stable.unicorns[j].cType == UPGRADE && i != pnum) {
           isvalid++;
           i = DESC_SIZE;
           break;
@@ -1829,8 +1829,8 @@ void enterStableEffects(int pnum, int effect) {
 
     for (int i = 0; i < player[pnum].hand.num_cards; i++) {
       // use the player's card ID (taken from deck_ref) to access the main
-      // deck to check the original cards classification
-      if (player[pnum].hand.cards[i].class == BASICUNICORN) {
+      // deck to check the original cards cType
+      if (player[pnum].hand.cards[i].cType == BASICUNICORN) {
         isvalid = 1;
         break;
       }
@@ -1849,7 +1849,7 @@ void enterStableEffects(int pnum, int effect) {
         continue;
 
       // make sure it's actually a basic unicorn
-      if (player[pnum].hand.cards[index].class == BASICUNICORN)
+      if (player[pnum].hand.cards[index].cType == BASICUNICORN)
         break;
     }
 
@@ -1954,8 +1954,8 @@ void beginningTurnEffects(int pnum, struct Unicorn corn) {
 
     // check if there are valid unicorn cards to discard
     for (int i = 0; i < player[pnum].hand.num_cards; i++) {
-      if (player[pnum].hand.cards[i].class == BASICUNICORN ||
-          player[pnum].hand.cards[i].class == MAGICUNICORN) {
+      if (player[pnum].hand.cards[i].cType == BASICUNICORN ||
+          player[pnum].hand.cards[i].cType == MAGICUNICORN) {
         isvalid = 1;
         break;
       }
@@ -1963,8 +1963,8 @@ void beginningTurnEffects(int pnum, struct Unicorn corn) {
 
     // check if there are actually cards available to take
     for (int i = 0; i < discardpile.size; i++) {
-      if (discardpile.cards[i].class == BASICUNICORN ||
-          discardpile.cards[i].class == MAGICUNICORN) {
+      if (discardpile.cards[i].cType == BASICUNICORN ||
+          discardpile.cards[i].cType == MAGICUNICORN) {
         isvalid2 = 1;
         break;
       }
@@ -1994,8 +1994,8 @@ void beginningTurnEffects(int pnum, struct Unicorn corn) {
           continue;
 
         // unicorn card check
-        if (discardpile.cards[index].class == BASICUNICORN ||
-            discardpile.cards[index].class == MAGICUNICORN)
+        if (discardpile.cards[index].cType == BASICUNICORN ||
+            discardpile.cards[index].cType == MAGICUNICORN)
           break;
 
       }
@@ -2017,8 +2017,8 @@ void beginningTurnEffects(int pnum, struct Unicorn corn) {
 
     // check if there are unicorn cards to discard
     for (int i = 0; i < player[pnum].hand.num_cards; i++) {
-      if (player[pnum].hand.cards[i].class == BASICUNICORN ||
-          player[pnum].hand.cards[i].class == MAGICUNICORN) {
+      if (player[pnum].hand.cards[i].cType == BASICUNICORN ||
+          player[pnum].hand.cards[i].cType == MAGICUNICORN) {
         isvalid++;
       }
     }
@@ -2047,8 +2047,8 @@ void beginningTurnEffects(int pnum, struct Unicorn corn) {
         if (index < 0 || index >= discardpile.size|| end != (buf + strlen(buf)))
           continue;
 
-        if (discardpile.cards[index].class == BASICUNICORN ||
-            discardpile.cards[index].class == MAGICUNICORN)
+        if (discardpile.cards[index].cType == BASICUNICORN ||
+            discardpile.cards[index].cType == MAGICUNICORN)
           break;
       }
       struct Unicorn tmp = discardpile.cards[index];
@@ -2065,8 +2065,8 @@ void beginningTurnEffects(int pnum, struct Unicorn corn) {
 
     // check if there are actually cards available to take
     for (int i = 0; i < discardpile.size; i++) {
-      if (discardpile.cards[i].class == BASICUNICORN ||
-          discardpile.cards[i].class == MAGICUNICORN) {
+      if (discardpile.cards[i].cType == BASICUNICORN ||
+          discardpile.cards[i].cType == MAGICUNICORN) {
         isvalid = 1;
         break;
       }
@@ -2107,8 +2107,8 @@ void beginningTurnEffects(int pnum, struct Unicorn corn) {
         if (index < 0 || index >= discardpile.size || end != (buf + strlen(buf)))
           continue;
 
-        if (discardpile.cards[index].class == BASICUNICORN ||
-            discardpile.cards[index].class == MAGICUNICORN)
+        if (discardpile.cards[index].cType == BASICUNICORN ||
+            discardpile.cards[index].cType == MAGICUNICORN)
           break;
       }
       // add it to the discard before bringing the other unicorn over in case
@@ -2242,7 +2242,7 @@ void beginningTurnEffects(int pnum, struct Unicorn corn) {
           continue;
 
         // check that the chosen card is actually a unicorn
-        if (checkClass(ANYUNICORN, player[index].stable.unicorns[index2].class)) {
+        if (checkType(ANYUNICORN, player[index].stable.unicorns[index2].cType)) {
           break;
         }
       }
@@ -2280,7 +2280,7 @@ void beginningTurnEffects(int pnum, struct Unicorn corn) {
 
     // check if Basic Unicorns are even in the player's hand
     for (int i = 0; i < player[pnum].hand.num_cards; i++) {
-      if (player[pnum].hand.cards[i].class == BASICUNICORN) {
+      if (player[pnum].hand.cards[i].cType == BASICUNICORN) {
         isvalid = 1;
         break;
       }
@@ -2292,7 +2292,7 @@ void beginningTurnEffects(int pnum, struct Unicorn corn) {
     for (;;) {
       printf("Choose a valid card number to place into your stable: \n");
       for (int i = 0; i < player[pnum].hand.num_cards; i++) {
-        if (player[pnum].hand.cards[i].class == BASICUNICORN) {
+        if (player[pnum].hand.cards[i].cType == BASICUNICORN) {
           printf("    %d. %s [ID: %d]\n", i + 1, player[pnum].hand.cards[i].name, player[pnum].hand.cards[i].id);
         }
       }
@@ -2303,7 +2303,7 @@ void beginningTurnEffects(int pnum, struct Unicorn corn) {
       if (index < 0 || index >= player[pnum].hand.num_cards || end != (buf + strlen(buf)))
         continue;
 
-      if (player[pnum].hand.cards[index].class == BASICUNICORN)
+      if (player[pnum].hand.cards[index].cType == BASICUNICORN)
         break;
     }
 

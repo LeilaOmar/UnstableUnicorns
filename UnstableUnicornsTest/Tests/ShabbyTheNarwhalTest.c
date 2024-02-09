@@ -15,7 +15,7 @@ int shabby_basic_check() {
 		reset_col();
 	}
 
-	if (player[0].hand.cards[0].class != DOWNGRADE) {
+	if (player[0].hand.cards[0].cType != DOWNGRADE) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    sanity test: downgrade check failed\n");

@@ -247,20 +247,20 @@ int clientMain(void) {
           }
           else if (network_events == discard_event) {
             int target_player;
-            int desired_class;
+            int desired_type;
             receiveInt(&target_player, sockfd);
-            receiveInt(&desired_class, sockfd);
+            receiveInt(&desired_type, sockfd);
             receivePlayers(sockfd);
 
-            clientDiscard(clientpnum, target_player, desired_class);
+            clientDiscard(clientpnum, target_player, desired_type);
           }
           else if (network_events == sacrifice_event) {
             int target_player;
-            int desired_class;
+            int desired_type;
             receiveInt(&target_player, sockfd);
-            receiveInt(&desired_class, sockfd);
+            receiveInt(&desired_type, sockfd);
 
-            clientSacrifice(clientpnum, target_player, desired_class);
+            clientSacrifice(clientpnum, target_player, desired_type);
           }
           else if (network_events == end_turn) {
             receiveGamePacket(sockfd);

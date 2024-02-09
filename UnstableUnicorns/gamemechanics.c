@@ -18,10 +18,10 @@ void printPile(struct Deck d) {
   }
 }
 
-void printPileFilter(struct Deck d, int class, int species) {
+void printPileFilter(struct Deck d, int cType, int species) {
   for (int i = 0; i < d.size; i++) {
     if ((species == ANY || species == d.cards[i].species) &&
-        checkClass(class, d.cards[i].class))
+        checkType(cType, d.cards[i].cType))
     printf("%d: %s [ID: %d]\n", i + 1, d.cards[i].name, d.cards[i].id);
   }
 }
@@ -36,9 +36,9 @@ void printHand(int pnum) {
 void printStable(int pnum) {
   printf("\n%s's stable:\n", player[pnum].username);
   for (int i = 0; i < player[pnum].stable.size; i++) {
-    if (player[pnum].stable.unicorns[i].class == UPGRADE)
+    if (player[pnum].stable.unicorns[i].cType == UPGRADE)
       green();
-    else if (player[pnum].stable.unicorns[i].class == DOWNGRADE)
+    else if (player[pnum].stable.unicorns[i].cType == DOWNGRADE)
       yellow();
 
     printf("    %d. %s [ID: %d]\n", i + 1, player[pnum].stable.unicorns[i].name, player[pnum].stable.unicorns[i].id);
@@ -105,9 +105,9 @@ void printStableGrid(void) {
     printf("\n");
     for (int i = 0; i < large; i++) {
       if (player[k].stable.size > i) {
-        if (player[k].stable.unicorns[i].class == UPGRADE)
+        if (player[k].stable.unicorns[i].cType == UPGRADE)
           green();
-        else if (player[k].stable.unicorns[i].class == DOWNGRADE)
+        else if (player[k].stable.unicorns[i].cType == DOWNGRADE)
           yellow();
 
         sprintf_s(gridbuf, sizeof gridbuf, "    %d. %s [ID: %d]", i + 1, player[k].stable.unicorns[i].name, player[k].stable.unicorns[i].id);
@@ -125,9 +125,9 @@ void printStableGrid(void) {
 
       if ((k + 1) < current_players && player[k + 1].stable.size > i)
       {
-        if (player[k + 1].stable.unicorns[i].class == UPGRADE)
+        if (player[k + 1].stable.unicorns[i].cType == UPGRADE)
           green();
-        else if (player[k + 1].stable.unicorns[i].class == DOWNGRADE)
+        else if (player[k + 1].stable.unicorns[i].cType == DOWNGRADE)
           yellow();
         printf("    %d: %s [ID: %d]", i + 1, player[k + 1].stable.unicorns[i].name, player[k + 1].stable.unicorns[i].id);
         reset_col();
@@ -143,15 +143,13 @@ void printStableGrid(void) {
 // ******************************* Utility Functions ******************************
 // ********************************************************************************
 
-// OPTIMIZE: use species UNICORN instead of class ANYUNICORN and then combine
-// this with checking for species too
-// return 0 = FALSE, the card's class does not equal the desired class
+// return 0 = FALSE, the card's cType does not equal the desired cType
 // return 1 = TRUE, card match!
-int checkClass(int desired_class, int card_class) {
-  if (desired_class == ANY || desired_class == card_class ||
-    (desired_class == ANYUNICORN &&
-      (card_class == BABYUNICORN || card_class == BASICUNICORN ||
-        card_class == MAGICUNICORN))) {
+int checkType(int desired_type, int card_type) {
+  if (desired_type == ANY || desired_type == card_type ||
+    (desired_type == ANYUNICORN &&
+      (card_type == BABYUNICORN || card_type == BASICUNICORN ||
+        card_type == MAGICUNICORN))) {
     return 1;
   }
   return 0;
@@ -272,14 +270,14 @@ void rearrangeStable(int pnum, int index) {
 // searching through the deck or discard pile for a specific card
 // 0 = return failed
 // 1 = return successful
-int searchPile(int pnum, struct Deck* d, int class, int species) {
+int searchPile(int pnum, struct Deck* d, int cType, int species) {
   int index, count = 0;
   char* end, buf[LINE_MAX];
 
   // check if there are actually available cards to take
   for (int i = 0; i < d->size; i++) {
     if ((species == ANY || species == d->cards[i].species) &&
-        checkClass(class, d->cards[i].class))
+        checkType(cType, d->cards[i].cType))
       count++;
   }
 
@@ -288,7 +286,7 @@ int searchPile(int pnum, struct Deck* d, int class, int species) {
     return 0;
 
   blue();
-  printPileFilter(*d, class, species);
+  printPileFilter(*d, cType, species);
   reset_col();
 
   for (;;) {
@@ -300,7 +298,7 @@ int searchPile(int pnum, struct Deck* d, int class, int species) {
       continue;
 
     if ((species == ANY || species == d->cards[index].species) &&
-        checkClass(class, d->cards[index].class))
+        checkType(cType, d->cards[index].cType))
       break;
   }
 
@@ -367,7 +365,7 @@ void addStable(int pnum, struct Unicorn corn) {
 // return card from stable to hand, or the nursery if it's a baby
 void returnCardToHand(int pnum, int cindex) {
   // return babies to the nursery
-  if (player[pnum].stable.unicorns[cindex].class == BABYUNICORN)
+  if (player[pnum].stable.unicorns[cindex].cType == BABYUNICORN)
     addNursery(player[pnum].stable.unicorns[cindex]);
   else {
     // "disable" the puppicorn swap since it was returned to someone's hand
@@ -412,9 +410,9 @@ int canNeighOthers(int pnum) {
   return 1;
 }
 
-int canBeDestroyed(int pindex, int cindex, int class, int isMagicCard) {
-  // class doesn't match
-  if (!checkClass(class, player[pindex].stable.unicorns[cindex].class))
+int canBeDestroyed(int pindex, int cindex, int cType, int isMagicCard) {
+  // card type doesn't match
+  if (!checkType(cType, player[pindex].stable.unicorns[cindex].cType))
     return 0;
 
   // player[pindex]'s unicorn cards can't be destroyed
@@ -425,9 +423,9 @@ int canBeDestroyed(int pindex, int cindex, int class, int isMagicCard) {
 
   // player[pindex]'s unicorns are pandas and can't be destroyed by cards targeting unicorns
   // no need to check for spces != NOSPECIES because those cards should have been filtered
-  // out already if class == ANYUNICORN
+  // out already if cType == ANYUNICORN
   if (((player[pindex].flags & pandamonium) != 0) &&
-      class == ANYUNICORN)
+      cType == ANYUNICORN)
     return 0;
 
   // puppicorn can't be destroyed
@@ -450,7 +448,7 @@ int canBeDestroyed(int pindex, int cindex, int class, int isMagicCard) {
   return 1;
 }
 
-int checkNumCardsToDestroy(int pnum, int class, int isMagicCard) {
+int checkNumCardsToDestroy(int pnum, int cType, int isMagicCard) {
   int isvalid = 0;
 
   // check if there are actual cards to destroy
@@ -458,7 +456,7 @@ int checkNumCardsToDestroy(int pnum, int class, int isMagicCard) {
     if (i == pnum) continue;
 
     for (int j = 0; j < player[i].stable.size; j++) {
-      if (canBeDestroyed(i, j, class, isMagicCard))
+      if (canBeDestroyed(i, j, cType, isMagicCard))
         isvalid++;
     }
   }
@@ -466,9 +464,9 @@ int checkNumCardsToDestroy(int pnum, int class, int isMagicCard) {
   return isvalid;
 }
 
-int canBeSacrificed(int pindex, int cindex, int class) {
-  // class doesn't match
-  if (!checkClass(class, player[pindex].stable.unicorns[cindex].class))
+int canBeSacrificed(int pindex, int cindex, int cType) {
+  // card type doesn't match
+  if (!checkType(cType, player[pindex].stable.unicorns[cindex].cType))
     return 0;
 
   // puppicorn can't be sacrificed
@@ -477,9 +475,9 @@ int canBeSacrificed(int pindex, int cindex, int class) {
 
   // pandas aren't unicorns, so they can't be sacrificed in place of a unicorn card
   // no need to check for spces != NOSPECIES because those cards should have been filtered
-  // out already if class == ANYUNICORN
+  // out already if cType == ANYUNICORN
   if ((player[pindex].flags & pandamonium) != 0 &&
-      class == ANYUNICORN)
+      cType == ANYUNICORN)
     return 0;
 
   return 1;
@@ -508,7 +506,7 @@ int draw(int pnum, int num_drawn) {
   return 0;
 }
 
-void discard(int pnum, int num_discard, int class) {
+void discard(int pnum, int num_discard, int cType) {
   int index;
   char* end, buf[LINE_MAX];
 
@@ -523,8 +521,8 @@ void discard(int pnum, int num_discard, int class) {
       if (index < 0 || index >= player[pnum].hand.num_cards || end != (buf + strlen(buf)))
         continue;
 
-      // class check
-      if (checkClass(class, player[pnum].hand.cards[index].class))
+      // check for a type match
+      if (checkType(cType, player[pnum].hand.cards[index].cType))
         break;
     }
 
@@ -534,12 +532,12 @@ void discard(int pnum, int num_discard, int class) {
   }
 }
 
-int sacrifice(int pnum, int class) {
+int sacrifice(int pnum, int cType) {
   int index, isvalid = 0;
   char* end, buf[LINE_MAX];
 
   for (int i = 0; i < player[pnum].stable.size; i++) {
-    if (canBeSacrificed(pnum, i, class)) {
+    if (canBeSacrificed(pnum, i, cType)) {
       isvalid = 1;
       break;
     }
@@ -563,7 +561,7 @@ int sacrifice(int pnum, int class) {
       continue;
 
     // condition met :)
-    if (canBeSacrificed(pnum, index, class))
+    if (canBeSacrificed(pnum, index, cType))
       break;
   }
 
@@ -571,8 +569,8 @@ int sacrifice(int pnum, int class) {
   return 1;
 }
 
-// treat ANYUNICORN as all unicorns when checking class for Unicorn cards
-void destroy(int pnum, int class, int isMagicCard) {
+// treat ANYUNICORN as all unicorns when checking cType for Unicorn cards
+void destroy(int pnum, int cType, int isMagicCard) {
   int pindex, cindex, isvalid = 0;
   char ans, * end, buf[LINE_MAX], buf2[LINE_MAX];
 
@@ -587,7 +585,7 @@ void destroy(int pnum, int class, int isMagicCard) {
       continue;
 
     for (int i = 0; i < player[pindex].stable.size; i++) {
-      if (canBeDestroyed(pindex, i, class, isMagicCard)) {
+      if (canBeDestroyed(pindex, i, cType, isMagicCard)) {
         isvalid = 1;
         break;
       }
@@ -603,8 +601,8 @@ void destroy(int pnum, int class, int isMagicCard) {
     if (cindex < 0 || cindex >= player[pindex].stable.size || end != (buf + strlen(buf)))
       continue;
 
-    // check for class stuff
-    if (!canBeDestroyed(pindex, cindex, class, isMagicCard)) {
+    // check for cType stuff
+    if (!canBeDestroyed(pindex, cindex, cType, isMagicCard)) {
       cindex = -1;
     }
     // TODO: (maybe) create a function for "martyr" cards that sacrifice themselves upon
@@ -641,8 +639,8 @@ void destroy(int pnum, int class, int isMagicCard) {
   sacrificeDestroyEffects(pindex, cindex, player[pindex].stable.unicorns[cindex].effect);
 }
 
-// treat ANYUNICORN as all unicorns when checking class for Unicorn cards
-void steal(int pnum, int class) {
+// treat ANYUNICORN as all unicorns when checking cType for Unicorn cards
+void steal(int pnum, int cType) {
   int pindex = -1, cindex, isvalid = 0;
   char* end, buf[LINE_MAX];
 
@@ -657,7 +655,7 @@ void steal(int pnum, int class) {
 
     // check if player has any valid unicorns to steal
     for (int i = 0; i < player[pindex].stable.size; i++) {
-      if (checkClass(class, player[pindex].stable.unicorns[i].class)) {
+      if (checkType(cType, player[pindex].stable.unicorns[i].cType)) {
         isvalid = 1;
         break;
       }
@@ -673,8 +671,8 @@ void steal(int pnum, int class) {
     if (cindex < 0 || cindex >= player[pindex].stable.size || end != (buf + strlen(buf)))
       continue;
 
-    // check for class stuff
-    if (checkClass(class, player[pindex].stable.unicorns[cindex].class)) {
+    // check for a type match
+    if (checkType(cType, player[pindex].stable.unicorns[cindex].cType)) {
       break;
     }
   }
@@ -703,7 +701,7 @@ void playCard(int pnum) {
       continue;
 
     // check for instant cards
-    if (player[pnum].hand.cards[index].class != INSTANT)
+    if (player[pnum].hand.cards[index].cType != INSTANT)
       break;
   }
 
@@ -731,7 +729,7 @@ void playCard(int pnum) {
   // effect
   struct Unicorn corn = player[pnum].hand.cards[index];
 
-  switch (corn.class) {
+  switch (corn.cType) {
   case BASICUNICORN:
   {
     if ((player[pnum].flags & queen_bee_unicorn) != 0) {
@@ -755,7 +753,7 @@ void playCard(int pnum) {
   {
     // check for Broken Stable flag
     if (((player[pnum].flags & broken_stable) != 0) &&
-        corn.class == UPGRADE) {
+        corn.cType == UPGRADE) {
       printf(
         "Player %d is unable to play Upgrade cards due to the effect of "
         "'Broken Stable'\n",
@@ -792,8 +790,8 @@ void playCard(int pnum) {
     }
     break;
   default:
-    // something went wrong here... there should be no baby unicorns, instant, or classless cards
-    printf("unicorn classification error, please choose a different card\n");
+    // something went wrong here... there should be no baby unicorns, instant, or typeless cards
+    printf("unicorn type error, please choose a different card\n");
     turn_count++;
     return;
   }
