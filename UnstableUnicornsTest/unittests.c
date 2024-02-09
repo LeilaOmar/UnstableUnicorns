@@ -32,28 +32,28 @@ int num_fails = 0;
 // ********************************************************************************
 
 void check_class_tests() {
-	rainbow_error("\nStarting checkClass tests...\n");
+	rainbow_error("\nStarting checkType tests...\n");
 
 	// test for ANY cards
-	if (checkClass(ANY, BABYUNICORN) == 0) num_fails++;
-	if (checkClass(ANY, BASICUNICORN) == 0) num_fails++;
-	if (checkClass(ANY, MAGICUNICORN) == 0) num_fails++;
-	if (checkClass(ANY, UPGRADE) == 0) num_fails++;
-	if (checkClass(ANY, DOWNGRADE) == 0) num_fails++;
-	if (checkClass(ANY, MAGIC) == 0) num_fails++;
-	if (checkClass(ANY, INSTANT) == 0) num_fails++;
+	if (checkType(ANY, BABYUNICORN) == 0) num_fails++;
+	if (checkType(ANY, BASICUNICORN) == 0) num_fails++;
+	if (checkType(ANY, MAGICUNICORN) == 0) num_fails++;
+	if (checkType(ANY, UPGRADE) == 0) num_fails++;
+	if (checkType(ANY, DOWNGRADE) == 0) num_fails++;
+	if (checkType(ANY, MAGIC) == 0) num_fails++;
+	if (checkType(ANY, INSTANT) == 0) num_fails++;
 
 	// test for ANYUNICORN
-	if (checkClass(ANYUNICORN, BABYUNICORN) == 0) num_fails++;
-	if (checkClass(ANYUNICORN, BASICUNICORN) == 0) num_fails++;
-	if (checkClass(ANYUNICORN, MAGICUNICORN) == 0) num_fails++;
+	if (checkType(ANYUNICORN, BABYUNICORN) == 0) num_fails++;
+	if (checkType(ANYUNICORN, BASICUNICORN) == 0) num_fails++;
+	if (checkType(ANYUNICORN, MAGICUNICORN) == 0) num_fails++;
 
 	// test for compatible classes
-	if (checkClass(BASICUNICORN, BASICUNICORN) == 0) num_fails++;
-	if (checkClass(BASICUNICORN, UPGRADE) == 1) num_fails++;
+	if (checkType(BASICUNICORN, BASICUNICORN) == 0) num_fails++;
+	if (checkType(BASICUNICORN, UPGRADE) == 1) num_fails++;
 
 	if (num_fails > 0) {
-		fprintf(stderr, "    checkClass failed?!?!!! wow lol\n");
+		fprintf(stderr, "    checkType failed?!?!!! wow lol\n");
 	}
 }
 
