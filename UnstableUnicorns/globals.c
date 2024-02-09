@@ -1,5 +1,6 @@
 #include "globals.h"
 #include "basedeck.h"
+#include <conio.h>
 
 int isclient; // 0 = server, 1 = client
 int network_events;
@@ -38,7 +39,7 @@ char charinput(char* buf, int size) {
 }
 
 // in the future, use a flag for decks chosen
-void init_deck(struct Deck *nursery, struct Deck *deck, struct Deck *discard) {
+void init_deck(struct Deck* nursery, struct Deck* deck, struct Deck* discard) {
   int counter = 0;
 
   nursery->cards = malloc(NURSERY_SIZE * sizeof(struct Unicorn));
@@ -76,6 +77,26 @@ void init_deck(struct Deck *nursery, struct Deck *deck, struct Deck *discard) {
     perror(NULL);
     exit(1);
   }
+}
+
+void cleanup(void) {
+  // hangs on exit until the user inputs something
+  _getch();
+
+  if (!isclient) {
+    for (int i = 0; i < current_players - 1; i++) {
+      closesocket(clientsockfd[i]);
+    }
+  }
+
+  if (sockfd != INVALID_SOCKET)
+    closesocket(sockfd);
+
+  free(nursery.cards);
+  free(deck.cards);
+  free(discardpile.cards);
+
+  WSACleanup();
 }
 
 // ********************************************************************************

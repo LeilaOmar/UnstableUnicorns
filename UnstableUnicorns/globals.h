@@ -107,7 +107,10 @@ extern FILE* fpinput; // stand-in for stdin in case it needs to read from a file
 int numinput(char*, char**, int);
 char charinput(char*, int);
 
-void init_deck(struct Deck*, struct Deck*, struct Deck*);
+void init_deck(struct Deck* nursery, struct Deck* deck, struct Deck* discard);
+
+// closes sockets and frees memory
+void cleanup(void);
 
 // ********************************************************************************
 // **************************** Pretty Color Functions ****************************

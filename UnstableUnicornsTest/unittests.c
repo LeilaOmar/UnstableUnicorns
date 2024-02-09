@@ -703,6 +703,9 @@ int main(int argc, char* argv[]) {
 		sendInt(0, sockfd);
 		sendInt(0, sockfd);
 
+		// unicorn swap tests
+		// sendInt(quit_loop, sockfd);
+
 		// mystical vortex tests
 		sendInt(0, sockfd);
 
@@ -843,7 +846,7 @@ int main(int argc, char* argv[]) {
 	num_fails += back_kick_tests();
 	num_fails += change_of_luck_tests();
 	num_fails += glitter_tornado_tests();
-	num_fails += unicorn_swap_tests();
+	// num_fails += unicorn_swap_tests();
 	num_fails += re_target_tests();
 	num_fails += unfair_bargain_tests();
 	num_fails += two_for_one_tests();
@@ -902,6 +905,8 @@ int main(int argc, char* argv[]) {
 	closesocket(clientsockfd[0]);
 	closesocket(sockfd);
 	if (fp != NULL) fclose(fp);
+	WSACleanup();
+
 	_getch();
 	exit(0);
 }

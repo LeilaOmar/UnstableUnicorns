@@ -155,6 +155,16 @@ int checkType(int desired_type, int card_type) {
   return 0;
 }
 
+int checkWin(int pnum) {
+  if ((player[pnum].stable.num_unicorns >= WIN_CONDITION ||
+    (player[pnum].stable.num_unicorns >= (WIN_CONDITION - 1) &&
+      (player[pnum].flags & (ginormous_unicorn | blinding_light)) == ginormous_unicorn)) &&
+    (player[pnum].flags & pandamonium) == 0)
+    return 1;
+
+  return 0;
+}
+
 // randomize deck
 void shuffleDeck(struct Deck *d) {
   struct Unicorn tmp;

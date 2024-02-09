@@ -570,7 +570,7 @@ void sacrificeDestroyEffects(int pnum, int cindex, int effect) {
       break;
 
     do {
-      printf("Would you like to destroy a Unicorn card (y/n)?: ");
+      printf("\033[1;31mStabby the Unicorn\033[0m has been destroyed.\nWould you like to destroy a Unicorn card (y/n)?: ");
       ans = charinput(buf, sizeof buf);
     } while ((ans != 'y' && ans != 'n') || strlen(buf) != 2);
     if (ans == 'y')
@@ -596,7 +596,7 @@ void sacrificeDestroyEffects(int pnum, int cindex, int effect) {
     do {
       printf(
         "Would you like to discard a Unicorn card instead of disposing "
-        "the card 'Unicorn Phoenix' (y/n)?: ");
+        "the card \033[1;31m'Unicorn Phoenix'\033[0m (y/n)?: ");
       ans = charinput(buf, sizeof buf);
     } while ((ans != 'y' && ans != 'n') || strlen(buf) != 2);
 
@@ -836,28 +836,7 @@ int conditionalEffects(int pnum, struct Unicorn corn, int hindex, int upgrade_ta
     // move a unicorn card from your stable to any other player's then STEAL
     // a unicorn card from that player's stable
 
-    // check if there are unicorn cards to steal
-    // 
-    // TODO: can you use this even when their stable is empty just to trigger the
-    // entering stable effect? maybe this check isn't necessary; the following code
-    // doesn't even prevent the player from stealing their card back anyways
-    for (int i = 0; i < current_players; i++) {
-      if (i == pnum && player[i].stable.num_unicorns > 0) {
-        isvalid = 1;
-      }
-      if (i != pnum && player[i].stable.num_unicorns > 0) {
-        isvalid2 = 1;
-      }
-      if (isvalid && isvalid2) break;
-    }
-
-    if (!isvalid || !isvalid2) {
-      printf(
-        "You are unable to play 'Unicorn Swap' because there aren't enough "
-        "Unicorn cards to swap\n");
-      turn_count++;
-      return 0;
-    }
+    // you can steal the card back, so the size of a player's stable doesn't matter
 
     // dispose of card
     addDiscard(corn);
@@ -893,12 +872,26 @@ int conditionalEffects(int pnum, struct Unicorn corn, int hindex, int upgrade_ta
         break;
     }
 
-    // rearrange the player's stable and toggle any flags before swapping the card to the other stable;
+    // rearrange the player's stable before swapping the card to the other stable;
     // this will (hopefully) prevent dupes from card effect shenanigans
     struct Unicorn tmp = player[pnum].stable.unicorns[index2];
     rearrangeStable(pnum, index2);
 
-    addStable(index, tmp);
+    // send a notice to add a card to the person's stable outside of their normal turn
+    if (isclient) {
+      sendInt(enter_stable_event, sockfd);
+      sendEnterStablePacket(tmp, index, sockfd); // index = target player index
+
+      // need to look out for nested network events
+      clientEnterStable(pnum);
+    }
+    else {
+      sendInt(enter_stable_event, clientsockfd[index - 1]);
+      sendEnterStablePacket(tmp, pnum, clientsockfd[index - 1]); // pnum = original player index
+
+      // need to look out for nested network events
+      serverEnterStable(pnum, index);
+    }
 
     // steal a unicorn from the chosen player's stable
     printStable(index);
@@ -944,19 +937,12 @@ int conditionalEffects(int pnum, struct Unicorn corn, int hindex, int upgrade_ta
     // card effect
     if (isclient) {
       sendInt(discard_event, sockfd);
-      sendInt(ANY, sockfd);   // player target; ANY = everyone
-      sendInt(ANY, sockfd);   // card type to discard
-      sendPlayers(sockfd);    // sending player stuff because other discard events require updates
+      // (target_pnum = ANY) represents all players
+      sendCardEffectPacket(ANY, ANY, sockfd);
       clientDiscard(pnum, ANY, ANY);
     }
     else {
-      for (int i = 0; i < current_players - 1; i++) {
-        sendInt(discard_event, clientsockfd[i]);
-        sendInt(ANY, clientsockfd[i]);  // player target; ANY = everyone
-        sendInt(ANY, clientsockfd[i]);  // card type to discard
-        sendPlayers(clientsockfd[i]);   // sending player stuff because other discard events require updates
-      }
-      serverDiscard(ANY, ANY);
+      serverDiscard(pnum, ANY, ANY);
     }
     shuffleDiscard();
     return 1;
@@ -1184,19 +1170,12 @@ int conditionalEffects(int pnum, struct Unicorn corn, int hindex, int upgrade_ta
     // make the chosen player discard a card
     if (isclient) {
       sendInt(discard_event, sockfd);
-      sendInt(index, sockfd);   // player target @ index
-      sendInt(ANY, sockfd);     // card type to discard
-      sendPlayers(sockfd);      // update the player stables/hands since a card was returned
+      // index = player target; discard ANY card class
+      sendCardEffectPacket(index, ANY, sockfd);
       clientDiscard(pnum, index, ANY);
     }
     else {
-      for (int i = 0; i < current_players - 1; i++) {
-        sendInt(discard_event, clientsockfd[i]);
-        sendInt(index, clientsockfd[i]);  // player target @ index
-        sendInt(ANY, clientsockfd[i]);    // card type to discard
-        sendPlayers(clientsockfd[i]);     // update the player stables/hands since a card was returned
-      }
-      serverDiscard(index, ANY);
+      serverDiscard(pnum, index, ANY);
     }
     return 1;
   }
@@ -1484,19 +1463,12 @@ void enterStableEffects(int pnum, int effect) {
     // make the chosen player discard a card
     if (isclient) {
       sendInt(discard_event, sockfd);
-      sendInt(index, sockfd);   // player target @ index
-      sendInt(ANY, sockfd);     // card type to discard
-      sendPlayers(sockfd);      // sending player stuff because other discard events require updates
+      // index = player target; discard ANY card class
+      sendCardEffectPacket(index, ANY, sockfd);
       clientDiscard(pnum, index, ANY);
     }
     else {
-      for (int i = 0; i < current_players - 1; i++) {
-        sendInt(discard_event, clientsockfd[i]);
-        sendInt(index, clientsockfd[i]);  // player target @ index
-        sendInt(ANY, clientsockfd[i]);    // card type to discard
-        sendPlayers(clientsockfd[i]);     // sending player stuff because other discard events require updates
-      }
-      serverDiscard(index, ANY);
+      serverDiscard(pnum, index, ANY);
     }
     break;
   }
@@ -1536,19 +1508,12 @@ void enterStableEffects(int pnum, int effect) {
 
     if (isclient) {
       sendInt(discard_event, sockfd);
-      sendInt(ANY, sockfd);   // player target; ANY = everyone
-      sendInt(ANY, sockfd);   // card type to discard
-      sendPlayers(sockfd);    // sending player stuff because other discard events require updates
+      // (target_pnum = ANY) represents all players
+      sendCardEffectPacket(ANY, ANY, sockfd);
       clientDiscard(pnum, ANY, ANY);
     }
     else {
-      for (int i = 0; i < current_players - 1; i++) {
-        sendInt(discard_event, clientsockfd[i]);
-        sendInt(ANY, clientsockfd[i]);  // player target; ANY = everyone
-        sendInt(ANY, clientsockfd[i]);  // card type to discard
-        sendPlayers(clientsockfd[i]);   // sending player stuff because other discard events require updates
-      }
-      serverDiscard(ANY, ANY);
+      serverDiscard(pnum, ANY, ANY);
     }
 
     break;
@@ -1562,17 +1527,12 @@ void enterStableEffects(int pnum, int effect) {
     // it's worth using vtables and sending their respective lookup table references?
     if (isclient) {
       sendInt(sacrifice_event, sockfd);
-      sendInt(ANY, sockfd);  // any being referred to all here, or the number "-1"
-      sendInt(ANYUNICORN, sockfd);
+      // (target_pnum = ANY) represents all players
+      sendCardEffectPacket(ANY, ANYUNICORN, sockfd);
       clientSacrifice(pnum, ANY, ANYUNICORN);
     }
     else {
-      for (int i = 0; i < current_players - 1; i++) {
-        sendInt(sacrifice_event, clientsockfd[i]);
-        sendInt(ANY, clientsockfd[i]); // any being referred to all here, or the number "-1"
-        sendInt(ANYUNICORN, clientsockfd[i]);
-      }
-      serverSacrifice(ANY, ANYUNICORN);
+      serverSacrifice(pnum, ANY, ANYUNICORN);
     }
 
     break;

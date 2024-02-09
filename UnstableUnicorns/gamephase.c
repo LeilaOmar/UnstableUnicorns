@@ -108,10 +108,7 @@ int endOfTurn(int pnum) {
   // in the stable...
   // another possibility is that blinding light skipped the ginormous unicorn toggle, and
   // when the unicorn got removed, it mistakenly toggled the flag true instead of false
-  if ((player[pnum].stable.num_unicorns >= WIN_CONDITION ||
-    (player[pnum].stable.num_unicorns >= (WIN_CONDITION - 1) &&
-      (player[pnum].flags & (ginormous_unicorn | blinding_light)) == ginormous_unicorn)) &&
-    (player[pnum].flags & pandamonium) == 0)
+  if (checkWin(pnum))
     return 1;
 
   // return any unicorns or pass any unicorns to their proper owner
@@ -130,19 +127,20 @@ int endOfTurn(int pnum) {
     addStable(owner, tmp);
   }
 
-  // puppicorn swap
-  if (puppicorn_index[0] != -1) {
-    int tmp_cindex = puppicorn_index[0]; // this gets changed in addStable
+  // puppicorn swap; pnum isn't always equal to the current puppicorn_index[1]
+  int tmp_cindex = puppicorn_index[0]; // this gets changed in addStable
+  int tmp_pindex = puppicorn_index[1];
+  if (tmp_cindex != -1) {
     
-    if (pnum == current_players - 1) {
-      addStable(0, player[pnum].stable.unicorns[puppicorn_index[0]]);
+    if (tmp_pindex == current_players - 1) {
+      addStable(0, player[tmp_pindex].stable.unicorns[tmp_cindex]);
     }
     else {
       // puppicorn should be removed first before adding it to the stable
-      addStable(pnum + 1, player[pnum].stable.unicorns[puppicorn_index[0]]);
+      addStable(tmp_pindex + 1, player[tmp_pindex].stable.unicorns[tmp_cindex]);
     }
     
-    rearrangeStable(pnum, tmp_cindex);
+    rearrangeStable(tmp_pindex, tmp_cindex);
   }
 
   return 0;

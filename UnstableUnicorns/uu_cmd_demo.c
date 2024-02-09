@@ -196,15 +196,10 @@ int main(int argc, char* argv[]) {
     if (strcmp(argv[i], "deck") == 0) deck_flag = 1;
     if (strcmp(argv[i], "discard") == 0) discard_flag = 1;
     if (strcmp(argv[i], "nursery") == 0) nursery_flag = 1;
-    if (strcmp(argv[i], "debug") == 0) {
-      // run a bunch of tests!
-      // https://cmocka.org/talks/cmocka_unit_testing_and_mocking.pdf
-
-      // FILE *fp = freopen("test.txt", "r", stdin);
-
-      exit(0);
-    }
   }
+
+  // register the termination function
+  atexit(cleanup);
 
   // initialize the deck here for now
   init_deck(&nursery, &deck, &discardpile);
@@ -318,9 +313,6 @@ int main(int argc, char* argv[]) {
       exit(result);
     }
   }
-
-  closesocket(sockfd);
-  WSACleanup();
 
   exit(0);
 }

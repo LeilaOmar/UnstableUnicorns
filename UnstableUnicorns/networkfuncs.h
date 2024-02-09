@@ -20,6 +20,20 @@ int receiveUnicorns(struct Unicorn* corns, int size, int fd);
 int sendGamePacket(int fd);
 int receiveGamePacket(int fd);
 
+// currently wraps the data to send during discard and sacrifice events
+int sendCardEffectPacket(int target_pnum, int desired_type, int fd);
+
+// currently wraps the data to receive during discard and sacrifice events
+int receiveCardEffectPacket(int* target_pnum, int* desired_type, int fd);
+
+// client sends target_pnum under pnum
+// server sends orig_pnum under pnum
+int sendEnterStablePacket(struct Unicorn corn, int pnum, int fd);
+
+// client receives orig_pnum under pnum
+// server receives target_pnum under pnum
+int receiveEnterStablePacket(struct Unicorn* corn, int* pnum, int fd);
+
 void receiveMsg(char* str, int count, int fd);
 
 // handles stdin events and filters everything but keydown presses
