@@ -3,8 +3,7 @@
 #include "gamephase.h"
 #include "windowsapp.h"
 #include <conio.h>
-
-#define ERRORBUF 256
+#include <windows.h>
 
 int clientMain(void) {
   int isvalid, clientpnum, index;
@@ -76,7 +75,10 @@ int clientMain(void) {
   // ******************** Game Set-up ********************
   // *****************************************************
 
-  int count, ret, rc;
+  char stdinbuf[MSGBUF] = { 0 };
+  int bufindex = 0;
+
+  int ret;
   WSAPOLLFD pfd[2] = { -1 };  // stdin + original sockfd
   pfd[0].fd = _fileno(stdin);
   pfd[0].events = POLLIN | POLLOUT;
@@ -103,7 +105,7 @@ int clientMain(void) {
 
         sendInt(incoming_msg, sockfd);
         sendInt(clientpnum, sockfd);
-        send(sockfd, stdinbuf, MSGBUF, 0);
+        send(sockfd, stdinbuf, sizeof stdinbuf, 0);
 
         memset(stdinbuf, '\0', sizeof stdinbuf);
         bufindex = 0;
@@ -121,13 +123,15 @@ int clientMain(void) {
         }
       }
       else if (network_events == incoming_msg) {
-        receiveMsg(stdinbuf, sockfd);
-        memset(stdinbuf, '\0', MSGBUF);
+        receiveMsg(stdinbuf, sizeof stdinbuf, sockfd);
+        memset(stdinbuf, '\0', sizeof stdinbuf);
       }
       else if (network_events == start_game) {
         break;
       }
     }
+
+    Sleep(20);
   }
 
   rainbow(
@@ -241,6 +245,14 @@ int clientMain(void) {
 
             clientNeigh(clientpnum, orig_pnum, &orig_cindex);
           }
+          else if (network_events == sacrifice_event) {
+            int target_player;
+            int desired_class;
+            receiveInt(&target_player, sockfd);
+            receiveInt(&desired_class, sockfd);
+
+            clientSacrifice(clientpnum, target_player, desired_class);
+          }
           else if (network_events == end_turn) {
             receiveGamePacket(sockfd);
             break;
@@ -252,6 +264,8 @@ int clientMain(void) {
             break;
           }
         }
+
+        Sleep(20);
       }
     }
 
