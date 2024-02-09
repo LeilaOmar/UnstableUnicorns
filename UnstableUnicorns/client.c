@@ -244,6 +244,15 @@ int clientMain(void) {
 
             clientNeigh(clientpnum, orig_pnum, &orig_cindex);
           }
+          else if (network_events == discard_event) {
+            int target_player;
+            int desired_class;
+            receiveInt(&target_player, sockfd);
+            receiveInt(&desired_class, sockfd);
+            receivePlayers(sockfd);
+
+            clientDiscard(clientpnum, target_player, desired_class);
+          }
           else if (network_events == sacrifice_event) {
             int target_player;
             int desired_class;

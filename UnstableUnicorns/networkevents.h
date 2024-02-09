@@ -12,5 +12,8 @@
 int clientNeigh(int clientpnum, int orig_pnum, int *orig_cindex);
 int serverNeigh(int orig_pnum, int *orig_cindex);
 
+void clientDiscard(int clientpnum, int target_pnum, int class);
+void serverDiscard(int target_pnum, int class);
+
 void clientSacrifice(int clientpnum, int target_pnum, int class);
-void serverSacrifice(int orig_pnum, int target_pnum, int class);
+void serverSacrifice(int target_pnum, int class);

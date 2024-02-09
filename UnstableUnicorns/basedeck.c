@@ -942,8 +942,21 @@ int conditionalEffects(int pnum, struct Unicorn corn, int hindex, int upgrade_ta
     rearrangeHand(pnum, hindex);
 
     // card effect
-    for (int i = 0; i < current_players; i++) {
-      discard(i, 1, ANY);
+    if (isclient) {
+      sendInt(discard_event, sockfd);
+      sendInt(ANY, sockfd);   // player target; ANY = everyone
+      sendInt(ANY, sockfd);   // class to discard
+      sendPlayers(sockfd);    // sending player stuff because other discard events require updates
+      clientDiscard(pnum, ANY, ANY);
+    }
+    else {
+      for (int i = 0; i < current_players - 1; i++) {
+        sendInt(discard_event, clientsockfd[i]);
+        sendInt(ANY, clientsockfd[i]);  // player target; ANY = everyone
+        sendInt(ANY, clientsockfd[i]);  // class to discard
+        sendPlayers(clientsockfd[i]);   // sending player stuff because other discard events require updates
+      }
+      serverDiscard(ANY, ANY);
     }
     shuffleDiscard();
     return 1;
@@ -1168,7 +1181,23 @@ int conditionalEffects(int pnum, struct Unicorn corn, int hindex, int upgrade_ta
 
     returnCardToHand(index, index2);
 
-    discard(index, 1, ANY);
+    // make the chosen player discard a card
+    if (isclient) {
+      sendInt(discard_event, sockfd);
+      sendInt(index, sockfd);   // player target @ index
+      sendInt(ANY, sockfd);     // class to discard
+      sendPlayers(sockfd);      // update the player stables/hands since a card was returned
+      clientDiscard(pnum, index, ANY);
+    }
+    else {
+      for (int i = 0; i < current_players - 1; i++) {
+        sendInt(discard_event, clientsockfd[i]);
+        sendInt(index, clientsockfd[i]);  // player target @ index
+        sendInt(ANY, clientsockfd[i]);    // class to discard
+        sendPlayers(clientsockfd[i]);     // update the player stables/hands since a card was returned
+      }
+      serverDiscard(index, ANY);
+    }
     return 1;
   }
   case blatant_thievery:
@@ -1452,7 +1481,23 @@ void enterStableEffects(int pnum, int effect) {
         break;
     }
 
-    discard(index, 1, ANY);
+    // make the chosen player discard a card
+    if (isclient) {
+      sendInt(discard_event, sockfd);
+      sendInt(index, sockfd);   // player target @ index
+      sendInt(ANY, sockfd);     // class to discard
+      sendPlayers(sockfd);      // sending player stuff because other discard events require updates
+      clientDiscard(pnum, index, ANY);
+    }
+    else {
+      for (int i = 0; i < current_players - 1; i++) {
+        sendInt(discard_event, clientsockfd[i]);
+        sendInt(index, clientsockfd[i]);  // player target @ index
+        sendInt(ANY, clientsockfd[i]);    // class to discard
+        sendPlayers(clientsockfd[i]);     // sending player stuff because other discard events require updates
+      }
+      serverDiscard(index, ANY);
+    }
     break;
   }
   case seductive_unicorn:
@@ -1488,9 +1533,24 @@ void enterStableEffects(int pnum, int effect) {
   {
     // Playing Llamacorn:
     // each player must DISCARD 1 card.
-    for (int i = 0; i < current_players; i++) {
-      discard(i, 1, ANY);
+
+    if (isclient) {
+      sendInt(discard_event, sockfd);
+      sendInt(ANY, sockfd);   // player target; ANY = everyone
+      sendInt(ANY, sockfd);   // class to discard
+      sendPlayers(sockfd);    // sending player stuff because other discard events require updates
+      clientDiscard(pnum, ANY, ANY);
     }
+    else {
+      for (int i = 0; i < current_players - 1; i++) {
+        sendInt(discard_event, clientsockfd[i]);
+        sendInt(ANY, clientsockfd[i]);  // player target; ANY = everyone
+        sendInt(ANY, clientsockfd[i]);  // class to discard
+        sendPlayers(clientsockfd[i]);   // sending player stuff because other discard events require updates
+      }
+      serverDiscard(ANY, ANY);
+    }
+
     break;
   }
   case extremely_destructive_unicorn:
@@ -1512,7 +1572,7 @@ void enterStableEffects(int pnum, int effect) {
         sendInt(ANY, clientsockfd[i]); // any being referred to all here, or the number "-1"
         sendInt(ANYUNICORN, clientsockfd[i]);
       }
-      serverSacrifice(pnum, ANY, ANYUNICORN);
+      serverSacrifice(ANY, ANYUNICORN);
     }
 
     break;

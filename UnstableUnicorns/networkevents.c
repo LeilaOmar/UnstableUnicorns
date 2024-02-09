@@ -398,29 +398,28 @@ int serverNeigh(int orig_pnum, int *orig_cindex) {
 }
 
 void clientSacrifice(int clientpnum, int target_pnum, int class) {
-
-  int isvalid = 1;
-
-  // check if clientpnum even has any cards to sacrifice
-  for (int i = 0; i < player[clientpnum].stable.size; i++) {
-    if (canBeSacrificed(clientpnum, i, class)) {
-      isvalid = 0;
-      printStable(clientpnum);
-      printf("Pick a valid card number to sacrifice: ");
-      break;
-    }
-  }
-
-  if (isvalid || (target_pnum != ANY && target_pnum != clientpnum)) {
-    sendInt(-1, sockfd); // no available cards to sacrifice
-  }
-    
   int ret2;
   int selection;
-  isvalid = 0;
+  int isvalid = 1;
   char* end = NULL;
   char buf[LINE_MAX] = { 0 };
   int input_index = 0;
+
+  if (target_pnum == ANY || target_pnum == clientpnum) {
+    // check if clientpnum even has any cards to sacrifice
+    for (int i = 0; i < player[clientpnum].stable.size; i++) {
+      if (canBeSacrificed(clientpnum, i, class)) {
+        isvalid = 0;
+        printStable(clientpnum);
+        printf("Pick a valid card number to sacrifice: ");
+        break;
+      }
+    }
+
+    if (isvalid) {
+      sendInt(-1, sockfd); // no available cards to sacrifice
+    }
+  }
 
   WSAPOLLFD pfd;
   pfd.fd = sockfd;
@@ -502,8 +501,7 @@ void clientSacrifice(int clientpnum, int target_pnum, int class) {
   receiveGamePacket(sockfd);
 }
 
-void serverSacrifice(int orig_pnum, int target_pnum, int class) {
-
+void serverSacrifice(int target_pnum, int class) {
   int ret2;
   int selection;
   int isvalid = 1;
@@ -513,18 +511,18 @@ void serverSacrifice(int orig_pnum, int target_pnum, int class) {
   char buf[LINE_MAX] = { 0 };
   int input_index = 0;
 
-  // check if the host even has any cards to sacrifice
-  for (int i = 0; i < player[0].stable.size; i++) {
-    if (canBeSacrificed(0, i, class)) {
-      isvalid = 0;
-      break;
-    }
-  }
-
-  if (target_pnum == -1) end_condition = (1 << current_players) - 1;
+  if (target_pnum == ANY) end_condition = (1 << current_players) - 1;
   else end_condition = (1 << target_pnum);
 
-  if (target_pnum == -1 || target_pnum == 0) {
+  if (target_pnum == ANY || target_pnum == 0) {
+    // check if the host even has any cards to sacrifice
+    for (int i = 0; i < player[0].stable.size; i++) {
+      if (canBeSacrificed(0, i, class)) {
+        isvalid = 0;
+        break;
+      }
+    }
+
     if (isvalid) {
       playersacrificeflag = 1;
     }
@@ -625,6 +623,236 @@ void serverSacrifice(int orig_pnum, int target_pnum, int class) {
     }
 
     if (playersacrificeflag == end_condition) {
+      for (int i = 0; i < current_players - 1; i++) {
+        sendInt(quit_loop, clientsockfd[i]);
+      }
+      break;
+    }
+
+    Sleep(20);
+  }
+
+  // that's all!
+  for (int i = 0; i < current_players - 1; i++) {
+    sendGamePacket(clientsockfd[i]);
+  }
+}
+
+void clientDiscard(int clientpnum, int target_pnum, int class) {
+  int ret2;
+  int selection;
+  int isvalid = 1;
+  char* end = NULL;
+  char buf[LINE_MAX] = { 0 };
+  int input_index = 0;
+
+  if (target_pnum == ANY || target_pnum == clientpnum) {
+    if (player[clientpnum].hand.num_cards <= 0) {
+      sendInt(-1, sockfd); // no available cards to sacrifice
+    }
+    else {
+      isvalid = 0;
+      printHand(clientpnum);
+      printf("Pick a valid card number to discard: ");
+    }
+  }
+
+
+  WSAPOLLFD pfd;
+  pfd.fd = sockfd;
+  pfd.events = POLLIN | POLLOUT;
+
+  for (;;) {
+    ret2 = WSAPoll(&pfd, 1, NEIGHTIME);
+    if (ret2 == SOCKET_ERROR) {
+      fprintf(stderr, "ERROR: poll() failed. Error code : %d", WSAGetLastError());
+      closesocket(sockfd);
+      _getch();
+      exit(2);
+    }
+    if (ret2 == 0) {
+      // this shouldn't time out because the server socket pipe is looking out for POLLOUT
+      fprintf(stderr, "ERROR: client timed out. Error code : %d", WSAGetLastError());
+      closesocket(sockfd);
+      _getch();
+      exit(2);
+    }
+
+    // skip the neigh input selection if the player already made a valid choice
+    // or if the player played the last card in the cycle
+    if (WaitForSingleObject(GetStdHandle(STD_INPUT_HANDLE), 0) == WAIT_OBJECT_0 &&
+        (target_pnum == clientpnum || target_pnum == ANY) && !isvalid) {
+      processStdin(buf, &input_index);
+      if (input_index >= (sizeof(buf) - 1) || buf[input_index - 1] == '\r' || buf[input_index - 1] == '\n') {
+
+        buf[strlen(buf) - 1] = 0;
+        selection = strtol(buf, &end, 10) - 1;
+
+        memset(buf, '\0', sizeof buf);
+        input_index = 0;
+
+        // index validation
+        if (selection < -1 || selection >= player[clientpnum].hand.num_cards ||
+            !checkClass(class, player[clientpnum].hand.cards[selection].class)) {
+          printf("Pick a valid card number to discard: ");
+        }
+
+        else {
+          sendInt(selection, sockfd);
+          isvalid = 1;
+        }
+      }
+    }
+
+    if (pfd.revents & POLLIN) {
+      int signal;
+      receiveInt(&signal, sockfd);
+
+      if (signal == quit_loop) {
+        // all eligible players sent in their choice
+        break;
+      }
+      else if (signal == incoming_msg) {
+        int count = DESC_SIZE;
+        int rc;
+        int offset = 0;
+        char stdinbuf[DESC_SIZE] = { 0 };
+
+        while (count > 0) {
+          rc = recv(sockfd, stdinbuf + offset, count, 0);
+          if (rc >= 0) {
+            offset += rc;
+            count -= rc;
+          }
+        }
+        printf("\n%s\n", stdinbuf);
+        memset(stdinbuf, '\0', sizeof stdinbuf);
+      }
+    }
+
+    Sleep(20);
+  }
+
+  // that's all!
+  receiveGamePacket(sockfd);
+}
+
+void serverDiscard(int target_pnum, int class) {
+  int ret2;
+  int selection;
+  int isvalid = 1;
+  int playerdiscardflag = 0;
+  int end_condition = 0;
+  char* end = NULL;
+  char buf[LINE_MAX] = { 0 };
+  int input_index = 0;
+
+  if (target_pnum == ANY) end_condition = (1 << current_players) - 1;
+  else end_condition = (1 << target_pnum);
+
+  if (target_pnum == ANY || target_pnum == 0) {
+    if (player[0].hand.num_cards <= 0) {
+      playerdiscardflag = 1;
+    }
+    else {
+      isvalid = 0;
+      printHand(0);
+      printf("Pick a valid card number to discard: ");
+    }
+  }
+
+  WSAPOLLFD pfd[MAX_PLAYERS + 1] = { -1 };  // stdin + original sockfd + 7 additional players
+  pfd[0].fd = _fileno(stdin);
+  pfd[0].events = POLLIN | POLLOUT;
+  pfd[1].fd = sockfd;
+  pfd[1].events = POLLIN | POLLOUT;
+  for (int i = 0; i < current_players - 1; i++) {
+    pfd[i + 2].fd = clientsockfd[i];
+    pfd[i + 2].events = POLLIN | POLLOUT;
+  }
+
+  for (;;) {
+    ret2 = WSAPoll(pfd, MAX_PLAYERS + 1, NEIGHTIME);
+    if (ret2 == SOCKET_ERROR) {
+      fprintf(stderr, "ERROR: poll() failed. Error code : %d", WSAGetLastError());
+      closesocket(sockfd);
+      _getch();
+      exit(2);
+    }
+    if (ret2 == 0) {
+      // this shouldn't time out because the server socket pipe is looking out for POLLOUT
+      fprintf(stderr, "ERROR: client timed out. Error code : %d", WSAGetLastError());
+      closesocket(sockfd);
+      _getch();
+      exit(2);
+    }
+
+    // skip the neigh input selection if the player already made a valid choice
+    // or if the player played the last card in the cycle
+    if (WaitForSingleObject(GetStdHandle(STD_INPUT_HANDLE), 0) == WAIT_OBJECT_0 &&
+        (target_pnum == 0 || target_pnum == ANY) && !isvalid) {
+      processStdin(buf, &input_index);
+      if (input_index >= (sizeof(buf) - 1) || buf[input_index - 1] == '\r' || buf[input_index - 1] == '\n') {
+
+        buf[strlen(buf) - 1] = 0;
+        selection = strtol(buf, &end, 10) - 1;
+
+        memset(buf, '\0', sizeof buf);
+        input_index = 0;
+
+        // index validation
+        if (selection < -1 || selection >= player[0].hand.num_cards ||
+            !checkClass(class, player[0].hand.cards[selection].class)) {
+          printf("Pick a valid card number to discard: ");
+        }
+
+        else {
+          playerdiscardflag |= 1;
+          isvalid = 1;
+
+          char stdinbuf[DESC_SIZE] = { 0 };
+          sprintf_s(stdinbuf, sizeof stdinbuf, "\033[1;31m%s\033[0m discarded the card '\033[1;31m%s\033[0m'.",
+            player[0].username, player[0].hand.cards[selection].name);
+
+          addDiscard(player[0].hand.cards[selection]);
+          rearrangeHand(0, selection);
+
+          for (int j = 0; j < current_players - 1; j++) {
+            sendInt(incoming_msg, clientsockfd[j]);
+            send(clientsockfd[j], stdinbuf, sizeof stdinbuf, 0); // TODO: (maybe) check that it sends every byte
+          }
+        }
+      }
+    }
+
+    for (int i = 0; i < current_players - 1; i++) {
+      if (pfd[i + 2].revents & POLLIN) {
+        int cindex;
+        receiveInt(&cindex, clientsockfd[i]);
+
+        playerdiscardflag |= (1 << (i + 1));
+
+        if (cindex == -1) continue;
+
+        char stdinbuf[DESC_SIZE] = { 0 };
+        sprintf_s(stdinbuf, sizeof stdinbuf, "\033[1;31m%s\033[0m discarded the card '\033[1;31m%s\033[0m'.",
+          player[i + 1].username, player[i + 1].hand.cards[cindex].name);
+
+        addDiscard(player[i + 1].hand.cards[cindex]);
+        rearrangeHand(i + 1, cindex);
+
+        for (int j = 0; j < current_players - 1; j++) {
+          if (j == i) continue;
+
+          sendInt(incoming_msg, clientsockfd[j]);
+          send(clientsockfd[j], stdinbuf, sizeof stdinbuf, 0); // TODO: (maybe) check that it sends every byte
+        }
+
+        printf("\n%s\n", stdinbuf);
+      }
+    }
+
+    if (playerdiscardflag == end_condition) {
       for (int i = 0; i < current_players - 1; i++) {
         sendInt(quit_loop, clientsockfd[i]);
       }
