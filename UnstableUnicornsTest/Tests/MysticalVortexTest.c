@@ -5,18 +5,17 @@ int mystical_vortex_basic_check() {
 	int num_fails = 0;
 	struct Unicorn vortex_tmp = basedeck[87];
 
-	current_players = 3;
+	current_players = 2;
 	player[0].hand.cards[player[0].hand.num_cards++] = vortex_tmp;
 	deck.size--; // to compensate for the vortex draw
 	draw(0, 2);
-	draw(2, 2);
+	draw(1, 2);
 	int tmp_size = deck.size;
 
 	int ret;
 	assert(discardpile.size == 0);
 	assert(player[0].hand.num_cards == 3);
-	assert(player[1].hand.num_cards == 0);
-	assert(player[2].hand.num_cards == 2);
+	assert(player[1].hand.num_cards == 2);
 	ret = conditionalEffects(0, vortex_tmp, 0, 0);
 
 	if (turn_count != 1 || ret != 1) {
@@ -27,8 +26,7 @@ int mystical_vortex_basic_check() {
 	}
 
 	if (player[0].hand.num_cards != 1 ||
-			player[1].hand.num_cards != 0 || 
-			player[2].hand.num_cards != 1) {
+			player[1].hand.num_cards != 1) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    sanity test: hand size failed\n");
@@ -42,7 +40,7 @@ int mystical_vortex_basic_check() {
 		reset_col();
 	}
 
-	// deck.size = tmp_size + 1 (mystical vortex) + 1 (player[0]'s discarded card) + 1 (player[2]'s discarded card)
+	// deck.size = tmp_size + 1 (mystical vortex) + 1 (player[0]'s discarded card) + 1 (player[1]'s discarded card)
 	if (deck.size != (tmp_size + 3)) {
 		num_fails++;
 		red();
@@ -119,7 +117,7 @@ int mystical_vortex_tests() {
 
 	// file input stream setup
 	FILE* fp;
-	fopen_s(&fp, "Tests/Input/line_1_1.txt", "r");
+	fopen_s(&fp, "Tests/Input/line_1.txt", "r");
 	if (fp == NULL) {
 		magenta();
 		fprintf(stderr, "    file input failed :(");

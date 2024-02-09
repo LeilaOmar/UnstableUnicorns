@@ -685,11 +685,26 @@ int main(int argc, char* argv[]) {
 		while (connect(sockfd, (struct sockaddr*)&server, sizeof(server)) < 0) {
 			fprintf(stderr, "Attempt to connect to the server was unsuccessful. Error code : %d\n", WSAGetLastError());
 		}
+		
+		// TODO: this is getting a bit too long, so add these to every relevant test file
 
 		// extremely destructive unicorn tests
 		sendInt(0, sockfd);  // sanity
 		sendInt(-1, sockfd); // non-unicorn
 		sendInt(0, sockfd);  // pandamonium
+
+		// llamacorn tests
+		sendInt(-1, sockfd);
+
+		// annoying flying unicorn tests
+		sendInt(0, sockfd);
+
+		// back kick tests
+		sendInt(0, sockfd);
+		sendInt(0, sockfd);
+
+		// mystical vortex tests
+		sendInt(0, sockfd);
 
 		// neigh odd test
 		sendInt(2, sockfd);
