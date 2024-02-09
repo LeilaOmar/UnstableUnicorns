@@ -118,7 +118,7 @@ int clientNeigh(int clientpnum, int orig_pnum, int *orig_cindex) {
 
             // index validation
             else if (selection < -1 || selection >= player[clientpnum].hand.num_cards ||
-                player[clientpnum].hand.cards[selection].class != INSTANT) {
+                player[clientpnum].hand.cards[selection].cType != INSTANT) {
               printf("Choose the neigh card to counter with, or enter 0 to skip: ");
             }
 
@@ -288,7 +288,7 @@ int serverNeigh(int orig_pnum, int *orig_cindex) {
 
           // index validation
           else if (selection < -1 || selection >= player[0].hand.num_cards ||
-              player[0].hand.cards[selection].class != INSTANT) {
+              player[0].hand.cards[selection].cType != INSTANT) {
             printf("Choose the neigh card to counter with, or enter 0 to skip: ");
           }
 
@@ -397,7 +397,7 @@ int serverNeigh(int orig_pnum, int *orig_cindex) {
   return oddcheck;
 }
 
-void clientSacrifice(int clientpnum, int target_pnum, int class) {
+void clientSacrifice(int clientpnum, int target_pnum, int cType) {
   int ret2;
   int selection;
   int isvalid = 1;
@@ -408,7 +408,7 @@ void clientSacrifice(int clientpnum, int target_pnum, int class) {
   if (target_pnum == ANY || target_pnum == clientpnum) {
     // check if clientpnum even has any cards to sacrifice
     for (int i = 0; i < player[clientpnum].stable.size; i++) {
-      if (canBeSacrificed(clientpnum, i, class)) {
+      if (canBeSacrificed(clientpnum, i, cType)) {
         isvalid = 0;
         printStable(clientpnum);
         printf("Pick a valid card number to sacrifice: ");
@@ -456,8 +456,8 @@ void clientSacrifice(int clientpnum, int target_pnum, int class) {
 
         // index validation
         if (selection < -1 || selection >= player[clientpnum].stable.size ||
-            !canBeSacrificed(clientpnum, selection, class) ||
-            !checkClass(class, player[clientpnum].stable.unicorns[selection].class)) {
+            !canBeSacrificed(clientpnum, selection, cType) ||
+            !checkType(cType, player[clientpnum].stable.unicorns[selection].cType)) {
           printf("Pick a valid card number to sacrifice: ");
         }
 
@@ -501,7 +501,7 @@ void clientSacrifice(int clientpnum, int target_pnum, int class) {
   receiveGamePacket(sockfd);
 }
 
-void serverSacrifice(int target_pnum, int class) {
+void serverSacrifice(int target_pnum, int cType) {
   int ret2;
   int selection;
   int isvalid = 1;
@@ -517,7 +517,7 @@ void serverSacrifice(int target_pnum, int class) {
   if (target_pnum == ANY || target_pnum == 0) {
     // check if the host even has any cards to sacrifice
     for (int i = 0; i < player[0].stable.size; i++) {
-      if (canBeSacrificed(0, i, class)) {
+      if (canBeSacrificed(0, i, cType)) {
         isvalid = 0;
         break;
       }
@@ -573,8 +573,8 @@ void serverSacrifice(int target_pnum, int class) {
 
         // index validation
         if (selection < -1 || selection >= player[0].stable.size ||
-            !canBeSacrificed(0, selection, class) ||
-            !checkClass(class, player[0].stable.unicorns[selection].class)) {
+            !canBeSacrificed(0, selection, cType) ||
+            !checkType(cType, player[0].stable.unicorns[selection].cType)) {
           printf("Pick a valid card number to sacrifice: ");
         }
 
@@ -638,7 +638,7 @@ void serverSacrifice(int target_pnum, int class) {
   }
 }
 
-void clientDiscard(int clientpnum, int target_pnum, int class) {
+void clientDiscard(int clientpnum, int target_pnum, int cType) {
   int ret2;
   int selection;
   int isvalid = 1;
@@ -693,7 +693,7 @@ void clientDiscard(int clientpnum, int target_pnum, int class) {
 
         // index validation
         if (selection < -1 || selection >= player[clientpnum].hand.num_cards ||
-            !checkClass(class, player[clientpnum].hand.cards[selection].class)) {
+            !checkType(cType, player[clientpnum].hand.cards[selection].cType)) {
           printf("Pick a valid card number to discard: ");
         }
 
@@ -737,7 +737,7 @@ void clientDiscard(int clientpnum, int target_pnum, int class) {
   receiveGamePacket(sockfd);
 }
 
-void serverDiscard(int target_pnum, int class) {
+void serverDiscard(int target_pnum, int cType) {
   int ret2;
   int selection;
   int isvalid = 1;
@@ -802,7 +802,7 @@ void serverDiscard(int target_pnum, int class) {
 
         // index validation
         if (selection < -1 || selection >= player[0].hand.num_cards ||
-            !checkClass(class, player[0].hand.cards[selection].class)) {
+            !checkType(cType, player[0].hand.cards[selection].cType)) {
           printf("Pick a valid card number to discard: ");
         }
 

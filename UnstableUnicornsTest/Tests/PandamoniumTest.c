@@ -49,14 +49,14 @@ int pandamonium_destroy_check() {
 	if (canBeDestroyed(0, 1, ANYUNICORN, FALSE)) {
 		num_fails++;
 		red();
-		fprintf(stderr, "    destroy test: canBeDestroyed ANYUNICORN class failed\n");
+		fprintf(stderr, "    destroy test: canBeDestroyed ANYUNICORN cType failed\n");
 		reset_col();
 	}
 
 	if (!canBeDestroyed(0, 1, ANY, FALSE)) {
 		num_fails++;
 		red();
-		fprintf(stderr, "    destroy test: canBeDestroyed ANY class failed\n");
+		fprintf(stderr, "    destroy test: canBeDestroyed ANY cType failed\n");
 		reset_col();
 	}
 

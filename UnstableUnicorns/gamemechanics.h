@@ -7,7 +7,7 @@
 
 void printPlayers(void);
 void printPile(struct Deck d);
-void printPileFilter(struct Deck d, int class, int species);
+void printPileFilter(struct Deck d, int cType, int species);
 void printHand(int pnum);
 void printStable(int pnum);
 void displayCardDesc(void);
@@ -18,9 +18,9 @@ void printStableGrid(void); // prints stables of all players in two columns
 // ******************************* Utility Functions ******************************
 // ********************************************************************************
 
-// return 0 = FALSE, the card's class does not equal the desired class
+// return 0 = FALSE, the card's type does not equal the desired type
 // return 1 = TRUE, card match!
-int checkClass(int desired_class, int card_class);
+int checkType(int desired_type, int card_type);
 
 // randomize deck between specific indices
 void shuffleDeck(struct Deck* d);
@@ -42,7 +42,7 @@ void rearrangeStable(int pnum, int index);
 // searching through the deck or discard pile for a specific card
 // 0 = return failed
 // 1 = return successful
-int searchPile(int pnum, struct Deck* d, int class, int species);
+int searchPile(int pnum, struct Deck* d, int cType, int species);
 
 void addNursery(struct Unicorn corn);
 
@@ -64,13 +64,13 @@ int canBeNeighed(int pnum);
 int canNeighOthers(int pnum);
 
 // checks for all of the specific edge cases for card destruction
-int canBeDestroyed(int pindex, int cindex, int class, int isMagicCard);
+int canBeDestroyed(int pindex, int cindex, int cType, int isMagicCard);
 
 // returns number of available cards to destroy
-int checkNumCardsToDestroy(int pnum, int class, int isMagicCard);
+int checkNumCardsToDestroy(int pnum, int cType, int isMagicCard);
 
 // checks for all of the specific edge cases for sacrificing cards
-int canBeSacrificed(int pindex, int cindex, int class);
+int canBeSacrificed(int pindex, int cindex, int cType);
 
 // ********************************************************************************
 // ************************** Basic Card Effect Functions *************************
@@ -78,17 +78,17 @@ int canBeSacrificed(int pindex, int cindex, int class);
 
 int draw(int pnum, int num_drawn);
 
-void discard(int pnum, int num_discard, int class);
+void discard(int pnum, int num_discard, int cType);
 
 // 0 = sacrifice failed
 // 1 = successful
-int sacrifice(int pnum, int class);
+int sacrifice(int pnum, int cType);
 
-// treat ANYUNICORN as all unicorns when checking class for Unicorn cards
-void destroy(int pnum, int class, int isMagicCard);
+// treat ANYUNICORN as all unicorns when checking cType for Unicorn cards
+void destroy(int pnum, int cType, int isMagicCard);
 
-// treat ANYUNICORN as all unicorns when checking class for Unicorn cards
-void steal(int pnum, int class);
+// treat ANYUNICORN as all unicorns when checking cType for Unicorn cards
+void steal(int pnum, int cType);
 
 // ********************************************************************************
 // *************************** Core Game Loop Functions ***************************

@@ -365,7 +365,7 @@ int sendUnicorns(struct Unicorn* corns, int size, int fd) {
   int offset = 0;
 
   for (int i = 0; i < size; i++) {
-    data[offset++] = corns[i].class;
+    data[offset++] = corns[i].cType;
     data[offset++] = corns[i].species;
     for (int j = 0; j < sizeof corns[i].name; j++) {
       data[offset++] = corns[i].name[j];
@@ -409,7 +409,7 @@ int receiveUnicorns(struct Unicorn* corns, int size, int fd) {
 
   offset = 0;
   for (int i = 0; i < size; i++) {
-    corns[i].class = data[offset++];
+    corns[i].cType = data[offset++];
     corns[i].species = data[offset++];
     for (int j = 0; j < sizeof corns[i].name; j++) {
       corns[i].name[j] = data[offset++];

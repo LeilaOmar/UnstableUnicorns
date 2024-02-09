@@ -27,7 +27,7 @@ enum UnicornDatatypes {ANY = -1, BABYUNICORN, BASICUNICORN, MAGICUNICORN, UPGRAD
 enum BabySelection { BABYRED, BABYPINK, BABYORANGE, BABYYELLOW, BABYGREEN, BABYBLUE, BABYPURPLE, BABYBLACK, BABYWHITE, BABYBROWN, BABYRAINBOW, BABYDEATH, BABYNARWHAL };
 
 struct Unicorn {
-  unsigned char class;    // 0 = Baby Unicorn
+  unsigned char cType;    // 0 = Baby Unicorn
                           // 1 = Basic Unicorn
                           // 2 = Magic Unicorn
                           // 3 = Upgrade

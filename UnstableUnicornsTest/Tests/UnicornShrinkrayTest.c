@@ -50,7 +50,7 @@ int shrinkray_basic_check() {
 	}
 
 	if (player[1].stable.size != 5 || player[1].stable.num_unicorns != 4 ||
-			player[1].stable.unicorns[0].class != BABYUNICORN ||
+			player[1].stable.unicorns[0].cType != BABYUNICORN ||
 			strcmp(player[1].stable.unicorns[3].name, yay_tmp.name) != 0) {
 		num_fails++;
 		red();
@@ -184,8 +184,8 @@ int shrinkray_puppicorn_check() {
 	conditionalEffects(0, shrinkray_tmp, 0, 0);
 
 	if (player[1].stable.size != 2 || player[1].stable.num_unicorns != 2 ||
-			player[1].stable.unicorns[0].class != BABYUNICORN ||
-			player[1].stable.unicorns[1].class != BABYUNICORN) {
+			player[1].stable.unicorns[0].cType != BABYUNICORN ||
+			player[1].stable.unicorns[1].cType != BABYUNICORN) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    puppicorn test: stable verification failed\n");
@@ -204,8 +204,8 @@ int shrinkray_puppicorn_check() {
 
 	if (player[0].stable.size != 0 || player[0].stable.num_unicorns != 0 ||
 			player[1].stable.size != 2 || player[1].stable.num_unicorns != 2 ||
-			player[1].stable.unicorns[0].class != BABYUNICORN ||
-			player[1].stable.unicorns[1].class != BABYUNICORN) {
+			player[1].stable.unicorns[0].cType != BABYUNICORN ||
+			player[1].stable.unicorns[1].cType != BABYUNICORN) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    puppicorn test: end of turn stable verification failed\n");
