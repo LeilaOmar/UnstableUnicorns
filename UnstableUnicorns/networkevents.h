@@ -9,5 +9,8 @@
 // bug where Neigh remained in player's hand that last refuted it (e.g. 3
 // neighs were used in total and when player 3 used americorn on player 1 to get
 // a random card, it picked the same Neigh ID that was in the discard pile)
-int clientNeigh(int clientpnum, int orig_pnum, int orig_cindex);
-int serverNeigh(int orig_pnum, int orig_cindex);
+int clientNeigh(int clientpnum, int orig_pnum, int *orig_cindex);
+int serverNeigh(int orig_pnum, int *orig_cindex);
+
+void clientSacrifice(int clientpnum, int target_pnum, int class);
+void serverSacrifice(int orig_pnum, int target_pnum, int class);

@@ -345,6 +345,11 @@ void addStable(int pnum, struct Unicorn corn) {
     }
   }
 
+  // enter stable effects if applicable; notably not the same as toggleflags
+  // this goes before the tiny stable trigger just to allow for unique card synergies
+  // (e.g. tiny stable + flying unicorn cards that return to your hand
+  enterStableEffects(pnum, corn.effect);
+
   // sacrifice unicorns if there are more than 5 with Tiny Stable
   if ((player[pnum].flags & tiny_stable) != 0 && (player[pnum].flags & pandamonium) == 0) {
     while (player[pnum].stable.num_unicorns > 5) {
@@ -357,9 +362,6 @@ void addStable(int pnum, struct Unicorn corn) {
     puppicorn_index[0] = player[pnum].stable.size - 1;
     puppicorn_index[1] = pnum;
   }
-
-  // enter stable effects if applicable; notably not the same as toggleflags
-  enterStableEffects(pnum, corn.effect);
 }
 
 // return card from stable to hand, or the nursery if it's a baby

@@ -686,6 +686,11 @@ int main(int argc, char* argv[]) {
 			fprintf(stderr, "Attempt to connect to the server was unsuccessful. Error code : %d\n", WSAGetLastError());
 		}
 
+		// extremely destructive unicorn tests
+		sendInt(0, sockfd);  // sanity
+		sendInt(-1, sockfd); // non-unicorn
+		sendInt(0, sockfd);  // pandamonium
+
 		// neigh odd test
 		sendInt(2, sockfd);
 		sendInt(4, sockfd);
@@ -701,17 +706,10 @@ int main(int argc, char* argv[]) {
 		// super neigh even test
 		sendInt(0, sockfd);
 
-		// quit once the server closes the socket
-		WSAPOLLFD pfd;
-		pfd.fd = sockfd;
-		pfd.events = POLLIN | POLLOUT;
-
-		for (;;) {
-			WSAPoll(&pfd, 1, 10000);
-			if (pfd.revents & (POLLHUP | POLLERR | POLLNVAL)) {
-				closesocket(sockfd);
-				exit(1);
-			}
+		char data[1024];
+		int rc;
+		while (rc = recv(sockfd, data, sizeof data, 0) > 0) {
+			// loop until socket closes or server disconnects in some way
 		}
 
 		closesocket(sockfd);
@@ -736,7 +734,7 @@ int main(int argc, char* argv[]) {
 
 		// start the program up
 		CreateProcessA (
-			NULL,   // the path
+			"..\\Debug\\UnstableUnicornsTest.exe",   // the path
 			"..\\Debug\\UnstableUnicornsTest.exe client",		// Full command line (includes argv[0])
 			NULL,                 // Process handle not inheritable
 			NULL,                 // Thread handle not inheritable
@@ -889,5 +887,6 @@ int main(int argc, char* argv[]) {
 	closesocket(clientsockfd[0]);
 	closesocket(sockfd);
 	if (fp != NULL) fclose(fp);
+	_getch();
 	exit(0);
 }

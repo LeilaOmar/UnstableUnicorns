@@ -2,6 +2,7 @@
 #include "basedeck.h"
 #include "gamemechanics.h"
 #include "gamephase.h"
+#include "networkevents.h"
 
 // Base game deck (ver. 1 before the reprint)
 struct Unicorn basedeck[] = {
@@ -1497,9 +1498,23 @@ void enterStableEffects(int pnum, int effect) {
     // Playing Extremely Destructive Unicorn:
     // each player must SACRIFICE 1 unicorn card
 
-    for (int i = 0; i < current_players; i++) {
-      sacrifice(i, ANYUNICORN);
+    // TODO: if there end up being too many isclient vs server checks, then maybe
+    // it's worth using vtables and sending their respective lookup table references?
+    if (isclient) {
+      sendInt(sacrifice_event, sockfd);
+      sendInt(ANY, sockfd);  // any being referred to all here, or the number "-1"
+      sendInt(ANYUNICORN, sockfd);
+      clientSacrifice(pnum, ANY, ANYUNICORN);
     }
+    else {
+      for (int i = 0; i < current_players - 1; i++) {
+        sendInt(sacrifice_event, clientsockfd[i]);
+        sendInt(ANY, clientsockfd[i]); // any being referred to all here, or the number "-1"
+        sendInt(ANYUNICORN, clientsockfd[i]);
+      }
+      serverSacrifice(pnum, ANY, ANYUNICORN);
+    }
+
     break;
   }
   case narwhal_torpedo:
@@ -1789,8 +1804,6 @@ void enterStableEffects(int pnum, int effect) {
 
 // switch cases for Magic cards
 void magicEffects(int pnum, int effect) {
-  int index;
-  char* end, buf[LINE_MAX];
 
   switch (effect) {
   case NOTHING:

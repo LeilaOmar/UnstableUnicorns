@@ -5,9 +5,6 @@
 #define MSGBUF 1024
 #define NEIGHTIME 4000 // 4000 ms
 
-extern char stdinbuf[MSGBUF];
-extern int bufindex;
-
 // hash functions for scrambling IP addresses
 // https://stackoverflow.com/questions/664014/what-integer-hash-function-are-good-that-accepts-an-integer-hash-key
 unsigned int hash(unsigned int x);
@@ -37,8 +34,8 @@ int receiveUnicorns(struct Unicorn* corns, int size, int fd);
 int sendGamePacket(int fd);
 int receiveGamePacket(int fd);
 
-void receiveMsg(char* str, int fd);
+void receiveMsg(char* str, int count, int fd);
 
 // handles stdin events and filters everything but keydown presses
 // https://stackoverflow.com/questions/19955617/win32-read-from-stdin-with-timeout
-void processStdin(char* stdinbuf, int bufindex);
+void processStdin(char* stdinbuf, int* bufindex);

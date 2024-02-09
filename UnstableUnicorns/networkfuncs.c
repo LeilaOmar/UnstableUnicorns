@@ -3,9 +3,6 @@
 #include "gamemechanics.h"
 #include "windowsapp.h"
 
-char stdinbuf[MSGBUF];
-int bufindex = 0;
-
 // hash functions for scrambling IP addresses
 // https://stackoverflow.com/questions/664014/what-integer-hash-function-are-good-that-accepts-an-integer-hash-key
 unsigned int hash(unsigned int x) {
@@ -553,11 +550,10 @@ int receiveGamePacket(int fd) {
   return 0;
 }
 
-void receiveMsg(char* str, int fd) {
+void receiveMsg(char* str, int count, int fd) {
   int pnum;
   int offset = 0;
   int rc;
-  int count = MSGBUF;
 
   receiveInt(&pnum, fd);
 
@@ -607,7 +603,7 @@ void processStdin(char* stdinbuf, int* bufindex) {
 
   // use printf \b when backspacing
   if (record->Event.KeyEvent.wVirtualKeyCode == VK_BACK) {
-    if (bufindex > 0) {
+    if (*bufindex > 0) {
       printf("\b \b");
       stdinbuf[*bufindex] = '\0';
       (*bufindex)--;
