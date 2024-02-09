@@ -2,9 +2,6 @@
 #include "networkfuncs.h"
 #include "gamemechanics.h"
 
-char stdinbuf[MSGBUF];
-int bufindex = 0;
-
 void serialize_int(unsigned char* buffer, int num) {
   buffer[0] = num >> 24;
   buffer[1] = num >> 16;
@@ -287,11 +284,10 @@ int receiveGamePacket(int fd) {
   return 0;
 }
 
-void receiveMsg(char* str, int fd) {
+void receiveMsg(char* str, int count, int fd) {
   int pnum;
   int offset = 0;
   int rc;
-  int count = MSGBUF;
 
   receiveInt(&pnum, fd);
 
@@ -341,7 +337,7 @@ void processStdin(char* stdinbuf, int* bufindex) {
 
   // use printf \b when backspacing
   if (record->Event.KeyEvent.wVirtualKeyCode == VK_BACK) {
-    if (bufindex > 0) {
+    if (*bufindex > 0) {
       printf("\b \b");
       stdinbuf[*bufindex] = '\0';
       (*bufindex)--;

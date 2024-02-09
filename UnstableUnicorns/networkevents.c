@@ -1,6 +1,7 @@
 #include "networkevents.h"
 #include "gamemechanics.h"
 #include <conio.h>
+#include <windows.h>
 
 // was unable to properly link this with an external file ;~;
 #ifdef TEST_RUN
@@ -75,6 +76,8 @@ int clientNeigh(int clientpnum, int orig_pnum, int *orig_cindex) {
       int selection;
       int isvalid = 0;
       char* end = NULL;
+      char buf[LINE_MAX] = { 0 };
+      int input_index = 0;
 
       WSAPOLLFD pfd;
       pfd.fd = sockfd;
@@ -99,14 +102,14 @@ int clientNeigh(int clientpnum, int orig_pnum, int *orig_cindex) {
         // skip the neigh input selection if the player already made a valid choice
         // or if the player played the last card in the cycle
         if (WaitForSingleObject(GetStdHandle(STD_INPUT_HANDLE), 0) == WAIT_OBJECT_0 && pnum != clientpnum && !isvalid) {
-          processStdin(stdinbuf, &bufindex);
-          if (bufindex >= (sizeof(stdinbuf) - 1) || stdinbuf[bufindex - 1] == '\r' || stdinbuf[bufindex - 1] == '\n') {
+          processStdin(buf, &input_index);
+          if (input_index >= (sizeof(buf) - 1) || buf[input_index - 1] == '\r' || buf[input_index - 1] == '\n') {
 
-            stdinbuf[strlen(stdinbuf) - 1] = 0;
-            selection = strtol(stdinbuf, &end, 10) - 1;
+            buf[strlen(buf) - 1] = 0;
+            selection = strtol(buf, &end, 10) - 1;
 
-            memset(stdinbuf, '\0', sizeof stdinbuf);
-            bufindex = 0;
+            memset(buf, '\0', sizeof buf);
+            input_index = 0;
 
             if (selection == -1) {
               sendInt(selection, sockfd);
@@ -130,9 +133,11 @@ int clientNeigh(int clientpnum, int orig_pnum, int *orig_cindex) {
           int quitter;
           receiveInt(&quitter, sockfd);
 
-          if (quitter == 1)
+          if (quitter == quit_loop)
             break;
         }
+
+        Sleep(20);
       }
     }
 
@@ -176,6 +181,9 @@ int clientNeigh(int clientpnum, int orig_pnum, int *orig_cindex) {
 // codes the part where players are able to use an instant card against a play
 // 0 = nobody used Neigh/Super Neigh cards, or Neigh cards cancelled out
 // 1 = card is gone
+// TODO: issues to look out for---
+//   - person A and person B sending a neigh at the same time
+//     (this can be circumvented by waiting until everyone entered something or the time limit passed though)
 int serverNeigh(int orig_pnum, int *orig_cindex) {
 
   for (int i = 0; i < current_players - 1; i++) {
@@ -209,9 +217,8 @@ int serverNeigh(int orig_pnum, int *orig_cindex) {
     int playerneigh = -1;
     int playerneighflag = 0;
     char* end = NULL;
-
-    memset(stdinbuf, '\0', sizeof stdinbuf);
-    bufindex = 0;
+    char buf[LINE_MAX] = { 0 };
+    int input_index = 0;
 
     if (pnum != 0) {
       if (cindex != -1) {
@@ -266,14 +273,14 @@ int serverNeigh(int orig_pnum, int *orig_cindex) {
       // skip the neigh input selection if the player already made a valid choice
       // or if the player played the last card in the cycle
       if (WaitForSingleObject(GetStdHandle(STD_INPUT_HANDLE), 0) == WAIT_OBJECT_0 && pnum != 0 && ((playerneighflag & 1) == 0)) {
-        processStdin(stdinbuf, &bufindex);
-        if (bufindex >= (sizeof(stdinbuf) - 1) || stdinbuf[bufindex - 1] == '\r' || stdinbuf[bufindex - 1] == '\n') {
+        processStdin(buf, &input_index);
+        if (input_index >= (sizeof(buf) - 1) || buf[input_index - 1] == '\r' || buf[input_index - 1] == '\n') {
 
-          stdinbuf[strlen(stdinbuf) - 1] = 0;
-          selection = strtol(stdinbuf, &end, 10) - 1;
+          buf[strlen(buf) - 1] = 0;
+          selection = strtol(buf, &end, 10) - 1;
 
-          memset(stdinbuf, '\0', sizeof stdinbuf);
-          bufindex = 0;
+          memset(buf, '\0', sizeof buf);
+          input_index = 0;
 
           if (selection == -1) {
             playerneighflag |= (1 << 0);
@@ -309,16 +316,18 @@ int serverNeigh(int orig_pnum, int *orig_cindex) {
         }
       }
 
-      if (playerneighflag == ((1 << current_players) - 1 - (1 << pnum))) {
+      if (playerneigh != -1 || playerneighflag == ((1 << current_players) - 1 - (1 << pnum))) {
         break;
       }
+
+      Sleep(20);
     }
 
     for (int i = 0; i < current_players - 1; i++) {
       // send it to every client that did not skip the polling process
       // this is sent in order to trigger the end of the loop
       if (canNeighOthers(i + 1)) {
-        sendInt(TRUE, clientsockfd[i]);
+        sendInt(quit_loop, clientsockfd[i]);
       }
     }
 
@@ -386,4 +395,247 @@ int serverNeigh(int orig_pnum, int *orig_cindex) {
   }
 
   return oddcheck;
+}
+
+void clientSacrifice(int clientpnum, int target_pnum, int class) {
+
+  int isvalid = 1;
+
+  // check if clientpnum even has any cards to sacrifice
+  for (int i = 0; i < player[clientpnum].stable.size; i++) {
+    if (canBeSacrificed(clientpnum, i, class)) {
+      isvalid = 0;
+      printStable(clientpnum);
+      printf("Pick a valid card number to sacrifice: ");
+      break;
+    }
+  }
+
+  if (isvalid || (target_pnum != ANY && target_pnum != clientpnum)) {
+    sendInt(-1, sockfd); // no available cards to sacrifice
+  }
+    
+  int ret2;
+  int selection;
+  isvalid = 0;
+  char* end = NULL;
+  char buf[LINE_MAX] = { 0 };
+  int input_index = 0;
+
+  WSAPOLLFD pfd;
+  pfd.fd = sockfd;
+  pfd.events = POLLIN | POLLOUT;
+
+  for (;;) {
+    ret2 = WSAPoll(&pfd, 1, NEIGHTIME);
+    if (ret2 == SOCKET_ERROR) {
+      fprintf(stderr, "ERROR: poll() failed. Error code : %d", WSAGetLastError());
+      closesocket(sockfd);
+      _getch();
+      exit(2);
+    }
+    if (ret2 == 0) {
+      // this shouldn't time out because the server socket pipe is looking out for POLLOUT
+      fprintf(stderr, "ERROR: client timed out. Error code : %d", WSAGetLastError());
+      closesocket(sockfd);
+      _getch();
+      exit(2);
+    }
+
+    // skip the neigh input selection if the player already made a valid choice
+    // or if the player played the last card in the cycle
+    if (WaitForSingleObject(GetStdHandle(STD_INPUT_HANDLE), 0) == WAIT_OBJECT_0 &&
+        (target_pnum == clientpnum || target_pnum == ANY) && !isvalid) {
+      processStdin(buf, &input_index);
+      if (input_index >= (sizeof(buf) - 1) || buf[input_index - 1] == '\r' || buf[input_index - 1] == '\n') {
+
+        buf[strlen(buf) - 1] = 0;
+        selection = strtol(buf, &end, 10) - 1;
+
+        memset(buf, '\0', sizeof buf);
+        input_index = 0;
+
+        // index validation
+        if (selection < -1 || selection >= player[clientpnum].stable.size ||
+            !canBeSacrificed(clientpnum, selection, class) ||
+            !checkClass(class, player[clientpnum].stable.unicorns[selection].class)) {
+          printf("Pick a valid card number to sacrifice: ");
+        }
+
+        else {
+          sendInt(selection, sockfd);
+          isvalid = 1;
+        }
+      }
+    }
+
+    if (pfd.revents & POLLIN) {
+      int signal;
+      receiveInt(&signal, sockfd);
+
+      if (signal == quit_loop) {
+        // all eligible players sent in their choice
+        break;
+      }
+      else if (signal == incoming_msg) {
+        int count = DESC_SIZE;
+        int rc;
+        int offset = 0;
+        char stdinbuf[DESC_SIZE] = { 0 };
+
+        while (count > 0) {
+          rc = recv(sockfd, stdinbuf + offset, count, 0);
+          if (rc >= 0) {
+            offset += rc;
+            count -= rc;
+          }
+        }
+        printf("\n%s\n", stdinbuf);
+        memset(stdinbuf, '\0', sizeof stdinbuf);
+      }
+    }
+
+    Sleep(20);
+  }
+
+  // that's all!
+  receiveGamePacket(sockfd);
+}
+
+void serverSacrifice(int orig_pnum, int target_pnum, int class) {
+
+  int ret2;
+  int selection;
+  int isvalid = 1;
+  int playersacrificeflag = 0;
+  int end_condition = 0;
+  char* end = NULL;
+  char buf[LINE_MAX] = { 0 };
+  int input_index = 0;
+
+  // check if the host even has any cards to sacrifice
+  for (int i = 0; i < player[0].stable.size; i++) {
+    if (canBeSacrificed(0, i, class)) {
+      isvalid = 0;
+      break;
+    }
+  }
+
+  if (target_pnum == -1) end_condition = (1 << current_players) - 1;
+  else end_condition = (1 << target_pnum);
+
+  if (target_pnum == -1 || target_pnum == 0) {
+    if (isvalid) {
+      playersacrificeflag = 1;
+    }
+    else {
+      printStable(0);
+      printf("Pick a valid card number to sacrifice: ");
+    }
+  }
+
+  WSAPOLLFD pfd[MAX_PLAYERS + 1] = { -1 };  // stdin + original sockfd + 7 additional players
+  pfd[0].fd = _fileno(stdin);
+  pfd[0].events = POLLIN | POLLOUT;
+  pfd[1].fd = sockfd;
+  pfd[1].events = POLLIN | POLLOUT;
+  for (int i = 0; i < current_players - 1; i++) {
+    pfd[i + 2].fd = clientsockfd[i];
+    pfd[i + 2].events = POLLIN | POLLOUT;
+  }
+
+  for (;;) {
+    ret2 = WSAPoll(pfd, MAX_PLAYERS + 1, NEIGHTIME);
+    if (ret2 == SOCKET_ERROR) {
+      fprintf(stderr, "ERROR: poll() failed. Error code : %d", WSAGetLastError());
+      closesocket(sockfd);
+      _getch();
+      exit(2);
+    }
+    if (ret2 == 0) {
+      // this shouldn't time out because the server socket pipe is looking out for POLLOUT
+      fprintf(stderr, "ERROR: client timed out. Error code : %d", WSAGetLastError());
+      closesocket(sockfd);
+      _getch();
+      exit(2);
+    }
+
+    // skip the neigh input selection if the player already made a valid choice
+    // or if the player played the last card in the cycle
+    if (WaitForSingleObject(GetStdHandle(STD_INPUT_HANDLE), 0) == WAIT_OBJECT_0 &&
+        (target_pnum == 0 || target_pnum == ANY) && !isvalid) {
+      processStdin(buf, &input_index);
+      if (input_index >= (sizeof(buf) - 1) || buf[input_index - 1] == '\r' || buf[input_index - 1] == '\n') {
+
+        buf[strlen(buf) - 1] = 0;
+        selection = strtol(buf, &end, 10) - 1;
+
+        memset(buf, '\0', sizeof buf);
+        input_index = 0;
+
+        // index validation
+        if (selection < -1 || selection >= player[0].stable.size ||
+            !canBeSacrificed(0, selection, class) ||
+            !checkClass(class, player[0].stable.unicorns[selection].class)) {
+          printf("Pick a valid card number to sacrifice: ");
+        }
+
+        else {
+          playersacrificeflag |= 1;
+          isvalid = 1;
+
+          char stdinbuf[DESC_SIZE] = { 0 };
+          sprintf_s(stdinbuf, sizeof stdinbuf, "\033[1;31m%s\033[0m sacrificed the card '\033[1;31m%s\033[0m'.",
+            player[0].username, player[0].stable.unicorns[selection].name);
+
+          sacrificeDestroyEffects(0, selection, player[0].stable.unicorns[selection].effect);
+
+          for (int j = 0; j < current_players - 1; j++) {
+            sendInt(incoming_msg, clientsockfd[j]);
+            send(clientsockfd[j], stdinbuf, sizeof stdinbuf, 0); // TODO: (maybe) check that it sends every byte
+          }
+        }
+      }
+    }
+
+    for (int i = 0; i < current_players - 1; i++) {
+      if (pfd[i + 2].revents & POLLIN) {
+        int cindex;
+        receiveInt(&cindex, clientsockfd[i]);
+
+        playersacrificeflag |= (1 << (i + 1));
+
+        if (cindex == -1) continue;
+
+        char stdinbuf[DESC_SIZE] = { 0 };
+        sprintf_s(stdinbuf, sizeof stdinbuf, "\033[1;31m%s\033[0m sacrificed the card '\033[1;31m%s\033[0m'.",
+          player[i + 1].username, player[i + 1].stable.unicorns[cindex].name);
+
+        sacrificeDestroyEffects(i + 1, cindex, player[i + 1].stable.unicorns[cindex].effect);
+        
+        for (int j = 0; j < current_players - 1; j++) {
+          if (j == i) continue;
+
+          sendInt(incoming_msg, clientsockfd[j]);
+          send(clientsockfd[j], stdinbuf, sizeof stdinbuf, 0); // TODO: (maybe) check that it sends every byte
+        }
+
+        printf("\n%s\n", stdinbuf);
+      }
+    }
+
+    if (playersacrificeflag == end_condition) {
+      for (int i = 0; i < current_players - 1; i++) {
+        sendInt(quit_loop, clientsockfd[i]);
+      }
+      break;
+    }
+
+    Sleep(20);
+  }
+
+  // that's all!
+  for (int i = 0; i < current_players - 1; i++) {
+    sendGamePacket(clientsockfd[i]);
+  }
 }

@@ -5,9 +5,6 @@
 #define MSGBUF 1024
 #define NEIGHTIME 4000 // 4000 ms
 
-extern char stdinbuf[MSGBUF];
-extern int bufindex;
-
 int sendInt(int num, int fd);
 int receiveInt(int* num, int fd);
 
@@ -23,8 +20,8 @@ int receiveUnicorns(struct Unicorn* corns, int size, int fd);
 int sendGamePacket(int fd);
 int receiveGamePacket(int fd);
 
-void receiveMsg(char* str, int fd);
+void receiveMsg(char* str, int count, int fd);
 
 // handles stdin events and filters everything but keydown presses
 // https://stackoverflow.com/questions/19955617/win32-read-from-stdin-with-timeout
-void processStdin(char* stdinbuf, int bufindex);
+void processStdin(char* stdinbuf, int* bufindex);

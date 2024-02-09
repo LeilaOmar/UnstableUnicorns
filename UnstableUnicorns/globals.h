@@ -82,7 +82,7 @@ struct Player {
   short filler; // padding for prev variable
 };
 
-enum NetworkEvents { player_join = 1, incoming_msg, start_game, end_turn, neigh_event, discard_event, sacrifice_event, enter_stable_event, end_game };
+enum NetworkEvents { player_join = 1, incoming_msg, start_game, end_turn, neigh_event, discard_event, sacrifice_event, enter_stable_event, quit_loop, end_game };
 
 SOCKET clientsockfd[MAX_PLAYERS - 1];
 SOCKET sockfd;

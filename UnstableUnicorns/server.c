@@ -2,6 +2,7 @@
 #include "gamemechanics.h"
 #include "gamephase.h"
 #include <conio.h>
+#include <windows.h>
 
 int newConnection(SOCKET *cfd) {
   struct sockaddr_in client_addr;
@@ -64,6 +65,8 @@ int serverMain(void) {
   // *****************************************************
 
   int ret, isvalid;
+  char stdinbuf[MSGBUF] = { 0 };
+  int bufindex = 0;
 
   // server should be in non-blocking mode
   unsigned long on = 1;
@@ -168,17 +171,17 @@ int serverMain(void) {
         else {
           receiveInt(&network_events, clientsockfd[i]);
           if (network_events == incoming_msg) {
-            receiveMsg(stdinbuf, clientsockfd[i]);
+            receiveMsg(stdinbuf, sizeof stdinbuf, clientsockfd[i]);
 
             // the pnum in receiveMsg is the same as the client socket number (i.e. clientsockfd[i])
             for (int j = 0; j < current_players - 1; j++) {
               if (j == i) continue;
               sendInt(network_events, clientsockfd[j]);
               sendInt(i + 1, clientsockfd[j]);
-              send(clientsockfd[j], stdinbuf, MSGBUF, 0);
+              send(clientsockfd[j], stdinbuf, sizeof stdinbuf, 0);
             }
 
-            memset(stdinbuf, '\0', MSGBUF);
+            memset(stdinbuf, '\0', sizeof stdinbuf);
           }
         }
       }
@@ -195,6 +198,8 @@ int serverMain(void) {
         closesocket(clientsockfd[i]);
       }
     }
+
+    Sleep(20);
   }
 
   // *****************************************************
@@ -345,7 +350,14 @@ int serverMain(void) {
               receiveInt(&cindex, clientsockfd[k]);
               receivePlayers(clientsockfd[k]); // this is for updating the current player's hand after the beginning stable effects and drawing
               serverNeigh(k + 1, &cindex);
-            } // if network_events == neigh_event
+            }
+            else if (network_events == sacrifice_event) {
+              int target_player;
+              int desired_class;
+              receiveInt(&target_player, clientsockfd[k]);
+              receiveInt(&desired_class, clientsockfd[k]);
+              serverSacrifice(k + 1, target_player, desired_class);
+            }
             else if (network_events == end_turn) {
               receiveGamePacket(clientsockfd[k]);
               eventloop = 1;
@@ -375,6 +387,8 @@ int serverMain(void) {
               break;
             }
           }
+
+          Sleep(20);
         } // network_events polling
 
       } while (!eventloop);
