@@ -1,6 +1,5 @@
 #include "networkevents.h"
 #include "gamemechanics.h"
-#include <conio.h>
 #include <windows.h>
 
 // was unable to properly link this with an external file ;~;
@@ -87,15 +86,11 @@ int clientNeigh(int clientpnum, int orig_pnum, int *orig_cindex) {
         ret2 = WSAPoll(&pfd, 1, NEIGHTIME);
         if (ret2 == SOCKET_ERROR) {
           fprintf(stderr, "ERROR: poll() failed. Error code : %d", WSAGetLastError());
-          closesocket(sockfd);
-          _getch();
           exit(2);
         }
         if (ret2 == 0) {
           // this shouldn't time out because the server socket pipe is looking out for POLLOUT
           fprintf(stderr, "ERROR: client timed out. Error code : %d", WSAGetLastError());
-          closesocket(sockfd);
-          _getch();
           exit(2);
         }
 
@@ -258,15 +253,11 @@ int serverNeigh(int orig_pnum, int *orig_cindex) {
       ret2 = WSAPoll(pfd, MAX_PLAYERS + 1, NEIGHTIME);
       if (ret2 == SOCKET_ERROR) {
         fprintf(stderr, "ERROR: poll() failed. Error code : %d", WSAGetLastError());
-        closesocket(sockfd);
-        _getch();
         exit(2);
       }
       if (ret2 == 0) {
         // this shouldn't time out because the client socket pipes are looking out for POLLOUT
         fprintf(stderr, "ERROR: client timed out. Error code : %d", WSAGetLastError());
-        closesocket(sockfd);
-        _getch();
         exit(2);
       }
 
@@ -429,15 +420,11 @@ void clientSacrifice(int clientpnum, int target_pnum, int cType) {
     ret2 = WSAPoll(&pfd, 1, NEIGHTIME);
     if (ret2 == SOCKET_ERROR) {
       fprintf(stderr, "ERROR: poll() failed. Error code : %d", WSAGetLastError());
-      closesocket(sockfd);
-      _getch();
       exit(2);
     }
     if (ret2 == 0) {
       // this shouldn't time out because the server socket pipe is looking out for POLLOUT
       fprintf(stderr, "ERROR: client timed out. Error code : %d", WSAGetLastError());
-      closesocket(sockfd);
-      _getch();
       exit(2);
     }
 
@@ -501,7 +488,7 @@ void clientSacrifice(int clientpnum, int target_pnum, int cType) {
   receiveGamePacket(sockfd);
 }
 
-void serverSacrifice(int target_pnum, int cType) {
+void serverSacrifice(int orig_pnum, int target_pnum, int cType) {
   int ret2;
   int selection;
   int isvalid = 1;
@@ -510,6 +497,14 @@ void serverSacrifice(int target_pnum, int cType) {
   char* end = NULL;
   char buf[LINE_MAX] = { 0 };
   int input_index = 0;
+
+  // send sacrifice event to all other players
+  for (int i = 0; i < current_players - 1; i++) {
+    if (orig_pnum == (i + 1)) continue;
+
+    sendInt(sacrifice_event, clientsockfd[i]);
+    sendCardEffectPacket(target_pnum, cType, clientsockfd[i]);
+  }
 
   if (target_pnum == ANY) end_condition = (1 << current_players) - 1;
   else end_condition = (1 << target_pnum);
@@ -546,15 +541,11 @@ void serverSacrifice(int target_pnum, int cType) {
     ret2 = WSAPoll(pfd, MAX_PLAYERS + 1, NEIGHTIME);
     if (ret2 == SOCKET_ERROR) {
       fprintf(stderr, "ERROR: poll() failed. Error code : %d", WSAGetLastError());
-      closesocket(sockfd);
-      _getch();
       exit(2);
     }
     if (ret2 == 0) {
       // this shouldn't time out because the server socket pipe is looking out for POLLOUT
       fprintf(stderr, "ERROR: client timed out. Error code : %d", WSAGetLastError());
-      closesocket(sockfd);
-      _getch();
       exit(2);
     }
 
@@ -666,15 +657,11 @@ void clientDiscard(int clientpnum, int target_pnum, int cType) {
     ret2 = WSAPoll(&pfd, 1, NEIGHTIME);
     if (ret2 == SOCKET_ERROR) {
       fprintf(stderr, "ERROR: poll() failed. Error code : %d", WSAGetLastError());
-      closesocket(sockfd);
-      _getch();
       exit(2);
     }
     if (ret2 == 0) {
       // this shouldn't time out because the server socket pipe is looking out for POLLOUT
       fprintf(stderr, "ERROR: client timed out. Error code : %d", WSAGetLastError());
-      closesocket(sockfd);
-      _getch();
       exit(2);
     }
 
@@ -737,7 +724,7 @@ void clientDiscard(int clientpnum, int target_pnum, int cType) {
   receiveGamePacket(sockfd);
 }
 
-void serverDiscard(int target_pnum, int cType) {
+void serverDiscard(int orig_pnum, int target_pnum, int cType) {
   int ret2;
   int selection;
   int isvalid = 1;
@@ -746,6 +733,14 @@ void serverDiscard(int target_pnum, int cType) {
   char* end = NULL;
   char buf[LINE_MAX] = { 0 };
   int input_index = 0;
+
+  // send discard event to all other players
+  for (int i = 0; i < current_players - 1; i++) {
+    if (orig_pnum == (i + 1)) continue;
+
+    sendInt(discard_event, clientsockfd[i]);
+    sendCardEffectPacket(target_pnum, cType, clientsockfd[i]);
+  }
 
   if (target_pnum == ANY) end_condition = (1 << current_players) - 1;
   else end_condition = (1 << target_pnum);
@@ -775,15 +770,11 @@ void serverDiscard(int target_pnum, int cType) {
     ret2 = WSAPoll(pfd, MAX_PLAYERS + 1, NEIGHTIME);
     if (ret2 == SOCKET_ERROR) {
       fprintf(stderr, "ERROR: poll() failed. Error code : %d", WSAGetLastError());
-      closesocket(sockfd);
-      _getch();
       exit(2);
     }
     if (ret2 == 0) {
       // this shouldn't time out because the server socket pipe is looking out for POLLOUT
       fprintf(stderr, "ERROR: client timed out. Error code : %d", WSAGetLastError());
-      closesocket(sockfd);
-      _getch();
       exit(2);
     }
 
@@ -866,4 +857,198 @@ void serverDiscard(int target_pnum, int cType) {
   for (int i = 0; i < current_players - 1; i++) {
     sendGamePacket(clientsockfd[i]);
   }
+}
+
+int clientEnterStable(int clientpnum) {
+  int ret2;
+  int eventloop = 0;
+  int didWin = 0;
+  int winningpnum = 0;
+
+  WSAPOLLFD pfd;
+  pfd.fd = sockfd;
+  pfd.events = POLLIN | POLLOUT;
+
+  do {
+    ret2 = WSAPoll(&pfd, 1, -1);
+    if (ret2 == SOCKET_ERROR) {
+      fprintf(stderr, "ERROR: poll() failed. Error code : %d", WSAGetLastError());
+      exit(2);
+    }
+    else if (ret2 == 0) {
+      fprintf(stderr, "ERROR: server timed out. Error code : %d", WSAGetLastError());
+      exit(2);
+    }
+
+    if (pfd.revents & POLLIN) {
+      receiveInt(&network_events, sockfd);
+
+      if (network_events == discard_event) {
+        int target_player;
+        int desired_type;
+        receiveCardEffectPacket(&target_player, &desired_type, sockfd);
+
+        clientDiscard(clientpnum, target_player, desired_type);
+      }
+      else if (network_events == sacrifice_event) {
+        int target_player;
+        int desired_type;
+        receiveCardEffectPacket(&target_player, &desired_type, sockfd);
+
+        clientSacrifice(clientpnum, target_player, desired_type);
+      }
+      else if (network_events == enter_stable_event) {
+        struct Unicorn corn;
+        int orig_pnum;
+        receiveEnterStablePacket(&corn, &orig_pnum, sockfd);
+
+        printf("\n\033[1;31m%s\033[0m sent you the card \033[1;31m'%s'\033[0m.\n", player[orig_pnum].username, corn.name);
+        addStable(clientpnum, corn);
+
+        if (!checkWin(clientpnum)) {
+          sendInt(quit_loop, sockfd);
+          sendGamePacket(sockfd);
+        }
+        else {
+          eventloop = 1;
+          didWin = 1;
+          winningpnum = clientpnum;
+          sendInt(end_game, sockfd);
+          sendGamePacket(sockfd);
+          break;
+        }
+      }
+      else if (network_events == quit_loop) {
+        receiveGamePacket(sockfd);
+        eventloop = 1;
+        break;
+      }
+      else if (network_events == end_game) {
+        receiveInt(&winningpnum, sockfd);
+        receiveGamePacket(sockfd);
+        eventloop = 1;
+        didWin = 1;
+        break;
+      }
+    }
+
+    Sleep(20);
+
+  } while (!eventloop);
+
+  return didWin;
+}
+
+// TODO: write a proper endGame function...
+// TODO: check if the target player wins the game inadvertedly through
+// an enter stable effect sacrificing masquerade cards
+int serverEnterStable(int orig_pnum, int target_pnum) {
+  // can always assume that target_pnum is a separate player from the host (or else this function wouldn't be called)
+  // orig_pnum can either be the host or a player that's different from target_pnum
+  int ret2;
+  int eventloop = 0;
+  int didWin = 0;
+  int winningpnum = 0;
+
+  WSAPOLLFD pfd[2] = { -1 };  // original sockfd + relevant client
+  pfd[0].fd = sockfd;
+  pfd[0].events = POLLIN | POLLOUT;
+  pfd[1].fd = clientsockfd[target_pnum - 1];
+  pfd[1].events = POLLIN | POLLOUT;
+
+  do {
+    ret2 = WSAPoll(pfd, 2, -1);
+    if (ret2 == SOCKET_ERROR) {
+      fprintf(stderr, "ERROR: poll() failed. Error code : %d", WSAGetLastError());
+      closesocket(sockfd);
+      return 2;
+    }
+    else if (ret2 == 0) {
+      fprintf(stderr, "ERROR: server timed out. Error code : %d", WSAGetLastError());
+      closesocket(sockfd);
+      return 2;
+    }
+
+    if (pfd[1].revents & POLLIN) {
+      // target_pnum becomes the new "orig_pnum" because that player is
+      // the catalyst that starts the next nested loop
+      receiveInt(&network_events, clientsockfd[target_pnum - 1]);
+
+      if (network_events == discard_event) {
+        int target_player;
+        int desired_type;
+        receiveCardEffectPacket(&target_player, &desired_type, clientsockfd[target_pnum - 1]);
+        serverDiscard(target_pnum, target_player, desired_type);
+      }
+      else if (network_events == sacrifice_event) {
+        int target_player;
+        int desired_type;
+        receiveCardEffectPacket(&target_player, &desired_type, clientsockfd[target_pnum - 1]);
+        serverSacrifice(target_pnum, target_player, desired_type);
+      }
+      else if (network_events == enter_stable_event) {
+        struct Unicorn corn;
+        int pindex;
+        receiveEnterStablePacket(&corn, &pindex, clientsockfd[target_pnum - 1]);
+
+        if (pindex != 0) {
+          sendInt(enter_stable_event, clientsockfd[pindex - 1]);
+          // target_pnum represents the original player
+          sendEnterStablePacket(corn, target_pnum, clientsockfd[pindex - 1]);
+          serverEnterStable(target_pnum, pindex);
+        }
+        else {
+          addStable(0, corn);
+
+          if (!checkWin(0)) {
+            sendInt(quit_loop, clientsockfd[target_pnum - 1]);
+            sendGamePacket(clientsockfd[target_pnum - 1]);
+          }
+          else {
+            eventloop = 1;
+            didWin = 1;
+            winningpnum = 0;
+
+            for (int i = 0; i < current_players - 1; i++) {
+              sendInt(end_game, clientsockfd[i]);
+              sendInt(winningpnum, clientsockfd[i]);
+              sendGamePacket(clientsockfd[i]);
+            }
+            break;
+          }
+        }
+      }
+      else if (network_events == quit_loop) {
+        // this looping nightmare is over!
+        receiveGamePacket(clientsockfd[target_pnum - 1]);
+        eventloop = 1;
+
+        if (orig_pnum != 0) {
+          sendInt(quit_loop, clientsockfd[orig_pnum - 1]);
+          sendGamePacket(clientsockfd[orig_pnum - 1]);
+        }
+        break;
+      }
+      else if (network_events == end_game) {
+        receiveGamePacket(clientsockfd[target_pnum - 1]);
+        eventloop = 1;
+        didWin = 1;
+        winningpnum = target_pnum;
+
+        for (int i = 0; i < current_players - 1; i++) {
+          if ((target_pnum - 1) == i) continue;
+
+          sendInt(end_game, clientsockfd[i]);
+          sendInt(winningpnum, clientsockfd[i]);
+          sendGamePacket(clientsockfd[i]);
+        }
+        break;
+      }
+    }
+
+    Sleep(20);
+
+  } while (!eventloop);
+
+  return didWin;
 }

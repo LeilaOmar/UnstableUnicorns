@@ -89,13 +89,11 @@ int clientMain(void) {
     ret = WSAPoll(pfd, 2, -1);
     if (ret == SOCKET_ERROR) {
       fprintf(stderr, "ERROR: poll() failed. Error code : %d", WSAGetLastError());
-      closesocket(sockfd);
-      return 2;
+      exit(2);
     }
     else if (ret == 0) {
       fprintf(stderr, "ERROR: server timed out. Error code : %d", WSAGetLastError());
-      closesocket(sockfd);
-      return 2;
+      exit(2);
     }
 
 
@@ -226,13 +224,11 @@ int clientMain(void) {
         ret = WSAPoll(pfd, 2, -1);
         if (ret == SOCKET_ERROR) {
           fprintf(stderr, "ERROR: poll() failed. Error code : %d", WSAGetLastError());
-          closesocket(sockfd);
-          return 2;
+          exit(2);
         }
         else if (ret == 0) {
           fprintf(stderr, "ERROR: server timed out. Error code : %d", WSAGetLastError());
-          closesocket(sockfd);
-          return 2;
+          exit(2);
         }
 
         if (pfd[1].revents & POLLIN) {
@@ -248,19 +244,36 @@ int clientMain(void) {
           else if (network_events == discard_event) {
             int target_player;
             int desired_type;
-            receiveInt(&target_player, sockfd);
-            receiveInt(&desired_type, sockfd);
-            receivePlayers(sockfd);
+            receiveCardEffectPacket(&target_player, &desired_type, sockfd);
 
             clientDiscard(clientpnum, target_player, desired_type);
           }
           else if (network_events == sacrifice_event) {
             int target_player;
             int desired_type;
-            receiveInt(&target_player, sockfd);
-            receiveInt(&desired_type, sockfd);
+            receiveCardEffectPacket(&target_player, &desired_type, sockfd);
 
             clientSacrifice(clientpnum, target_player, desired_type);
+          }
+          else if (network_events == enter_stable_event) {
+            struct Unicorn corn;
+            int orig_pnum;
+            receiveEnterStablePacket(&corn, &orig_pnum, sockfd);
+
+            printf("\n\033[1;31m%s\033[0m sent you the card \033[1;31m'%s'\033[0m.\n", player[orig_pnum].username, corn.name);
+            addStable(clientpnum, corn);
+
+            if (!checkWin(clientpnum)) {
+              sendInt(quit_loop, sockfd);
+              sendGamePacket(sockfd);
+            }
+            else {
+              didWin = 1;
+              winningpnum = clientpnum;
+              sendInt(end_game, sockfd);
+              sendGamePacket(sockfd);
+              break;
+            }
           }
           else if (network_events == end_turn) {
             receiveGamePacket(sockfd);
@@ -319,7 +332,6 @@ int clientMain(void) {
   rainbow(winmsg);
 
   printf("\nPress any key to close the window...");
-  _getch();
 
 	return 0;
 }

@@ -13,7 +13,10 @@ int clientNeigh(int clientpnum, int orig_pnum, int *orig_cindex);
 int serverNeigh(int orig_pnum, int *orig_cindex);
 
 void clientDiscard(int clientpnum, int target_pnum, int cType);
-void serverDiscard(int target_pnum, int cType);
+void serverDiscard(int orig_pnum, int target_pnum, int cType);
 
 void clientSacrifice(int clientpnum, int target_pnum, int cType);
-void serverSacrifice(int target_pnum, int cType);
+void serverSacrifice(int orig_pnum, int target_pnum, int cType);
+
+int clientEnterStable(int clientpnum);
+int serverEnterStable(int orig_pnum, int target_pnum);

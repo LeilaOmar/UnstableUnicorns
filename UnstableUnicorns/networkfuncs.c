@@ -550,6 +550,38 @@ int receiveGamePacket(int fd) {
   return 0;
 }
 
+int sendCardEffectPacket(int target_pnum, int desired_type, int fd) {
+  sendInt(target_pnum, fd);
+  sendInt(desired_type, fd);
+  sendGamePacket(fd);
+
+  return 0;
+}
+
+int receiveCardEffectPacket(int* target_pnum, int* desired_type, int fd) {
+  receiveInt(target_pnum, fd);
+  receiveInt(desired_type, fd);
+  receiveGamePacket(fd);
+
+  return 0;
+}
+
+int sendEnterStablePacket(struct Unicorn corn, int pnum, int fd) {
+  sendInt(pnum, fd);
+  sendUnicorns(&corn, 1, fd);
+  sendGamePacket(fd);
+
+  return 0;
+}
+
+int receiveEnterStablePacket(struct Unicorn* corn, int* pnum, int fd) {
+  receiveInt(pnum, fd);
+  receiveUnicorns(corn, 1, fd);
+  receiveGamePacket(fd);
+
+  return 0;
+}
+
 void receiveMsg(char* str, int count, int fd) {
   int pnum;
   int offset = 0;

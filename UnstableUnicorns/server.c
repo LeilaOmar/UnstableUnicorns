@@ -85,13 +85,11 @@ int serverMain(void) {
     ret = WSAPoll(pfd, MAX_PLAYERS + 1, -1);
     if (ret == SOCKET_ERROR) {
       printf( "ERROR: poll() failed. Error code : %d", WSAGetLastError());
-      closesocket(sockfd);
-      return 2;
+      exit(2);
     }
     else if (ret == 0) {
       printf("ERROR: server timed out. Error code : %d", WSAGetLastError());
-      closesocket(sockfd);
-      return 2;
+      exit(2);
     }
 
     // incoming connection
@@ -107,8 +105,7 @@ int serverMain(void) {
 
     if (pfd[1].revents & (POLLHUP | POLLERR)) {
       puts("ERROR: Server received POLLHUP or POLLERR signal");
-      closesocket(sockfd);
-      return 2;
+      exit(2);
     }
 
     // incoming signal from stdin (through handle, not pipe)
@@ -189,15 +186,15 @@ int serverMain(void) {
       }
 
       if (pfd[i + 2].revents & (POLLHUP | POLLERR)) {
-        puts("ERROR: Server received POLLHUP or POLLERR signal");
         printf("Player %s disconnected :(\n", player[i + 1].username);
 
-        for (int j = i; j < current_players - 2; j++) {
-          clientsockfd[j] = clientsockfd[j + 1];
-        }
+        closesocket(clientsockfd[i]);
         current_players--;
 
-        closesocket(clientsockfd[i]);
+        for (int j = i; j < current_players - 1; j++) {
+          clientsockfd[j] = clientsockfd[j + 1];
+        }
+
       }
     }
 
@@ -333,13 +330,11 @@ int serverMain(void) {
         ret = WSAPoll(pfd, MAX_PLAYERS + 1, -1);
         if (ret == SOCKET_ERROR) {
           fprintf(stderr, "ERROR: poll() failed. Error code : %d", WSAGetLastError());
-          closesocket(sockfd);
-          return 2;
+          exit(2);
         }
         else if (ret == 0) {
           fprintf(stderr, "ERROR: server timed out. Error code : %d", WSAGetLastError());
-          closesocket(sockfd);
-          return 2;
+          exit(2);
         }
 
         for (int k = 0; k < current_players - 1; k++) {
@@ -356,17 +351,47 @@ int serverMain(void) {
             else if (network_events == discard_event) {
               int target_player;
               int desired_type;
-              receiveInt(&target_player, clientsockfd[k]);
-              receiveInt(&desired_type, clientsockfd[k]);
-              receivePlayers(clientsockfd[k]);
-              serverDiscard(target_player, desired_type);
+              receiveCardEffectPacket(&target_player, &desired_type, clientsockfd[k]);
+              serverDiscard(k + 1, target_player, desired_type);
             }
             else if (network_events == sacrifice_event) {
               int target_player;
               int desired_type;
-              receiveInt(&target_player, clientsockfd[k]);
-              receiveInt(&desired_type, clientsockfd[k]);
-              serverSacrifice(target_player, desired_type);
+              receiveCardEffectPacket(&target_player, &desired_type, clientsockfd[k]);
+              serverSacrifice(k + 1, target_player, desired_type);
+            }
+            else if (network_events == enter_stable_event) {
+              struct Unicorn corn;
+              int target_player;
+              receiveEnterStablePacket(&corn, &target_player, clientsockfd[k]);
+              
+              if (target_player != 0) {
+                sendInt(enter_stable_event, clientsockfd[target_player - 1]);
+                // k + 1 represents the original player
+                sendEnterStablePacket(corn, k + 1, clientsockfd[target_player - 1]);
+                serverEnterStable(k + 1, target_player);
+              }
+              else {
+                printf("\n\033[1;31m%s\033[0m sent you the card \033[1;31m'%s'\033[0m.\n", player[k + 1].username, corn.name);
+                addStable(0, corn);
+
+                if (!checkWin(0)) {
+                  sendInt(quit_loop, clientsockfd[k]);
+                  sendGamePacket(clientsockfd[k]);
+                }
+                else {
+                  eventloop = 1;
+                  didWin = 1;
+                  winningpnum = 0;
+
+                  for (int i = 0; i < current_players - 1; i++) {
+                    sendInt(end_game, clientsockfd[i]);
+                    sendInt(winningpnum, clientsockfd[i]);
+                    sendGamePacket(clientsockfd[i]);
+                  }
+                  break;
+                }
+              }
             }
             else if (network_events == end_turn) {
               receiveGamePacket(clientsockfd[k]);
@@ -385,13 +410,13 @@ int serverMain(void) {
               receiveGamePacket(clientsockfd[k]);
               eventloop = 1;
               didWin = 1;
-              winningpnum = counter;
+              winningpnum = k + 1;
 
               for (int i = 0; i < current_players - 1; i++) {
                 if (k == i) continue;
 
                 sendInt(end_game, clientsockfd[i]);
-                sendInt(k + 1, clientsockfd[i]);
+                sendInt(winningpnum, clientsockfd[i]);
                 sendGamePacket(clientsockfd[i]);
               }
               break;
@@ -445,7 +470,6 @@ int serverMain(void) {
   rainbow(winmsg);
 
   printf("\nPress any key to close the window...");
-  _getch();
 
   return 0;
 }
