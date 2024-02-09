@@ -4,31 +4,28 @@
 int llamacorn_basic_check() {
 	int num_fails = 0;
 	struct Unicorn llamacorn_tmp = basedeck[46];
+	struct Unicorn basic_tmp = basedeck[13];
 
-	current_players = 3;
+	current_players = 2;
+	player[0].hand.cards[player[0].hand.num_cards++] = basic_tmp;
+
+	assert(player[0].hand.num_cards == 1);
+	assert(player[1].hand.num_cards == 0);
 	addStable(0, llamacorn_tmp);
-	draw(0, 1);
-	draw(2, 1);
 
-	int nhand0 = player[0].hand.num_cards;
-	int nhand1 = player[1].hand.num_cards;
-	int nhand2 = player[2].hand.num_cards;
-
-	enterStableEffects(0, player[0].stable.unicorns[0].effect);
-
-	if (player[0].hand.num_cards != (nhand0 - 1) ||
-			player[1].hand.num_cards != nhand1 || 
-			player[2].hand.num_cards != (nhand2 - 1)) {
+	if (player[0].hand.num_cards != 0 ||
+			player[1].hand.num_cards != 0) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    sanity test: hand size failed\n");
 		reset_col();
 	}
 
-	// only 2 cards should have been discarded because player[1] did not have any
+	// only 1 card should have been discarded because player[1] did not have any
 	// in their hand to discard, and EVERY player including player[0] must discard
 	// a card if they have one
-	if (discardpile.size != 2) {
+	if (discardpile.size != 1 ||
+			strcmp(discardpile.cards[0].name, basic_tmp.name) != 0) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    sanity test: discard pile size failed\n");
@@ -36,7 +33,6 @@ int llamacorn_basic_check() {
 	}
 
 	reset_players();
-	reset_deck();
 	reset_discard();
 	return num_fails;
 }
@@ -52,7 +48,7 @@ int llamacorn_tests() {
 
 	// file input stream setup
 	FILE* fp;
-	fopen_s(&fp, "Tests/Input/line_1_1.txt", "r");
+	fopen_s(&fp, "Tests/Input/line_1.txt", "r");
 	if (fp == NULL) {
 		magenta();
 		fprintf(stderr, "    file input failed :(");

@@ -8,22 +8,25 @@ int back_kick_basic_check() {
 	struct Unicorn barbed_tmp = basedeck[106];
 	struct Unicorn basic_tmp = basedeck[13];
 	struct Unicorn basic_tmp2 = basedeck[17];
+	struct Unicorn basic_tmp3 = basedeck[20];
 
 	current_players = 2;
 	addStable(1, rainbow_tmp);
 	addStable(1, basic_tmp);
 	addStable(1, barbed_tmp);
 	player[0].hand.cards[player[0].hand.num_cards++] = back_kick_tmp;
+	player[0].hand.cards[player[0].hand.num_cards++] = basic_tmp3;
 	player[1].hand.cards[player[1].hand.num_cards++] = basic_tmp2;
 
 	assert(discardpile.size == 0);
-	assert(player[0].hand.num_cards == 1);
+	assert(player[0].hand.num_cards == 2);
 	assert(player[1].hand.num_cards == 1);
 	assert(player[1].stable.size == 3);
 	assert(player[1].stable.num_unicorns == 2);
 	conditionalEffects(0, back_kick_tmp, 0, 0);
 
-	if (player[0].hand.num_cards != 0) {
+	if (player[0].hand.num_cards != 1 ||
+			strcmp(player[0].hand.cards[0].name, basic_tmp3.name) != 0) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    sanity test: player[0] hand size failed\n");
@@ -47,7 +50,7 @@ int back_kick_basic_check() {
 
 	if (discardpile.size != 2 ||
 			strcmp(discardpile.cards[0].name, back_kick_tmp.name) != 0 ||
-			strcmp(discardpile.cards[1].name, basic_tmp.name) != 0) {
+			strcmp(discardpile.cards[1].name, basic_tmp2.name) != 0) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    sanity test: discard verification failed\n");
@@ -59,7 +62,8 @@ int back_kick_basic_check() {
 	return num_fails;
 }
 
-// check to make sure toggles are applied
+// check to make sure toggles are applied;
+// this also checks if it works when a player's hand was empty
 int back_kick_special_check() {
 	int num_fails = 0;
 	struct Unicorn back_kick_tmp = basedeck[70];
@@ -70,7 +74,10 @@ int back_kick_special_check() {
 	addStable(1, yay_tmp);
 	toggleFlags(1, yay_effect);
 
+	assert(discardpile.size == 0);
 	assert(player[0].hand.num_cards == 1);
+	assert(player[1].hand.num_cards == 0);
+	assert(player[1].stable.size == 1);
 	assert((player[1].flags & yay) == yay);
 	conditionalEffects(0, back_kick_tmp, 0, 0);
 
@@ -82,48 +89,19 @@ int back_kick_special_check() {
 		reset_col();
 	}
 
-	reset_players();
-	reset_discard();
-	return num_fails;
-}
-
-// no cards in hand before the effect takes place
-int back_kick_empty_hand_check() {
-	int num_fails = 0;
-	struct Unicorn back_kick_tmp = basedeck[70];
-	struct Unicorn basic_tmp = basedeck[13];
-
-	current_players = 2;
-	addStable(1, basic_tmp);
-	player[0].hand.cards[player[0].hand.num_cards++] = back_kick_tmp;
-
-	assert(discardpile.size == 0);
-	assert(player[0].hand.num_cards == 1);
-	assert(player[1].hand.num_cards == 0);
-	assert(player[1].stable.size == 1);
-	conditionalEffects(0, back_kick_tmp, 0, 0);
-
-
-	if (player[1].hand.num_cards != 0) {
-		num_fails++;
-		red();
-		fprintf(stderr, "    empty hand test: player[1] hand size failed\n");
-		reset_col();
-	}
-
 	if (player[1].stable.size != 0 || player[1].stable.num_unicorns != 0) {
 		num_fails++;
 		red();
-		fprintf(stderr, "    empty hand test: stable size failed\n");
+		fprintf(stderr, "    toggle test: stable size failed\n");
 		reset_col();
 	}
 
 	if (discardpile.size != 2 ||
-		strcmp(discardpile.cards[0].name, back_kick_tmp.name) != 0 ||
-		strcmp(discardpile.cards[1].name, basic_tmp.name) != 0) {
+			strcmp(discardpile.cards[0].name, back_kick_tmp.name) != 0 ||
+			strcmp(discardpile.cards[1].name, yay_tmp.name) != 0) {
 		num_fails++;
 		red();
-		fprintf(stderr, "    empty hand test: discard verification failed\n");
+		fprintf(stderr, "    toggle test: discard verification failed\n");
 		reset_col();
 	}
 
@@ -195,7 +173,6 @@ int back_kick_tests() {
 
 	num_fails += back_kick_basic_check();
 	num_fails += back_kick_special_check();
-	num_fails += back_kick_empty_hand_check();
 	num_fails += back_kick_empty_stable_check();
 
 	fclose(fp);

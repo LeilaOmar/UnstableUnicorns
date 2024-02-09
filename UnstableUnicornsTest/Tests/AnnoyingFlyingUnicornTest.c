@@ -4,20 +4,29 @@
 int annoying_basic_check() {
 	int num_fails = 0;
 	struct Unicorn basic_tmp = basedeck[13];
+	struct Unicorn basic_tmp2 = basedeck[17];
 	struct Unicorn annoying_tmp = basedeck[53];
 
 	current_players = 2;
-	addStable(0, annoying_tmp);
+	player[0].hand.cards[player[0].hand.num_cards++] = basic_tmp2;
 	player[1].hand.cards[player[1].hand.num_cards++] = basic_tmp;
 
-	assert(player[0].hand.num_cards == 0);
+	assert(player[0].hand.num_cards == 1);
+	assert(player[1].hand.num_cards == 1);
+	assert(discardpile.size == 0);
+	addStable(0, annoying_tmp);
 
-	enterStableEffects(0, annoying_tmp.effect);
-
-	if (player[1].hand.num_cards != 0) {
+	if (player[0].hand.num_cards != 1 || player[1].hand.num_cards != 0) {
 		num_fails++;
 		red();
-		fprintf(stderr, "    sanity test: discard failed\n");
+		fprintf(stderr, "    sanity test: hand size failed\n");
+		reset_col();
+	}
+	if (discardpile.size != 1 ||
+			strcmp(discardpile.cards[0].name, basic_tmp.name) != 0) {
+		num_fails++;
+		red();
+		fprintf(stderr, "    sanity test: discard size failed\n");
 		reset_col();
 	}
 	reset_players();
@@ -29,7 +38,6 @@ int annoying_basic_check() {
 	player[1].hand.num_cards = 0;
 
 	addStable(0, annoying_tmp);
-	enterStableEffects(0, annoying_tmp.effect);
 
 	if (player[1].hand.num_cards != 0 || discardpile.size != 0) {
 		num_fails++;
@@ -40,13 +48,14 @@ int annoying_basic_check() {
 	reset_players();
 
 	// check the sacrifice/destroy effects
-	addStable(0, annoying_tmp);
+
+	player[0].stable.unicorns[0] = annoying_tmp;
 
 	assert(player[0].hand.num_cards == 0);
 	sacrificeDestroyEffects(0, 0, annoying_tmp.effect);
 
 	if (player[0].hand.num_cards != 1 ||
-		strcmp(player[0].hand.cards[0].name, annoying_tmp.name) != 0) {
+			strcmp(player[0].hand.cards[0].name, annoying_tmp.name) != 0) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    sanity test: hand return failed\n");

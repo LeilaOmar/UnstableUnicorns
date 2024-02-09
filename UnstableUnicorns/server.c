@@ -353,12 +353,20 @@ int serverMain(void) {
               receivePlayers(clientsockfd[k]); // this is for updating the current player's hand after the beginning stable effects and drawing
               serverNeigh(k + 1, &cindex);
             }
+            else if (network_events == discard_event) {
+              int target_player;
+              int desired_class;
+              receiveInt(&target_player, clientsockfd[k]);
+              receiveInt(&desired_class, clientsockfd[k]);
+              receivePlayers(clientsockfd[k]);
+              serverDiscard(target_player, desired_class);
+            }
             else if (network_events == sacrifice_event) {
               int target_player;
               int desired_class;
               receiveInt(&target_player, clientsockfd[k]);
               receiveInt(&desired_class, clientsockfd[k]);
-              serverSacrifice(k + 1, target_player, desired_class);
+              serverSacrifice(target_player, desired_class);
             }
             else if (network_events == end_turn) {
               receiveGamePacket(clientsockfd[k]);
