@@ -22,6 +22,9 @@ void printStableGrid(void); // prints stables of all players in two columns
 // return 1 = TRUE, card match!
 int checkType(int desired_type, int card_type);
 
+// returns 1 if the player satisfies the win condition
+int checkWin(int pnum);
+
 // randomize deck between specific indices
 void shuffleDeck(struct Deck* d);
 
