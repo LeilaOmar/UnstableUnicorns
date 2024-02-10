@@ -42,9 +42,10 @@ int greedy_basic_check() {
 int greedy_flying_unicorn_tests() {
 	int num_fails = 0;
 
-	rainbow_error("\nStarting Greedy Flying Unicorn tests...\n");
+	if (!isclient) {
+		rainbow_error("\nStarting Greedy Flying Unicorn tests...\n");
 
-	num_fails += greedy_basic_check();
-
+		num_fails += greedy_basic_check();
+	}
 	return num_fails;
 }

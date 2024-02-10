@@ -106,24 +106,26 @@ int pandamonium_rainbow_mane_check() {
 int pandamonium_tests() {
 	int num_fails = 0;
 
-	rainbow_error("\nStarting Pandamonium tests...\n");
+	if (!isclient) {
+		rainbow_error("\nStarting Pandamonium tests...\n");
 
-	// file input stream setup
-	FILE* fp;
-	fopen_s(&fp, "Tests/Input/line_1.txt", "r");
-	if (fp == NULL) {
-		magenta();
-		fprintf(stderr, "    file input failed :(");
-		reset_col();
-		return 1;
+		// file input stream setup
+		FILE* fp;
+		fopen_s(&fp, "Tests/Input/line_1.txt", "r");
+		if (fp == NULL) {
+			magenta();
+			fprintf(stderr, "    file input failed :(");
+			reset_col();
+			return 1;
+		}
+		fpinput = fp;
+
+		// already tested it w/ barbed wire, rainbow aura, black knight unicorn, extremely destructive unicorn, sadistic ritual, tiny stable
+		num_fails += pandamonium_win_check();
+		num_fails += pandamonium_destroy_check();
+		num_fails += pandamonium_rainbow_mane_check(); // just making sure that cards are only pandas when inside the stable, not in the hand
+
+		fclose(fp);
 	}
-	fpinput = fp;
-
-	// already tested it w/ barbed wire, rainbow aura, black knight unicorn, extremely destructive unicorn, sadistic ritual, tiny stable
-	num_fails += pandamonium_win_check();
-	num_fails += pandamonium_destroy_check();
-	num_fails += pandamonium_rainbow_mane_check(); // just making sure that cards are only pandas when inside the stable, not in the hand
-
-	fclose(fp);
 	return num_fails;
 }

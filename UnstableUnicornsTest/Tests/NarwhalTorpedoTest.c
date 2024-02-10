@@ -93,10 +93,11 @@ int torpedo_empty_check() {
 int narwhal_torpedo_tests() {
 	int num_fails = 0;
 
-	rainbow_error("\nStarting Narwhal Torpedo tests...\n");
+	if (!isclient) {
+		rainbow_error("\nStarting Narwhal Torpedo tests...\n");
 
-	num_fails += torpedo_basic_check();
-	num_fails += torpedo_empty_check();
-
+		num_fails += torpedo_basic_check();
+		num_fails += torpedo_empty_check();
+	}
 	return num_fails;
 }

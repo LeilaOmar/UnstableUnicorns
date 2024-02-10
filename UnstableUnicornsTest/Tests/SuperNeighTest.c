@@ -1,4 +1,5 @@
 #include "InstantTests.h"
+#include "networkevents.h"
 
 // odd number of neighs, the card goes to the discard pile
 int super_neigh_odd_check() {
@@ -129,21 +130,43 @@ int super_neigh_tests() {
 	int num_fails = 0;
 
 	rainbow_error("\nStarting Super Neigh tests...\n");
-
-	// file input stream setup
 	FILE* fp;
-	fopen_s(&fp, "Tests/Input/superneigh.txt", "r");
-	if (fp == NULL) {
-		magenta();
-		fprintf(stderr, "    file input failed :(");
-		reset_col();
-		return 1;
-	}
-	fpinput = fp;
 
-	// already tested with yay, slowdown, and ginormous unicorn
-	num_fails += super_neigh_odd_check();
-	num_fails += super_neigh_even_check();
+	if (!isclient) {
+		// file input stream setup
+		fopen_s(&fp, "Tests/Input/superneigh.txt", "r");
+		if (fp == NULL) {
+			magenta();
+			fprintf(stderr, "    file input failed :(");
+			reset_col();
+			return 1;
+		}
+		fpinput = fp;
+
+		// already tested with yay, slowdown, and ginormous unicorn
+		num_fails += super_neigh_odd_check();
+		num_fails += super_neigh_even_check();
+	}
+	else {
+		// file input stream setup
+		fopen_s(&fp, "Tests/Input/line_1_1.txt", "r");
+		if (fp == NULL) {
+			magenta();
+			fprintf(stderr, "    file input failed :(");
+			reset_col();
+			return 1;
+		}
+		fpinput = fp;
+
+		// super neigh odd test; input is 1
+		int events;
+		receiveInt(&events, sockfd);
+		netStates[events].recvClient(1, sockfd);
+
+		// super neigh even test; input is 1
+		receiveInt(&events, sockfd);
+		netStates[events].recvClient(1, sockfd);
+	}
 
 	fclose(fp);
 	return num_fails;

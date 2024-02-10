@@ -384,25 +384,27 @@ int shrinkray_pandamonium_check() {
 int unicorn_shrinkray_tests() {
 	int num_fails = 0;
 
-	rainbow("\nStarting Unicorn Shrinkray tests...\n");
+	if (!isclient) {
+		rainbow_error("\nStarting Unicorn Shrinkray tests...\n");
 
-	// file input stream setup
-	FILE* fp;
-	fopen_s(&fp, "Tests/Input/unicornshrinkray.txt", "r");
-	if (fp == NULL) {
-		magenta();
-		fprintf(stderr, "    file input failed :(");
-		reset_col();
-		return 1;
+		// file input stream setup
+		FILE* fp;
+		fopen_s(&fp, "Tests/Input/unicornshrinkray.txt", "r");
+		if (fp == NULL) {
+			magenta();
+			fprintf(stderr, "    file input failed :(");
+			reset_col();
+			return 1;
+		}
+		fpinput = fp;
+
+		num_fails += shrinkray_basic_check();
+		num_fails += shrinkray_empty_check();
+		num_fails += shrinkray_puppicorn_check();
+		num_fails += shrinkray_barbed_wire_check();
+		num_fails += shrinkray_pandamonium_check();
+
+		fclose(fp);
 	}
-	fpinput = fp;
-
-	num_fails += shrinkray_basic_check();
-	num_fails += shrinkray_empty_check();
-	num_fails += shrinkray_puppicorn_check();
-	num_fails += shrinkray_barbed_wire_check();
-	num_fails += shrinkray_pandamonium_check();
-
-	fclose(fp);
 	return num_fails;
 }

@@ -134,23 +134,25 @@ int zombie_invalid_discard_check() {
 int zombie_unicorn_tests() {
 	int num_fails = 0;
 
-	rainbow("\nStarting Zombie Unicorn tests...\n");
+	if (!isclient) {
+		rainbow_error("\nStarting Zombie Unicorn tests...\n");
 
-	// file input stream setup
-	FILE* fp;
-	fopen_s(&fp, "Tests/Input/zombieunicorn.txt", "r");
-	if (fp == NULL) {
-		magenta();
-		fprintf(stderr, "    file input failed :(");
-		reset_col();
-		return 1;
+		// file input stream setup
+		FILE* fp;
+		fopen_s(&fp, "Tests/Input/zombieunicorn.txt", "r");
+		if (fp == NULL) {
+			magenta();
+			fprintf(stderr, "    file input failed :(");
+			reset_col();
+			return 1;
+		}
+		fpinput = fp;
+
+		num_fails += zombie_basic_check();
+		num_fails += zombie_invalid_hand_check();
+		num_fails += zombie_invalid_discard_check();
+
+		fclose(fp);
 	}
-	fpinput = fp;
-
-	num_fails += zombie_basic_check();
-	num_fails += zombie_invalid_hand_check();
-	num_fails += zombie_invalid_discard_check();
-
-	fclose(fp);
 	return num_fails;
 }

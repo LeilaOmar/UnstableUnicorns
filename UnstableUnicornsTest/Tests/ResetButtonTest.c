@@ -312,12 +312,13 @@ int reset_button_empty_other_check() {
 int reset_button_tests() {
 	int num_fails = 0;
 
-	rainbow_error("\nStarting Reset Button tests...\n");
+	if (!isclient) {
+		rainbow_error("\nStarting Reset Button tests...\n");
 
-	num_fails += reset_button_basic_check();
-	num_fails += reset_button_empty_upgrade_check();
-	num_fails += reset_button_empty_downgrade_check();
-	num_fails += reset_button_empty_other_check();
-
+		num_fails += reset_button_basic_check();
+		num_fails += reset_button_empty_upgrade_check();
+		num_fails += reset_button_empty_downgrade_check();
+		num_fails += reset_button_empty_other_check();
+	}
 	return num_fails;
 }

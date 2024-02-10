@@ -176,23 +176,25 @@ int re_target_empty_check() {
 int re_target_tests() {
 	int num_fails = 0;
 
-	rainbow_error("\nStarting Re-Target tests...\n");
+	if (!isclient) {
+		rainbow_error("\nStarting Re-Target tests...\n");
 
-	// file input stream setup
-	FILE* fp;
-	fopen_s(&fp, "Tests/Input/retarget.txt", "r");
-	if (fp == NULL) {
-		magenta();
-		fprintf(stderr, "    file input failed :(");
-		reset_col();
-		return 1;
+		// file input stream setup
+		FILE* fp;
+		fopen_s(&fp, "Tests/Input/retarget.txt", "r");
+		if (fp == NULL) {
+			magenta();
+			fprintf(stderr, "    file input failed :(");
+			reset_col();
+			return 1;
+		}
+		fpinput = fp;
+
+		num_fails += re_target_upgrade_check();
+		num_fails += re_target_downgrade_check();
+		num_fails += re_target_empty_check();
+
+		fclose(fp);
 	}
-	fpinput = fp;
-
-	num_fails += re_target_upgrade_check();
-	num_fails += re_target_downgrade_check();
-	num_fails += re_target_empty_check();
-
-	fclose(fp);
 	return num_fails;
 }

@@ -1,4 +1,5 @@
 #include "MagicUnicornTests.h"
+#include "networkevents.h"
 
 // sanity check
 int annoying_basic_check() {
@@ -74,19 +75,38 @@ int annoying_flying_unicorn_tests() {
 	int num_fails = 0;
 
 	rainbow_error("\nStarting Annoying Flying Unicorn tests...\n");
-
-	// file input stream setup
 	FILE* fp;
-	fopen_s(&fp, "Tests/Input/annoyingflyingunicorn.txt", "r");
-	if (fp == NULL) {
-		magenta();
-		fprintf(stderr, "    file input failed :(");
-		reset_col();
-		return 1;
-	}
-	fpinput = fp;
 
-	num_fails += annoying_basic_check();
+	if (!isclient) {
+		// file input stream setup
+		fopen_s(&fp, "Tests/Input/annoyingflyingunicorn.txt", "r");
+		if (fp == NULL) {
+			magenta();
+			fprintf(stderr, "    file input failed :(");
+			reset_col();
+			return 1;
+		}
+		fpinput = fp;
+
+		num_fails += annoying_basic_check();
+
+	}
+	else {
+		// file input stream setup
+		fopen_s(&fp, "Tests/Input/line_1.txt", "r");
+		if (fp == NULL) {
+			magenta();
+			fprintf(stderr, "    file input failed :(");
+			reset_col();
+			return 1;
+		}
+		fpinput = fp;
+
+		// input = 1; card index is actually 0
+		int events;
+		receiveInt(&events, sockfd);
+		netStates[events].recvClient(1, sockfd);
+	}
 
 	fclose(fp);
 	return num_fails;

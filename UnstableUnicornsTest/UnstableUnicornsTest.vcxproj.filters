@@ -234,6 +234,9 @@
     <ClCompile Include="..\UnstableUnicorns\networkfuncs.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\UnstableUnicorns\networkstates.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Tests\DowngradeTests.h">

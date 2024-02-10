@@ -806,3 +806,33 @@ void playCard(int pnum) {
     return;
   }
 }
+
+void endGame(int winningpnum) {
+  printf("\n********************************************************************************\n");
+  red();
+  printf("\nPlayer Stables\n");
+  reset_col();
+  printStableGrid();
+
+  // https://www.asciiart.eu/mythology/unicorns
+  printf("\n\n"
+    "                    /  \n"
+    "               ,.. /   \n"
+    "             ,'   ';        _____                         _____      _   _ \n"
+    "  ,,.__    _,' /';  .      / ____|                       / ____|    | | | |\n"
+    " :','  ~~~~    '. '~      | |  __  __ _ _ __ ___   ___  | (___   ___| |_| |\n"
+    ":' (   )         )::,     | | |_ |/ _` | '_ ` _ \\ / _ \\  \\___ \\ / _ \\ __| |\n"
+    "'. '. .=----=..-~  .;'    | |__| | (_| | | | | | |  __/  ____) |  __/ |_|_|\n"
+    " '  ;'  ::   ':.  '\"       \\_____|\\__,_|_| |_| |_|\\___| |_____/ \\___|\\__(_)\n"
+    "   (:   ':    ;)       \n"
+    "    \\\\   '\"  ./        \n"
+    "     '\"      '\"     *ASCII unicorn by Dr J   \n"
+    "\n");
+
+  char winmsg[DESC_SIZE];
+  sprintf_s(winmsg, NAME_SIZE + 18, "%s won the game!!!\n", player[winningpnum].username);
+  rainbow(winmsg);
+
+  printf("\nPress any key to close the window...");
+  exit(0);
+}

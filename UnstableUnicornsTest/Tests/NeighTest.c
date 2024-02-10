@@ -1,4 +1,5 @@
 #include "InstantTests.h"
+#include "networkevents.h"
 
 // odd number of neighs, the card goes to the discard pile
 int neigh_odd_check() {
@@ -188,21 +189,42 @@ int neigh_tests() {
 	int num_fails = 0;
 
 	rainbow_error("\nStarting Neigh tests...\n");
-
-	// file input stream setup
 	FILE* fp;
-	fopen_s(&fp, "Tests/Input/neigh.txt", "r");
-	if (fp == NULL) {
-		magenta();
-		fprintf(stderr, "    file input failed :(");
-		reset_col();
-		return 1;
-	}
-	fpinput = fp;
+	if (!isclient) {
+		// file input stream setup
+		fopen_s(&fp, "Tests/Input/neigh.txt", "r");
+		if (fp == NULL) {
+			magenta();
+			fprintf(stderr, "    file input failed :(");
+			reset_col();
+			return 1;
+		}
+		fpinput = fp;
 
-	// already tested with yay, slowdown, and ginormous unicorn
-	num_fails += neigh_odd_check();
-	num_fails += neigh_even_check();
+		// already tested with yay, slowdown, and ginormous unicorn
+		num_fails += neigh_odd_check();
+		num_fails += neigh_even_check();
+	}
+	else {
+		// file input stream setup
+		fopen_s(&fp, "Tests/Input/neighclient.txt", "r");
+		if (fp == NULL) {
+			magenta();
+			fprintf(stderr, "    file input failed :(");
+			reset_col();
+			return 1;
+		}
+		fpinput = fp;
+
+		// neigh odd test; inputs are 3 and 5
+		int events;
+		receiveInt(&events, sockfd);
+		netStates[events].recvClient(1, sockfd);
+
+		// neigh even test; inputs are 3, 3, and 0
+		receiveInt(&events, sockfd);
+		netStates[events].recvClient(1, sockfd);
+	}
 
 	fclose(fp);
 	return num_fails;

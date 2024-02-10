@@ -283,8 +283,6 @@ int serverMain(void) {
     "\n");
 
   int counter = 0;
-  int didWin = 0;
-  int winningpnum = 0;
   // asynch stuff: http://archive.gamedev.net/archive/reference/articles/article1297.html22
 
   // loop until win condition occurs (7 unicorns in stable)
@@ -305,14 +303,15 @@ int serverMain(void) {
 
       actionPhase(counter);
 
-      didWin = endOfTurn(counter);
-      if (didWin == 1) {
+      if (endOfTurn(counter)) {
         for (int i = 0; i < current_players - 1; i++) {
           sendInt(end_game, clientsockfd[i]);
           sendInt(counter, clientsockfd[i]);
           sendGamePacket(clientsockfd[i]);
         }
-        winningpnum = 0;
+
+        // player 0 must have played the winning card
+        endGame(0);
         break;
       }
 
@@ -341,86 +340,7 @@ int serverMain(void) {
           if (pfd[k + 2].revents & POLLIN) {
             receiveInt(&network_events, clientsockfd[k]);
 
-            // neigh stuff
-            if (network_events == neigh_event) {
-              int cindex;
-              receiveInt(&cindex, clientsockfd[k]);
-              receivePlayers(clientsockfd[k]); // this is for updating the current player's hand after the beginning stable effects and drawing
-              serverNeigh(k + 1, &cindex);
-            }
-            else if (network_events == discard_event) {
-              int target_player;
-              int desired_type;
-              receiveCardEffectPacket(&target_player, &desired_type, clientsockfd[k]);
-              serverDiscard(k + 1, target_player, desired_type);
-            }
-            else if (network_events == sacrifice_event) {
-              int target_player;
-              int desired_type;
-              receiveCardEffectPacket(&target_player, &desired_type, clientsockfd[k]);
-              serverSacrifice(k + 1, target_player, desired_type);
-            }
-            else if (network_events == enter_stable_event) {
-              struct Unicorn corn;
-              int target_player;
-              receiveEnterStablePacket(&corn, &target_player, clientsockfd[k]);
-              
-              if (target_player != 0) {
-                sendInt(enter_stable_event, clientsockfd[target_player - 1]);
-                // k + 1 represents the original player
-                sendEnterStablePacket(corn, k + 1, clientsockfd[target_player - 1]);
-                serverEnterStable(k + 1, target_player);
-              }
-              else {
-                printf("\n\033[1;31m%s\033[0m sent you the card \033[1;31m'%s'\033[0m.\n", player[k + 1].username, corn.name);
-                addStable(0, corn);
-
-                if (!checkWin(0)) {
-                  sendInt(quit_loop, clientsockfd[k]);
-                  sendGamePacket(clientsockfd[k]);
-                }
-                else {
-                  eventloop = 1;
-                  didWin = 1;
-                  winningpnum = 0;
-
-                  for (int i = 0; i < current_players - 1; i++) {
-                    sendInt(end_game, clientsockfd[i]);
-                    sendInt(winningpnum, clientsockfd[i]);
-                    sendGamePacket(clientsockfd[i]);
-                  }
-                  break;
-                }
-              }
-            }
-            else if (network_events == end_turn) {
-              receiveGamePacket(clientsockfd[k]);
-              eventloop = 1;
-
-              for (int i = 0; i < current_players - 1; i++) {
-                if (k == i) continue;
-
-                sendInt(end_turn, clientsockfd[i]);
-                sendGamePacket(clientsockfd[i]);
-              }
-
-              break;
-            }
-            else if (network_events == end_game) {
-              receiveGamePacket(clientsockfd[k]);
-              eventloop = 1;
-              didWin = 1;
-              winningpnum = k + 1;
-
-              for (int i = 0; i < current_players - 1; i++) {
-                if (k == i) continue;
-
-                sendInt(end_game, clientsockfd[i]);
-                sendInt(winningpnum, clientsockfd[i]);
-                sendGamePacket(clientsockfd[i]);
-              }
-              break;
-            }
+            eventloop = netStates[network_events].recvServer(k + 1, clientsockfd[k]);
           }
 
           Sleep(20);
@@ -441,37 +361,11 @@ int serverMain(void) {
       reset_col();
     }
 
-    counter = (counter < current_players - 1) ? counter + 1 : 0;
-  } while (!didWin);
+    counter = (counter + 1) % current_players;
+  } while (42);
 
-  printf("\n********************************************************************************\n");
-  red();
-  printf("\nPlayer Stables\n");
-  reset_col();
-  printStableGrid();
-
-  // https://www.asciiart.eu/mythology/unicorns
-  printf("\n\n"
-    "                    /  \n"
-    "               ,.. /   \n"
-    "             ,'   ';        _____                         _____      _   _ \n"
-    "  ,,.__    _,' /';  .      / ____|                       / ____|    | | | |\n"
-    " :','  ~~~~    '. '~      | |  __  __ _ _ __ ___   ___  | (___   ___| |_| |\n"
-    ":' (   )         )::,     | | |_ |/ _` | '_ ` _ \\ / _ \\  \\___ \\ / _ \\ __| |\n"
-    "'. '. .=----=..-~  .;'    | |__| | (_| | | | | | |  __/  ____) |  __/ |_|_|\n"
-    " '  ;'  ::   ':.  '\"       \\_____|\\__,_|_| |_| |_|\\___| |_____/ \\___|\\__(_)\n"
-    "   (:   ':    ;)       \n"
-    "    \\\\   '\"  ./        \n"
-    "     '\"      '\"     *ASCII unicorn by Dr J   \n"
-    "\n");
-
-  char winmsg[DESC_SIZE];
-  sprintf_s(winmsg, NAME_SIZE + 18, "%s won the game!!!\n", player[winningpnum].username);
-  rainbow(winmsg);
-
-  printf("\nPress any key to close the window...");
-
-  return 0;
+  // this shouldn't happen
+  return 1;
 }
 
 int serverInit(short portno) {

@@ -138,25 +138,27 @@ int black_knight_blinding_light_check() {
 int black_knight_unicorn_tests() {
 	int num_fails = 0;
 
-	rainbow_error("\nStarting Black Knight Unicorn tests...\n");
+	if (!isclient) {
+		rainbow_error("\nStarting Black Knight Unicorn tests...\n");
 
-	// file input stream setup
-	FILE* fp;
-	fopen_s(&fp, "Tests/Input/blackknightunicorn.txt", "r");
-	if (fp == NULL) {
-		magenta();
-		fprintf(stderr, "    file input failed :(");
-		reset_col();
-		return 1;
+		// file input stream setup
+		FILE* fp;
+		fopen_s(&fp, "Tests/Input/blackknightunicorn.txt", "r");
+		if (fp == NULL) {
+			magenta();
+			fprintf(stderr, "    file input failed :(");
+			reset_col();
+			return 1;
+		}
+		fpinput = fp;
+
+		// the test is set up to prepare for the fail scenario with y inputs
+		num_fails += black_knight_basic_check();
+		num_fails += black_knight_empty_check();
+		num_fails += black_knight_pandamonium_check();
+		num_fails += black_knight_blinding_light_check();
+
+		fclose(fp);
 	}
-	fpinput = fp;
-
-	// the test is set up to prepare for the fail scenario with y inputs
-	num_fails += black_knight_basic_check();
-	num_fails += black_knight_empty_check();
-	num_fails += black_knight_pandamonium_check();
-	num_fails += black_knight_blinding_light_check();
-
-	fclose(fp);
 	return num_fails;
 }

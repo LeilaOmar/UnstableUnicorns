@@ -377,25 +377,27 @@ int blinding_ginormous_check() {
 int blinding_light_tests() {
 	int num_fails = 0;
 
-	rainbow_error("\nStarting Blinding Light tests...\n");
+	if (!isclient) {
+		rainbow_error("\nStarting Blinding Light tests...\n");
 
-	// file input stream setup
-	FILE* fp;
-	fopen_s(&fp, "Tests/Input/blindinglight.txt", "r");
-	if (fp == NULL) {
-		magenta();
-		fprintf(stderr, "    file input failed :(");
-		reset_col();
-		return 1;
+		// file input stream setup
+		FILE* fp;
+		fopen_s(&fp, "Tests/Input/blindinglight.txt", "r");
+		if (fp == NULL) {
+			magenta();
+			fprintf(stderr, "    file input failed :(");
+			reset_col();
+			return 1;
+		}
+		fpinput = fp;
+
+		num_fails += blinding_beginning_turn_check();
+		num_fails += blinding_enter_stable_check();
+		num_fails += blinding_sacrifice_destroy_check();
+		num_fails += blinding_pandamonium_check();
+		num_fails += blinding_ginormous_check();
+
+		fclose(fp);
 	}
-	fpinput = fp;
-
-	num_fails += blinding_beginning_turn_check();
-	num_fails += blinding_enter_stable_check();
-	num_fails += blinding_sacrifice_destroy_check();
-	num_fails += blinding_pandamonium_check();
-	num_fails += blinding_ginormous_check();
-
-	fclose(fp);
 	return num_fails;
 }

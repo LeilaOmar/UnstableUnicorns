@@ -112,23 +112,25 @@ int fertile_empty_nursery() {
 int extremely_fertile_unicorn_tests() {
 	int num_fails = 0;
 
-	rainbow_error("\nStarting Extremely Fertile Unicorn tests...\n");
+	if (!isclient) {
+		rainbow_error("\nStarting Extremely Fertile Unicorn tests...\n");
 
-	// file input stream setup
-	FILE* fp;
-	fopen_s(&fp, "Tests/Input/extremelyfertileunicorn.txt", "r");
-	if (fp == NULL) {
-		magenta();
-		fprintf(stderr, "    file input failed :(");
-		reset_col();
-		return 1;
+		// file input stream setup
+		FILE* fp;
+		fopen_s(&fp, "Tests/Input/extremelyfertileunicorn.txt", "r");
+		if (fp == NULL) {
+			magenta();
+			fprintf(stderr, "    file input failed :(");
+			reset_col();
+			return 1;
+		}
+		fpinput = fp;
+
+		num_fails += fertile_basic_check();
+		num_fails += fertile_empty_hand();
+		num_fails += fertile_empty_nursery();
+
+		fclose(fp);
 	}
-	fpinput = fp;
-
-	num_fails += fertile_basic_check();
-	num_fails += fertile_empty_hand();
-	num_fails += fertile_empty_nursery();
-
-	fclose(fp);
 	return num_fails;
 }
