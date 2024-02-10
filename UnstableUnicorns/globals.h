@@ -67,21 +67,7 @@ struct Player {
   struct Stable stable;
   char username[NAME_SIZE];
   enum BabySelection icon;
-  short flags;  // 00000000 00000000 plain cheese
-                // & 1 = cannot play upgrade cards
-                // & 2 = cannot play neigh cards
-                // & 4 = cards you play cannot be neigh'd
-                // & 8 = your unicorn cards cannot be destroyed
-                // & 16 = your hand must be visible to all players
-                // & 32 = basic unicorns can't enter your stable
-                // & 64 = ginormous unicorn check
-                // & 128 = all your unicorns are considered basic and have no
-                // effects
-                // & 256 = all your unicorns are considered pandas;
-                // cards that affect unicorns don't affect yours
-                // & 512 = tiny unicorn; sacrifice cards after >5 unicorns
-                // & 1024 = black knight unicorn; sacrifice that card instead
-                // & 2048 = brbd wre; discrd a card upon entry/exit of stable
+  short flags; // enum baseflag
   short filler; // padding for prev variable
 };
 
