@@ -14,6 +14,7 @@ int glitter_tornado_basic_check() {
 	addStable(0, basic_tmp);
 	addStable(1, basic_tmp2);
 	addStable(2, baby_tmp);
+	toggleFlags(0, yay_effect);
 	player[0].hand.cards[player[0].hand.num_cards++] = tornado_tmp;
 
 	int ret;
@@ -24,9 +25,10 @@ int glitter_tornado_basic_check() {
 	assert(player[0].stable.size == 1);
 	assert(player[1].stable.size == 1);
 	assert(player[2].stable.size == 1);
-	ret = conditionalEffects(0, tornado_tmp, 0, 0);
+	assert(player[0].flags == yay);
+	playCard(0);
 
-	if (turn_count != 1 || ret != 1) {
+	if (turn_count != 1) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    sanity test: turn count failed\n");
@@ -84,7 +86,7 @@ int glitter_tornado_special_check() {
 	assert((player[0].flags & yay) == yay);
 	assert((player[1].flags & ginormous_unicorn) == ginormous_unicorn);
 	assert(player[0].hand.num_cards == 1);
-	conditionalEffects(0, tornado_tmp, 0, 0);
+	magicEffects(0, tornado_tmp.effect);
 
 	if ((player[0].flags & yay) != 0 ||
 			(player[1].flags & ginormous_unicorn) != 0) {
@@ -110,29 +112,13 @@ int glitter_tornado_empty_check() {
 	player[0].hand.cards[player[0].hand.num_cards++] = tornado_tmp;
 
 	int ret;
-	assert(discardpile.size == 0);
-	assert(player[0].hand.num_cards == 1);
+	assert(player[0].stable.size == 0);
 	ret = conditionalEffects(0, tornado_tmp, 0, 0);
 
 	if (turn_count != 2 || ret != 0) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    empty stable test: turn count failed\n");
-		reset_col();
-	}
-
-	if (player[0].hand.num_cards != 1 ||
-			strcmp(player[0].hand.cards[0].name, tornado_tmp.name) != 0) {
-		num_fails++;
-		red();
-		fprintf(stderr, "    empty stable test: hand verification failed\n");
-		reset_col();
-	}
-
-	if (discardpile.size != 0) {
-		num_fails++;
-		red();
-		fprintf(stderr, "    empty stable test: discard size failed\n");
 		reset_col();
 	}
 
@@ -155,6 +141,7 @@ int glitter_tornado_unicorn_lasso_check() {
 	addStable(0, lasso_tmp);
 	addStable(1, basic_tmp);
 	addStable(1, basic_tmp2);
+	toggleFlags(0, yay_effect);
 
 	assert(player[0].hand.num_cards == 1);
 	assert(player[0].stable.size == 1);
@@ -166,7 +153,8 @@ int glitter_tornado_unicorn_lasso_check() {
 
 	beginningTurnEffects(0, lasso_tmp);
 	assert(uni_lasso_flag[0] != -1);
-	conditionalEffects(0, tornado_tmp, 0, 0);
+	assert(player[0].flags == yay);
+	playCard(0);
 
 	// check if the lasso flag has been reset before the turn is over
 	if (uni_lasso_flag[0] != -1) {

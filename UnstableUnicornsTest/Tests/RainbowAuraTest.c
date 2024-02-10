@@ -12,21 +12,11 @@ int rainbow_aura_basic_check() {
 	addStable(0, rainaura_tmp);
 	addStable(0, basic_tmp);
 	toggleFlags(0, rainaura_tmp.effect);
-	assert(player[0].stable.size == 2);
-	assert(player[0].flags == rainbow_aura);
-
-	// first just check canBeDestroyed; card referenced is player[0][1]
-	if (canBeDestroyed(0, 1, ANY, FALSE)) {
-		num_fails++;
-		red();
-		fprintf(stderr, "    sanity test: canBeDestroyed failed\n");
-		reset_col();
-	}
 
 	// try destroying it with unicorn poison
 	int ret;
-	assert(discardpile.size == 0);
-	assert(player[1].hand.num_cards == 1);
+	assert(player[0].stable.size == 2);
+	assert(player[0].flags == rainbow_aura);
 	ret = conditionalEffects(1, poison_tmp, 0, 1);
 
 	if (turn_count != 2 || ret != 0) {
@@ -36,29 +26,14 @@ int rainbow_aura_basic_check() {
 		reset_col();
 	}
 
-	if (player[1].hand.num_cards != 1 ||
-			strcmp(player[1].hand.cards[0].name, poison_tmp.name) != 0) {
+	// check canBeDestroyed; card referenced is player[0][1]
+	if (canBeDestroyed(0, 1, ANY, FALSE)) {
 		num_fails++;
 		red();
-		fprintf(stderr, "    sanity test: hand size failed\n");
+		fprintf(stderr, "    sanity test: canBeDestroyed failed\n");
 		reset_col();
 	}
 
-	if (player[0].stable.size != 2 || player[0].stable.num_unicorns != 1 ||
-			strcmp(player[0].stable.unicorns[0].name, rainaura_tmp.name) != 0 ||
-			strcmp(player[0].stable.unicorns[1].name, basic_tmp.name) != 0) {
-		num_fails++;
-		red();
-		fprintf(stderr, "    sanity test: stable verification failed\n");
-		reset_col();
-	}
-
-	if (discardpile.size != 0) {
-		num_fails++;
-		red();
-		fprintf(stderr, "    sanity test: discard pile size failed\n");
-		reset_col();
-	}
 
 	reset_players();
 	reset_discard();

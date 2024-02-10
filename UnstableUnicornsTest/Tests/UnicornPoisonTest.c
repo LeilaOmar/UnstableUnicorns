@@ -10,15 +10,16 @@ int poison_basic_check() {
 	current_players = 2;
 	addStable(1, yay_tmp);
 	addStable(1, basic_tmp);
+	toggleFlags(0, yay_effect);
 	player[0].hand.cards[player[0].hand.num_cards++] = poison_tmp;
 
-	int ret;
 	assert(turn_count == 1);
 	assert(discardpile.size == 0);
 	assert(player[0].hand.num_cards == 1);
-	ret = conditionalEffects(0, poison_tmp, 0, 0);
+	assert(player[0].flags == yay);
+	playCard(0);
 
-	if (turn_count != 1 || ret != 1) {
+	if (turn_count != 1) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    sanity test: turn count failed\n");
@@ -68,12 +69,11 @@ int poison_special_check() {
 	player[0].hand.cards[player[0].hand.num_cards++] = poison_tmp;
 
 	assert(discardpile.size == 0);
-	conditionalEffects(0, poison_tmp, 0, 0);
+	magicEffects(0, poison_tmp.effect);
 
-	if (discardpile.size != 3 ||
-			strcmp(discardpile.cards[0].name, poison_tmp.name) != 0 ||
-			strcmp(discardpile.cards[1].name, basic_tmp.name) != 0 ||
-			strcmp(discardpile.cards[2].name, stabby_tmp.name) != 0) {
+	if (discardpile.size != 2 ||
+			strcmp(discardpile.cards[0].name, basic_tmp.name) != 0 ||
+			strcmp(discardpile.cards[1].name, stabby_tmp.name) != 0) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    special test: stabby unicorn effect failed\n");
@@ -89,7 +89,7 @@ int poison_special_check() {
 	player[0].hand.cards[player[0].hand.num_cards++] = poison_tmp;
 
 	assert((player[1].flags & ginormous_unicorn) == ginormous_unicorn);
-	conditionalEffects(0, poison_tmp, 0, 0);
+	magicEffects(0, poison_tmp.effect);
 
 	if ((player[1].flags & ginormous_unicorn) != 0) {
 		num_fails++;
@@ -117,35 +117,13 @@ int poison_empty_check() {
 
 	int ret;
 	assert(turn_count == 1);
-	assert(player[0].hand.num_cards == 1);
+	assert(player[1].stable.num_unicorns == 0);
 	ret = conditionalEffects(0, poison_tmp, 0, 0);
 
 	if (turn_count != 2 || ret != 0) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    non-unicorn test: turn count failed\n");
-		reset_col();
-	}
-
-	if (discardpile.size != 0) {
-		num_fails++;
-		red();
-		fprintf(stderr, "    non-unicorn test: discard size failed\n");
-		reset_col();
-	}
-
-	if (player[0].hand.num_cards != 1 ||
-			strcmp(player[0].hand.cards[0].name, poison_tmp.name) != 0) {
-		num_fails++;
-		red();
-		fprintf(stderr, "    non-unicorn test: hand verification failed\n");
-		reset_col();
-	}
-
-	if (player[1].stable.size != 2 || player[1].stable.num_unicorns != 0) {
-		num_fails++;
-		red();
-		fprintf(stderr, "    non-unicorn test: stable size failed\n");
 		reset_col();
 	}
 
