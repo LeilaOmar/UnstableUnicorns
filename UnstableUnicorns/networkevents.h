@@ -1,5 +1,6 @@
 #pragma once
 #include "networkfuncs.h"
+#include "networkstates.h"
 
 // codes the part where players are able to use an instant card against a play
 // 0 = nobody used Neigh/Super Neigh cards, or Neigh cards cancelled out
@@ -18,5 +19,5 @@ void serverDiscard(int orig_pnum, int target_pnum, int cType);
 void clientSacrifice(int clientpnum, int target_pnum, int cType);
 void serverSacrifice(int orig_pnum, int target_pnum, int cType);
 
-int clientEnterStable(int clientpnum);
-int serverEnterStable(int orig_pnum, int target_pnum);
+void clientEnterStable(int clientpnum);
+void serverEnterStable(int orig_pnum, int target_pnum);

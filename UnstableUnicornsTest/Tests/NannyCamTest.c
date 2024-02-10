@@ -36,9 +36,10 @@ int nanny_cam_basic_check() {
 int nanny_cam_tests() {
 	int num_fails = 0;
 
-	rainbow_error("\nStarting Nanny Cam tests...\n");
+	if (!isclient) {
+		rainbow_error("\nStarting Nanny Cam tests...\n");
 
-	num_fails += nanny_cam_basic_check();
-
+		num_fails += nanny_cam_basic_check();
+	}
 	return num_fails;
 }

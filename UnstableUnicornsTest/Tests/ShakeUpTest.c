@@ -87,9 +87,10 @@ int shake_up_basic_check() {
 int shake_up_tests() {
 	int num_fails = 0;
 
-	rainbow_error("\nStarting Shake Up tests...\n");
+	if (!isclient) {
+		rainbow_error("\nStarting Shake Up tests...\n");
 
-	num_fails += shake_up_basic_check();
-
+		num_fails += shake_up_basic_check();
+	}
 	return num_fails;
 }

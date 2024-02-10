@@ -268,31 +268,40 @@ int puppicorn_rearrange_check() {
 }
 
 // Puppicorn
+// 
+// (original print text)
+// At the end of your turn, move Puppicorn to the Stable of the player on your left.
+// This card cannot be sacrificed or destroyed.
 //
+// (2nd print text: i overlooked this when configuring unicorn swap, but now it
+// will be defunct)
 // Each time any player begins their turn, move this card to that player's Stable.
 // This card cannot be sacrificed or destroyed.
 int puppicorn_tests() {
 	int num_fails = 0;
 
-	rainbow_error("\nStarting Puppicorn tests...\n");
+	if (!isclient) {
+		rainbow_error("\nStarting Puppicorn tests...\n");
 
-	// file input stream setup
-	FILE* fp;
-	fopen_s(&fp, "Tests/Input/line_1.txt", "r");
-	if (fp == NULL) {
-		magenta();
-		fprintf(stderr, "    file input failed :(");
-		reset_col();
-		return 1;
+		// file input stream setup
+		FILE* fp;
+		fopen_s(&fp, "Tests/Input/line_1.txt", "r");
+		if (fp == NULL) {
+			magenta();
+			fprintf(stderr, "    file input failed :(");
+			reset_col();
+			return 1;
+		}
+		fpinput = fp;
+
+		num_fails += puppicorn_basic_check();
+		num_fails += puppicorn_sacrifice_destroy_check();
+		num_fails += puppicorn_win_check();
+		num_fails += puppicorn_reset_check();
+		num_fails += puppicorn_swap_check();
+		num_fails += puppicorn_rearrange_check();
+
+		fclose(fp);
 	}
-	fpinput = fp;
-
-	num_fails += puppicorn_basic_check();
-	num_fails += puppicorn_sacrifice_destroy_check();
-	num_fails += puppicorn_win_check();
-	num_fails += puppicorn_reset_check();
-	num_fails += puppicorn_swap_check();
-	num_fails += puppicorn_rearrange_check();
-
 	return num_fails;
 }

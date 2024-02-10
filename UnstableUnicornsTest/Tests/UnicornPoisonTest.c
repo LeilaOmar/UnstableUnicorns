@@ -160,23 +160,25 @@ int poison_empty_check() {
 int unicorn_poison_tests() {
 	int num_fails = 0;
 
-	rainbow_error("\nStarting Unicorn Poison tests...\n");
+	if (!isclient) {
+		rainbow_error("\nStarting Unicorn Poison tests...\n");
 
-	// file input stream setup
-	FILE* fp;
-	fopen_s(&fp, "Tests/Input/unicornpoison.txt", "r");
-	if (fp == NULL) {
-		magenta();
-		fprintf(stderr, "    file input failed :(");
-		reset_col();
-		return 1;
+		// file input stream setup
+		FILE* fp;
+		fopen_s(&fp, "Tests/Input/unicornpoison.txt", "r");
+		if (fp == NULL) {
+			magenta();
+			fprintf(stderr, "    file input failed :(");
+			reset_col();
+			return 1;
+		}
+		fpinput = fp;
+
+		num_fails += poison_basic_check();
+		num_fails += poison_special_check();
+		num_fails += poison_empty_check();
+
+		fclose(fp);
 	}
-	fpinput = fp;
-
-	num_fails += poison_basic_check();
-	num_fails += poison_special_check();
-	num_fails += poison_empty_check();
-
-	fclose(fp);
 	return num_fails;
 }

@@ -1,4 +1,5 @@
 #include "MagicTests.h"
+#include "networkevents.h"
 
 // sanity test
 int mystical_vortex_basic_check() {
@@ -126,8 +127,16 @@ int mystical_vortex_tests() {
 	}
 	fpinput = fp;
 
-	num_fails += mystical_vortex_basic_check();
-	num_fails += mystical_vortex_empty_check();
+	if (!isclient) {
+		num_fails += mystical_vortex_basic_check();
+		num_fails += mystical_vortex_empty_check();
+	}
+	else {
+		// input = 1; card index is actually 0
+		int events;
+		receiveInt(&events, sockfd);
+		netStates[events].recvClient(1, sockfd);
+	}
 
 	fclose(fp);
 	return num_fails;

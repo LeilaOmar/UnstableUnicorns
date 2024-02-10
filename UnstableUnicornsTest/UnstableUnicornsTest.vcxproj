@@ -146,6 +146,7 @@
     <ClCompile Include="..\UnstableUnicorns\globals.c" />
     <ClCompile Include="..\UnstableUnicorns\networkevents.c" />
     <ClCompile Include="..\UnstableUnicorns\networkfuncs.c" />
+    <ClCompile Include="..\UnstableUnicorns\networkstates.c" />
     <ClCompile Include="resetfns.c" />
     <ClCompile Include="Tests\AlluringNarwhalTest.c" />
     <ClCompile Include="Tests\AmericornTest.c" />

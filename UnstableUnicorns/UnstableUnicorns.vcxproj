@@ -153,6 +153,7 @@
     <ClCompile Include="globals.c" />
     <ClCompile Include="networkevents.c" />
     <ClCompile Include="networkfuncs.c" />
+    <ClCompile Include="networkstates.c" />
     <ClCompile Include="server.c" />
     <ClCompile Include="uu_cmd_demo.c" />
   </ItemGroup>
@@ -164,6 +165,7 @@
     <ClInclude Include="globals.h" />
     <ClInclude Include="networkevents.h" />
     <ClInclude Include="networkfuncs.h" />
+    <ClInclude Include="networkstates.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="server.h" />
   </ItemGroup>

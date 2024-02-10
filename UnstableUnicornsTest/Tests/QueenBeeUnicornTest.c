@@ -62,21 +62,23 @@ int queen_bee_basic_check() {
 int queen_bee_unicorn_tests() {
 	int num_fails = 0;
 
-	rainbow_error("\nStarting Queen Bee Unicorn tests...\n");
+	if (!isclient) {
+		rainbow_error("\nStarting Queen Bee Unicorn tests...\n");
 
-	// file input stream setup
-	FILE* fp;
-	fopen_s(&fp, "Tests/Input/queenbeeunicorn.txt", "r");
-	if (fp == NULL) {
-		magenta();
-		fprintf(stderr, "    file input failed :(");
-		reset_col();
-		return 1;
+		// file input stream setup
+		FILE* fp;
+		fopen_s(&fp, "Tests/Input/queenbeeunicorn.txt", "r");
+		if (fp == NULL) {
+			magenta();
+			fprintf(stderr, "    file input failed :(");
+			reset_col();
+			return 1;
+		}
+		fpinput = fp;
+
+		num_fails += queen_bee_basic_check();
+
+		fclose(fp);
 	}
-	fpinput = fp;
-
-	num_fails += queen_bee_basic_check();
-
-	fclose(fp);
 	return num_fails;
 }

@@ -39,21 +39,23 @@ int rhinocorn_basic_check() {
 int rhinocorn_tests() {
 	int num_fails = 0;
 
-	rainbow("Starting Rhinocorn tests...\n");
+	if (!isclient) {
+		rainbow_error("\nStarting Rhinocorn tests...\n");
 
-	// file input stream setup
-	FILE* fp;
-	fopen_s(&fp, "Tests/Input/rhinocorn.txt", "r");
-	if (fp == NULL) {
-		magenta();
-		fprintf(stderr, "    file input failed :(");
-		reset_col();
-		return 1;
+		// file input stream setup
+		FILE* fp;
+		fopen_s(&fp, "Tests/Input/rhinocorn.txt", "r");
+		if (fp == NULL) {
+			magenta();
+			fprintf(stderr, "    file input failed :(");
+			reset_col();
+			return 1;
+		}
+		fpinput = fp;
+
+		num_fails += rhinocorn_basic_check();
+
+		fclose(fp);
 	}
-	fpinput = fp;
-
-	num_fails += rhinocorn_basic_check();
-
-	fclose(fp);
 	return num_fails;
 }

@@ -270,24 +270,26 @@ int barbed_pandamonium_check() {
 int barbed_wire_tests() {
 	int num_fails = 0;
 
-	rainbow_error("\nStarting Barbed Wire tests...\n");
+	if (!isclient) {
+		rainbow_error("\nStarting Barbed Wire tests...\n");
 
-	// file input stream setup
-	FILE* fp;
-	fopen_s(&fp, "Tests/Input/barbedwire.txt", "r");
-	if (fp == NULL) {
-		magenta();
-		fprintf(stderr, "    file input failed :(");
-		reset_col();
-		return 1;
+		// file input stream setup
+		FILE* fp;
+		fopen_s(&fp, "Tests/Input/barbedwire.txt", "r");
+		if (fp == NULL) {
+			magenta();
+			fprintf(stderr, "    file input failed :(");
+			reset_col();
+			return 1;
+		}
+		fpinput = fp;
+
+		// already tested it w/ unicorn shrinkray
+		num_fails += barbed_enter_check();
+		num_fails += barbed_exit_check();
+		num_fails += barbed_pandamonium_check();
+
+		fclose(fp);
 	}
-	fpinput = fp;
-
-	// already tested it w/ unicorn shrinkray
-	num_fails += barbed_enter_check();
-	num_fails += barbed_exit_check();
-	num_fails += barbed_pandamonium_check();
-
-	fclose(fp);
 	return num_fails;
 }

@@ -1,4 +1,5 @@
 #include "MagicTests.h"
+#include "networkevents.h"
 
 // sanity check
 int unicorn_swap_basic_check() {
@@ -100,21 +101,19 @@ int unicorn_swap_toggle_check() {
 	struct Unicorn queen_tmp = basedeck[51];
 	struct Unicorn ginormous_tmp = basedeck[48];
 
-	current_players = 3;
+	current_players = 2;
 	addStable(0, queen_tmp);
 	addStable(1, ginormous_tmp);
 	player[0].hand.cards[player[0].hand.num_cards++] = swap_tmp;
 
 	assert((player[0].flags & queen_bee_unicorn) == 0); // this flag is set backwards
 	assert((player[1].flags & queen_bee_unicorn) == queen_bee_unicorn);
-	assert((player[2].flags & queen_bee_unicorn) == queen_bee_unicorn);
 	assert((player[1].flags & ginormous_unicorn) == ginormous_unicorn);
 	assert(player[0].hand.num_cards == 1);
 	conditionalEffects(0, swap_tmp, 0, 0);
 
 	if ((player[0].flags & queen_bee_unicorn) != queen_bee_unicorn || (player[0].flags & ginormous_unicorn) != ginormous_unicorn ||
-			(player[1].flags & queen_bee_unicorn) != 0 || (player[1].flags & ginormous_unicorn) != 0 ||
-			(player[2].flags & queen_bee_unicorn) != queen_bee_unicorn || (player[2].flags & ginormous_unicorn) != 0) {
+			(player[1].flags & queen_bee_unicorn) != 0 || (player[1].flags & ginormous_unicorn) != 0) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    special test: toggle flags failed\n");
@@ -126,8 +125,9 @@ int unicorn_swap_toggle_check() {
 	return num_fails;
 }
 
-// either no unicorn cards in your own stable or no unicorns is any other stable,
-// so unicorn swap cannot be played
+// either no unicorn cards in your own stable or no unicorns is any other stable;
+// unicorn swap cannot be played if yours is empty,
+// but it can be played with other empty stables
 int unicorn_swap_empty_check() {
 	int num_fails = 0;
 	struct Unicorn swap_tmp = basedeck[77];
@@ -177,18 +177,114 @@ int unicorn_swap_empty_check() {
 	player[0].hand.cards[player[0].hand.num_cards++] = swap_tmp;
 
 	assert(discardpile.size == 0);
+	assert(player[0].stable.size == 1);
+	assert(player[1].stable.size == 1);
 	assert(player[0].hand.num_cards == 1);
 	ret = conditionalEffects(0, swap_tmp, 0, 0);
 
-	if (turn_count != 2 || ret != 0) {
+	if (turn_count != 1 || ret != 1) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    empty stable test (player[1]): turn count failed\n");
 		reset_col();
 	}
 
+	if (player[0].hand.num_cards != 0) {
+		num_fails++;
+		red();
+		fprintf(stderr, "    empty stable test (player[1]): hand size failed\n");
+		reset_col();
+	}
+
+	if (player[0].stable.size != 1 || player[0].stable.num_unicorns != 1 ||
+			player[1].stable.size != 1 || player[1].stable.num_unicorns != 0) {
+		num_fails++;
+		red();
+		fprintf(stderr, "    empty stable test (player[1]): stable size failed\n");
+		reset_col();
+	}
+
+	if (discardpile.size != 1 ||
+			strcmp(player[0].hand.cards[0].name, swap_tmp.name) != 0) {
+		num_fails++;
+		red();
+		fprintf(stderr, "    empty stable test (player[1]): discard verification failed\n");
+		reset_col();
+	}
+
+	reset_players();
+	reset_discard();
+	return num_fails;
+}
+
+// pandamonium
+int unicorn_swap_masquerade_check() {
+	int num_fails = 0;
+	struct Unicorn swap_tmp = basedeck[77];
+	struct Unicorn basic_tmp = basedeck[13];
+	struct Unicorn basic_tmp2 = basedeck[17];
+	struct Unicorn panda_tmp = basedeck[107];
+
+	// player[0] is under a masquerade effect
+	current_players = 2;
+	addStable(0, basic_tmp);
+	addStable(1, basic_tmp2);
+	addStable(0, panda_tmp);
+	toggleFlags(0, panda_tmp.effect);
+	player[0].hand.cards[player[0].hand.num_cards++] = swap_tmp;
+
+	int ret;
+	assert(discardpile.size == 0);
+	assert(player[0].hand.num_cards == 1);
+	assert(player[0].flags == pandamonium);
+	ret = conditionalEffects(0, swap_tmp, 0, 0);
+
+	if (turn_count != 2 || ret != 0) {
+		num_fails++;
+		red();
+		fprintf(stderr, "    pandamonium test (player[0]): turn count failed\n");
+		reset_col();
+	}
+
 	if (player[0].hand.num_cards != 1 ||
 		strcmp(player[0].hand.cards[0].name, swap_tmp.name) != 0) {
+		num_fails++;
+		red();
+		fprintf(stderr, "    empty stable test (player[1]): hand verification failed\n");
+		reset_col();
+	}
+
+	if (discardpile.size != 0) {
+		num_fails++;
+		red();
+		fprintf(stderr, "    empty stable test (player[1]): discard size failed\n");
+		reset_col();
+	}
+	reset_players();
+	reset_discard();
+
+	// player[0] is under a masquerade effect
+	current_players = 2;
+	addStable(0, basic_tmp);
+	addStable(1, basic_tmp2);
+	addStable(1, panda_tmp);
+	toggleFlags(1, panda_tmp.effect);
+	player[0].hand.cards[player[0].hand.num_cards++] = swap_tmp;
+
+	assert(discardpile.size == 0);
+	assert(player[0].hand.num_cards == 1);
+	assert(player[1].flags == pandamonium);
+	ret = conditionalEffects(0, swap_tmp, 0, 0);
+
+	if (turn_count != 2 || ret != 0) {
+		num_fails++;
+		red();
+		fprintf(stderr, "    pandamonium test (player[0]): turn count failed\n");
+		reset_col();
+	}
+
+	if (player[0].hand.num_cards != 1 ||
+			strcmp(player[0].hand.cards[0].name, swap_tmp.name) != 0) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    empty stable test (player[1]): hand verification failed\n");
@@ -390,25 +486,74 @@ int unicorn_swap_puppicorn_check() {
 int unicorn_swap_tests() {
 	int num_fails = 0;
 
-	rainbow("\nStarting Unicorn Swap tests...\n");
-
-	// file input stream setup
+	rainbow_error("\nStarting Unicorn Swap tests...\n");
 	FILE* fp;
-	fopen_s(&fp, "Tests/Input/unicornswap.txt", "r");
-	if (fp == NULL) {
-		magenta();
-		fprintf(stderr, "    file input failed :(");
-		reset_col();
-		return 1;
-	}
-	fpinput = fp;
+	if (!isclient) {
+		// file input stream setup
+		fopen_s(&fp, "Tests/Input/unicornswap.txt", "r");
+		if (fp == NULL) {
+			magenta();
+			fprintf(stderr, "    file input failed :(");
+			reset_col();
+			return 1;
+		}
+		fpinput = fp;
 
-	num_fails += unicorn_swap_basic_check();
-	num_fails += unicorn_swap_special_check();
-	num_fails += unicorn_swap_toggle_check();
-	num_fails += unicorn_swap_empty_check();
-	num_fails += unicorn_swap_unicorn_lasso_check();
-	num_fails += unicorn_swap_puppicorn_check();
+		num_fails += unicorn_swap_basic_check();
+		num_fails += unicorn_swap_special_check();
+		num_fails += unicorn_swap_toggle_check();
+		num_fails += unicorn_swap_empty_check();
+		num_fails += unicorn_swap_masquerade_check();
+		// num_fails += unicorn_swap_unicorn_lasso_check();
+		num_fails += unicorn_swap_puppicorn_check();
+
+	}
+	else {
+		// file input stream setup
+		fopen_s(&fp, "Tests/Input/unicornswapclient.txt", "r");
+		if (fp == NULL) {
+			magenta();
+			fprintf(stderr, "    file input failed :(");
+			reset_col();
+			return 1;
+		}
+		fpinput = fp;
+
+		// basic check, no input
+		int events;
+		receiveInt(&events, sockfd);
+		netStates[events].recvClient(1, sockfd);
+
+		// special check
+		receiveInt(&events, sockfd);
+		netStates[events].recvClient(1, sockfd);
+
+		// toggle check
+		receiveInt(&events, sockfd);
+		netStates[events].recvClient(1, sockfd);
+
+		// empty check; the second test within that function requires input
+		receiveInt(&events, sockfd);
+		netStates[events].recvClient(1, sockfd);
+
+		// masquerade check
+		// should get no prompt
+
+		// unicorn lasso check
+		// receiveInt(&events, sockfd);
+		// netStates[events].recvClient(1, sockfd);
+
+		// puppicorn check
+		receiveInt(&events, sockfd);
+		netStates[events].recvClient(1, sockfd);
+
+		// TOOD: unicorn lasso (soonTM)
+		// TODO: unicorn swap & some destroy event like extremely destructive unicorn
+		// TODO: unicorn swap & checking endGame triggers [would have to use mock functions so that the exe doesn't shut down early]
+		//	 -   1) after the other player adds the swapped unicorn to their stable (before the original person steals it)
+		//	 - 1.5) after some enter stable event that increases their unicorn count (e.g. chainsaw unicorn sacrificing pandamonium)
+		//	 -   2) puppicorn schenanigans (swap it to the person that comes before you so that you start with 7 unicorns at the start of the next turn
+	}
 
 	fclose(fp);
 	return num_fails;

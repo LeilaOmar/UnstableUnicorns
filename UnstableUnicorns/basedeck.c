@@ -124,8 +124,8 @@ struct Unicorn basedeck[] = {
      "If this card is sacrificed or destroyed, you may DESTROY a Unicorn card.",
      stabby_the_unicorn},
     {MAGICUNICORN, UNICORN, "Puppicorn",
-     "Each time any player begins their turn, move this card to that player's "
-     "Stable. This card cannot be sacrificed or destroyed.",
+     "At the end of your turn, move Puppicorn to the next player's Stable. "
+     "This card cannot be sacrificed or destroyed.",
      puppicorn},
     {MAGICUNICORN, UNICORN, "Rainbow Unicorn",
      "When this card enters your Stable, you may bring a Basic Unicorn card "
@@ -836,7 +836,24 @@ int conditionalEffects(int pnum, struct Unicorn corn, int hindex, int upgrade_ta
     // move a unicorn card from your stable to any other player's then STEAL
     // a unicorn card from that player's stable
 
-    // you can steal the card back, so the size of a player's stable doesn't matter
+    // you can steal the card back, so the size of any other player's stable doesn't matter
+    // so long as the current player has 1 unicorn card and there are no masquerade effects in play
+    for (int i = 0; i < current_players; i++) {
+      if (i == pnum) continue;
+
+      if ((player[i].flags & pandamonium) == 0) {
+        isvalid = 1;
+        break;
+      }
+    }
+
+    if (player[pnum].stable.num_unicorns <= 0 || (player[pnum].flags & pandamonium) == pandamonium ||
+        !isvalid) {
+      printf(
+        "You are unable to play 'Unicorn Swap' because there are not enough Unicorn cards to swap.\n");
+      turn_count++;
+      return 0;
+    }
 
     // dispose of card
     addDiscard(corn);
@@ -852,8 +869,8 @@ int conditionalEffects(int pnum, struct Unicorn corn, int hindex, int upgrade_ta
       if (index < 0 || index >= current_players || index == pnum || end != (buf + strlen(buf)))
         continue;
 
-      // check if chosen player actually has a unicorn card
-      if (player[index].stable.num_unicorns > 0)
+      // check if chosen player has "pandas" instead of unicorns
+      if ((player[index].flags & pandamonium) == 0)
         break;
     }
 

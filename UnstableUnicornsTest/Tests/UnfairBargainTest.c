@@ -185,23 +185,25 @@ int bargain_empty_check() {
 int unfair_bargain_tests() {
 	int num_fails = 0;
 
-	rainbow_error("\nStarting Unfair Bargain tests...\n");
+	if (!isclient) {
+		rainbow_error("\nStarting Unfair Bargain tests...\n");
 
-	// file input stream setup
-	FILE* fp;
-	fopen_s(&fp, "Tests/Input/unfairbargain.txt", "r");
-	if (fp == NULL) {
-		magenta();
-		fprintf(stderr, "    file input failed :(");
-		reset_col();
-		return 1;
+		// file input stream setup
+		FILE* fp;
+		fopen_s(&fp, "Tests/Input/unfairbargain.txt", "r");
+		if (fp == NULL) {
+			magenta();
+			fprintf(stderr, "    file input failed :(");
+			reset_col();
+			return 1;
+		}
+		fpinput = fp;
+
+		num_fails += bargain_greater_check();
+		num_fails += bargain_lesser_check();
+		num_fails += bargain_empty_check();
+
+		fclose(fp);
 	}
-	fpinput = fp;
-
-	num_fails += bargain_greater_check();
-	num_fails += bargain_lesser_check();
-	num_fails += bargain_empty_check();
-
-	fclose(fp);
 	return num_fails;
 }

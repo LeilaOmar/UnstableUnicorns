@@ -4,7 +4,8 @@
 #include "Tests/UpgradeTests.h"
 #include "Tests/DowngradeTests.h"
 #include "Tests/InstantTests.h"
-#include "networkfuncs.h"
+#include "networkstates.h"
+#include <conio.h>
 
 // void processStdin_mock(char* stdinbuf, int* bufindex) {
 // 
@@ -686,52 +687,8 @@ int main(int argc, char* argv[]) {
 			fprintf(stderr, "Attempt to connect to the server was unsuccessful. Error code : %d\n", WSAGetLastError());
 		}
 		
-		// TODO: this is getting a bit too long, so add these to every relevant test file
+		isclient = 1;
 
-		// extremely destructive unicorn tests
-		sendInt(0, sockfd);  // sanity
-		sendInt(-1, sockfd); // non-unicorn
-		sendInt(0, sockfd);  // pandamonium
-
-		// llamacorn tests
-		sendInt(-1, sockfd);
-
-		// annoying flying unicorn tests
-		sendInt(0, sockfd);
-
-		// back kick tests
-		sendInt(0, sockfd);
-		sendInt(0, sockfd);
-
-		// unicorn swap tests
-		// sendInt(quit_loop, sockfd);
-
-		// mystical vortex tests
-		sendInt(0, sockfd);
-
-		// neigh odd test
-		sendInt(2, sockfd);
-		sendInt(4, sockfd);
-
-		// neigh even test
-		sendInt(2, sockfd);
-		sendInt(2, sockfd);
-		sendInt(-1, sockfd);
-
-		// super neigh odd test
-		sendInt(0, sockfd);
-
-		// super neigh even test
-		sendInt(0, sockfd);
-
-		char data[1024];
-		int rc;
-		while (rc = recv(sockfd, data, sizeof data, 0) > 0) {
-			// loop until socket closes or server disconnects in some way
-		}
-
-		closesocket(sockfd);
-		exit(1);
 	}
 	else {
 
@@ -783,6 +740,9 @@ int main(int argc, char* argv[]) {
 	init_deck(&nursery, &deck, &discardpile);
 	srand(0);
 
+	// initialize the network states too
+	init_network_states();
+
 	// wheeeee~
 	current_players = 1;
 	strcpy_s(player[0].username, sizeof player[0].username, "one");
@@ -793,19 +753,21 @@ int main(int argc, char* argv[]) {
 	rainbow_error("Unstable Unicorns");
 	fprintf(stderr, " application demo! :D\n");
 
-	// utility function test
-	check_class_tests();
-	rearrange_pile_tests();
-	add_nursery_tests();
-	add_stable_tests();
-	rearrange_stable_tests();
-	
-	// basic card effect tests
-	draw_tests();
-	discard_tests();
-	sacrifice_tests();
-	destroy_tests();
-	steal_tests();
+	if (!isclient) {
+		// utility function test
+		check_class_tests();
+		rearrange_pile_tests();
+		add_nursery_tests();
+		add_stable_tests();
+		rearrange_stable_tests();
+
+		// basic card effect tests
+		draw_tests();
+		discard_tests();
+		sacrifice_tests();
+		destroy_tests();
+		steal_tests();
+	}
 
 	// specific card functionality tests
 
@@ -846,7 +808,7 @@ int main(int argc, char* argv[]) {
 	num_fails += back_kick_tests();
 	num_fails += change_of_luck_tests();
 	num_fails += glitter_tornado_tests();
-	// num_fails += unicorn_swap_tests();
+	num_fails += unicorn_swap_tests();
 	num_fails += re_target_tests();
 	num_fails += unfair_bargain_tests();
 	num_fails += two_for_one_tests();
@@ -882,10 +844,20 @@ int main(int argc, char* argv[]) {
 	num_fails += neigh_tests();
 	num_fails += super_neigh_tests();
 
-
 	// ********************************************************************************
 	// ***************************** Results and Clean-up *****************************
 	// ********************************************************************************
+
+	if (isclient) {
+		char data[1024];
+		int rc;
+		while (rc = recv(sockfd, data, sizeof data, 0) > 0) {
+			// loop until socket closes or server disconnects in some way
+		}
+		
+		closesocket(sockfd);
+		exit(1);
+	}
 
 	if (num_fails == 0) {
 		green();
@@ -901,10 +873,10 @@ int main(int argc, char* argv[]) {
 	// Close process and thread handles. 
 	CloseHandle(pi.hProcess);
 	CloseHandle(pi.hThread);
-
 	closesocket(clientsockfd[0]);
 	closesocket(sockfd);
-	if (fp != NULL) fclose(fp);
+	if (fp != NULL)
+		fclose(fp);
 	WSACleanup();
 
 	_getch();

@@ -38,21 +38,23 @@ int good_deal_basic_check() {
 int good_deal_tests() {
 	int num_fails = 0;
 
-	rainbow_error("\nStarting Good Deal tests...\n");
+	if (!isclient) {
+		rainbow_error("\nStarting Good Deal tests...\n");
 
-	// file input stream setup
-	FILE* fp;
-	fopen_s(&fp, "Tests/Input/line_1.txt", "r");
-	if (fp == NULL) {
-		magenta();
-		fprintf(stderr, "    file input failed :(");
-		reset_col();
-		return 1;
+		// file input stream setup
+		FILE* fp;
+		fopen_s(&fp, "Tests/Input/line_1.txt", "r");
+		if (fp == NULL) {
+			magenta();
+			fprintf(stderr, "    file input failed :(");
+			reset_col();
+			return 1;
+		}
+		fpinput = fp;
+
+		num_fails += good_deal_basic_check();
+
+		fclose(fp);
 	}
-	fpinput = fp;
-
-	num_fails += good_deal_basic_check();
-
-	fclose(fp);
 	return num_fails;
 }

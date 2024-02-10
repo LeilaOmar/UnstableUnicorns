@@ -94,10 +94,11 @@ int extra_tail_empty_check() {
 int extra_tail_tests() {
 	int num_fails = 0;
 
-	rainbow_error("\nStarting Extra Tail tests...\n");
+	if (!isclient) {
+		rainbow_error("\nStarting Extra Tail tests...\n");
 
-	num_fails += extra_tail_basic_check();
-	num_fails += extra_tail_empty_check();
-
+		num_fails += extra_tail_basic_check();
+		num_fails += extra_tail_empty_check();
+	}
 	return num_fails;
 }

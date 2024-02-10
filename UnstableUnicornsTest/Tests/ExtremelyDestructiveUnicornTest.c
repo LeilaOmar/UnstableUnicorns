@@ -1,4 +1,5 @@
 #include "MagicUnicornTests.h"
+#include "networkevents.h"
 
 // sanity check
 int destructive_basic_check() {
@@ -127,7 +128,7 @@ int destructive_pandamonium_check() {
 			strcmp(discardpile.cards[0].name, basic_tmp.name) != 0) {
 		num_fails++;
 		red();
-		fprintf(stderr, "    sanity test: discard pile verification failed\n");
+		fprintf(stderr, "    pandamonium test: discard pile verification failed\n");
 		reset_col();
 	}
 
@@ -156,9 +157,26 @@ int extremely_destructive_unicorn_tests() {
 	}
 	fpinput = fp;
 
-	num_fails += destructive_basic_check();
-	num_fails += destructive_non_unicorn_check();
-	num_fails += destructive_pandamonium_check();
+	if (!isclient) {
+		num_fails += destructive_basic_check();
+		num_fails += destructive_non_unicorn_check();
+		num_fails += destructive_pandamonium_check();
+	}
+	else {
+		int events;
+
+		// sanity check; input = 1 for the card at index 0
+		receiveInt(&events, sockfd);
+		netStates[events].recvClient(1, sockfd);
+
+		// non-unicorn; auto sends -1
+		receiveInt(&events, sockfd);
+		netStates[events].recvClient(1, sockfd);
+
+		// pandamonium; input = 1 for the card at index 0
+		receiveInt(&events, sockfd);
+		netStates[events].recvClient(1, sockfd);
+	}
 
 	fclose(fp);
 	return num_fails;
