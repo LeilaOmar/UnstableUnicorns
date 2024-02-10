@@ -458,28 +458,44 @@ int toggleFlags(int pnum, int effect) {
   switch (effect) {
   case NOTHING:
     return 0;
-  case black_knight_unicorn_effect:
-    // Playing Black Knight Unicorn
-    // if a unicorn card in your stable would be destroyed, you may
-    // SACRIFICE this card instead
-    player[pnum].flags ^= black_knight_unicorn;
-    return 1;
-  case tiny_stable_effect:
-    // Playing Tiny Stable:
-    // If at any time you have more than 5 Unicorns in your Stable,
-    // SACRIFICE a Unicorn card
-    player[pnum].flags ^= tiny_stable;
-    return 1;
   case barbed_wire_effect:
     // Playing Barbed Wire:
     // Each time a Unicorn card enters or leaves your Stable, DISCARD a
     // card. 
     player[pnum].flags ^= barbed_wire;
     return 1;
+  case black_knight_unicorn_effect:
+    // Playing Black Knight Unicorn
+    // if a unicorn card in your stable would be destroyed, you may
+    // SACRIFICE this card instead
+    player[pnum].flags ^= black_knight_unicorn;
+    return 1;
+  case blinding_light_effect:
+    // Playing Blinding Light:
+    // all of your unicorn cards are considered basic unicorns with
+    // no effects
+    player[pnum].flags ^= blinding_light;
+    return 1;
+  case broken_stable_effect:
+    // Playing Broken Stable:
+    // you cannot play any upgrade cards
+    player[pnum].flags ^= broken_stable;
+    return 1;
+  case ginormous_unicorn_effect:
+    // Playing Ginormous Unicorn:
+    // this card counts for 2 unicorns. you cannot play any instant cards
+    player[pnum].flags ^= ginormous_unicorn;
+    return 1;
   case nanny_cam_effect:
     // Playing Nanny Cam:
     // your hand must be visible to all players
     player[pnum].flags ^= nanny_cam;
+    return 1;
+  case pandamonium_effect:
+    // Playing Pandamonium
+    // all of your unicorns are considered pandas. cards that
+    // affect unicorn cards do not affect your pandas
+    player[pnum].flags ^= pandamonium;
     return 1;
   case queen_bee_unicorn_effect:
     // Playing Queen Bee Unicorn:
@@ -493,37 +509,21 @@ int toggleFlags(int pnum, int effect) {
     // your unicorn cards cannot be destroyed
     player[pnum].flags ^= rainbow_aura;
     return 1;
-  case broken_stable_effect:
-    // Playing Broken Stable:
-    // you cannot play any upgrade cards
-    player[pnum].flags ^= broken_stable;
-    return 1;
   case slowdown_effect:
     // Playing Slowdown:
     // you cannot play any instant cards
     player[pnum].flags ^= slowdown;
     return 1;
-  case ginormous_unicorn_effect:
-    // Playing Ginormous Unicorn:
-    // this card counts for 2 unicorns. you cannot play any instant cards
-    player[pnum].flags ^= ginormous_unicorn;
+  case tiny_stable_effect:
+    // Playing Tiny Stable:
+    // If at any time you have more than 5 Unicorns in your Stable,
+    // SACRIFICE a Unicorn card
+    player[pnum].flags ^= tiny_stable;
     return 1;
   case yay_effect:
     // Playing Yay:
     // cards you play cannot be neigh'd
     player[pnum].flags ^= yay;
-    return 1;
-  case blinding_light_effect:
-    // Playing Blinding Light:
-    // all of your unicorn cards are considered basic unicorns with
-    // no effects
-    player[pnum].flags ^= blinding_light;
-    return 1;
-  case pandamonium_effect:
-    // Playing Pandamonium
-    // all of your unicorns are considered pandas. cards that
-    // affect unicorn cards do not affect your pandas
-    player[pnum].flags ^= pandamonium;
     return 1;
   default:
     return 0;
@@ -629,264 +629,6 @@ int conditionalEffects(int pnum, struct Unicorn corn, int hindex, int upgrade_ta
   switch (corn.effect) {
   case NOTHING:
     break;
-  case extra_tail:
-  {
-    // Playing Extra Tail:
-    // can only enter a stable if there is a Basic Unicorn card there
-    for (int i = 0; i < player[upgrade_target].stable.size; i++) {
-      if (player[upgrade_target].stable.unicorns[i].cType == BASICUNICORN) {
-        return 1;
-      }
-    }
-
-    printf(
-      "You are unable to play 'Extra Tail' because there aren't any "
-      "Basic Unicorn cards in the chosen player's stable\n");
-    turn_count++;
-    return 0;
-  }
-  case rainbow_mane:
-  {
-    // Playing Rainbow Mane:
-    // can only enter a stable if there is a Basic Unicorn card there
-    for (int i = 0; i < player[upgrade_target].stable.size; i++) {
-      if (player[upgrade_target].stable.unicorns[i].cType == BASICUNICORN) {
-        return 1;
-      }
-    }
-
-    printf(
-      "You are unable to play 'Rainbow Mane' because there aren't any "
-      "Basic Unicorn cards in the chosen player's stable\n");
-    turn_count++;
-    return 0;
-  }
-  case two_for_one:
-  {
-    // Playing Two-For-One:
-    // SACRIFICE 1 card, then DESTROY 2 cards
-
-    // check if there is at least 1 card to sacrifice; some cards *cough puppicorn cough*
-    // are impervious to getting sacrificed
-    for (int i = 0; i < player[pnum].stable.size; i++) {
-      if (canBeSacrificed(pnum, i, ANY)) {
-        isvalid = 1;
-        break;
-      }
-    }
-
-    // check if there are at least 2 cards to destroy
-    isvalid2 = checkNumCardsToDestroy(pnum, ANY, TRUE);
-
-    // quit and reassign the card to the player's hand
-    if (!isvalid || isvalid2 < 2) {
-      printf(
-        "You are unable to play 'Two-For-One' because there are "
-        "not enough cards to Sacrifice and/or Destroy\n");
-      turn_count++;
-      return 0;
-    }
-
-    return 1;
-  }
-  case targeted_destruction:
-  {
-    // Playing Targeted Destruction:
-    // you must DESTROY an upgrade card or SACRIFICE a downgrade card
-
-    for (int j = 0; j < current_players; j++) {
-      for (int i = 0; i < player[j].stable.size; i++) {
-        if (j != pnum && player[j].stable.unicorns[i].cType == UPGRADE)
-          isvalid = 1;
-        if (j == pnum &&
-          player[j].stable.unicorns[i].cType == DOWNGRADE)
-          isvalid2 = 1;
-      }
-      // quit if both conditions have been met
-      if (isvalid == 1 && isvalid2 == 1) j = current_players;
-    }
-    // quit if there isn't an upgrade card or downgrade card available
-    if (isvalid == 0 && isvalid2 == 0) {
-      printf(
-        "You are unable to play 'Targeted Destruction' because there are "
-        "no Upgrade or Downgrade cards in place\n");
-      turn_count++;
-      return 0;
-    }
-
-    return 1;
-  }
-  case unicorn_poison:
-  {
-    // Playing Unicorn Poison:
-    // DESTROY 1 unicorn card
-
-    // check if there's at least 1 unicorn card to destroy first
-    isvalid = checkNumCardsToDestroy(pnum, ANYUNICORN, TRUE);
-
-    // quit and reassign the card to the player's hand
-    if (!isvalid) {
-      printf(
-        "You are unable to play 'Unicorn Poison' because there are "
-        "no available cards to Destroy\n");
-      turn_count++;
-      return 0;
-    }
-
-    return 1;
-  }
-  case change_of_luck:
-  {
-    // Playing Change of Luck:
-    // DRAW 2 cards and DISCARD 3 cards; take another turn
-
-    // need to discard 3 cards
-    // 3 cards - 2 drawn + 1 (change of luck) = 2 cards in hand needed, including this card
-    if (player[pnum].hand.num_cards < 2) {
-      printf(
-        "You are unable to play 'Change of Luck' because you would not "
-        "have 3 cards in total to Discard\n");
-      turn_count++;
-      return 0;
-    }
-
-    return 1;
-  }
-  case glitter_tornado:
-  {
-    // Playing Glitter Tornado
-    // Return a card in each player's Stable (including yours) to their
-    // hand.
-
-    // check if every player has a card to return
-    for (int i = 0; i < current_players; i++) {
-      if (player[i].stable.size <= 0) {
-        isvalid = 1;
-        break;
-      }
-    }
-
-    if (isvalid) {
-      printf(
-        "You are unable to play 'Glitter Tornado' because all players do "
-        "not have at least 1 card in their stables\n");
-      turn_count++;
-      return 0;
-    }
-
-    return 1;
-  }
-  case unicorn_swap:
-  {
-    // Playing Unicorn Swap:
-    // move a unicorn card from your stable to any other player's then STEAL
-    // a unicorn card from that player's stable
-
-    // you can steal the card back, so the size of any other player's stable doesn't matter
-    // so long as the current player has 1 unicorn card and there are no masquerade effects in play
-    for (int i = 0; i < current_players; i++) {
-      if (i == pnum) continue;
-
-      if ((player[i].flags & pandamonium) == 0) {
-        isvalid = 1;
-        break;
-      }
-    }
-
-    if (player[pnum].stable.num_unicorns <= 0 || (player[pnum].flags & pandamonium) == pandamonium ||
-        !isvalid) {
-      printf(
-        "You are unable to play 'Unicorn Swap' because there are not enough Unicorn cards to swap.\n");
-      turn_count++;
-      return 0;
-    }
-
-    return 1;
-  }
-  case mystical_vortex:
-  {
-    // Playing Mystical Vortex:
-    // every player must DISCARD 1 card. shuffle the discard pile into the
-    // deck
-
-    // check if the current player has any cards to dispose of
-    if (player[pnum].hand.num_cards < 2) {
-      printf(
-        "You are unable to play 'Mystical Vortex' because you don't have any "
-        "cards to Discard\n");
-      turn_count++;
-      return 0;
-    }
-
-    return 1;
-  }
-  case unicorn_shrinkray:
-  {
-    // Playing Unicorn Shrinkray:
-    // move all player's unicorn cards to the discard pile without
-    // triggering any of their effects, then bring the same number of baby
-    // unicorns from the nursery directly into that player's stable
-
-    for (int i = 0; i < current_players; i++) {
-      if (i == pnum) continue;
-      if ((player[i].flags & pandamonium) != 0) {
-        // pandas aren't unicorns
-        isvalid2++;
-        continue;
-      }
-
-      for (int j = 0; j < player[i].stable.size; j++) {
-        if (player[i].stable.unicorns[j].cType == BASICUNICORN ||
-            player[i].stable.unicorns[j].cType == MAGICUNICORN) {
-          isvalid++;
-        }
-      }
-      // adds to a counter check if nursery size is less than the amount of non-baby unicorns
-      if (nursery.size < isvalid) {
-        isvalid2++;
-      }
-      isvalid = 0;
-    }
-
-    // if there aren't enough baby unicorns in the nursery, quit
-    if (isvalid2 == current_players - 1) {
-      printf(
-        "You are unable to play 'Unicorn Shrinkray' because there aren't "
-        "enough available Baby Unicorns to replace any player's stable\n");
-      turn_count++;
-      return 0;
-    }
-
-    return 1;
-  }
-  case re_target:
-  {
-    // Playing Re-Target:
-    // move an upgrade or downgrade card from any player's stable to any
-    // other player's stable
-
-    for (int j = 0; j < current_players; j++) {
-      for (int i = 0; i < player[j].stable.size; i++) {
-        if (player[j].stable.unicorns[i].cType == UPGRADE ||
-            player[j].stable.unicorns[i].cType == DOWNGRADE) {
-          // quit if either condition was met
-          isvalid = 1;
-          j = DESC_SIZE;
-          break;
-        }
-      }
-    }
-
-    if (!isvalid) {
-      printf(
-        "You are unable to play 'Re-Target' because there are no Upgrade "
-        "or Downgrade cards in place\n");
-      turn_count++;
-      return 0;
-    }
-
-    return 1;
-  }
   case back_kick:
   {
     // Playing Back Kick:
@@ -932,22 +674,118 @@ int conditionalEffects(int pnum, struct Unicorn corn, int hindex, int upgrade_ta
 
     return 1;
   }
-  case unfair_bargain:
+  case change_of_luck:
   {
-    // Playing Unfair Bargain:
-    // trade hands with any other player
+    // Playing Change of Luck:
+    // DRAW 2 cards and DISCARD 3 cards; take another turn
 
+    // need to discard 3 cards
+    // 3 cards - 2 drawn + 1 (change of luck) = 2 cards in hand needed, including this card
+    if (player[pnum].hand.num_cards < 2) {
+      printf(
+        "You are unable to play 'Change of Luck' because you would not "
+        "have 3 cards in total to Discard\n");
+      turn_count++;
+      return 0;
+    }
+
+    return 1;
+  }
+  case extra_tail:
+  {
+    // Playing Extra Tail:
+    // can only enter a stable if there is a Basic Unicorn card there
+    for (int i = 0; i < player[upgrade_target].stable.size; i++) {
+      if (player[upgrade_target].stable.unicorns[i].cType == BASICUNICORN) {
+        return 1;
+      }
+    }
+
+    printf(
+      "You are unable to play 'Extra Tail' because there aren't any "
+      "Basic Unicorn cards in the chosen player's stable\n");
+    turn_count++;
+    return 0;
+  }
+  case glitter_tornado:
+  {
+    // Playing Glitter Tornado
+    // Return a card in each player's Stable (including yours) to their
+    // hand.
+
+    // check if every player has a card to return
     for (int i = 0; i < current_players; i++) {
-      if (i != pnum && player[i].hand.num_cards > 0) {
+      if (player[i].stable.size <= 0) {
         isvalid = 1;
         break;
       }
     }
 
-    if (isvalid == 0) {
+    if (isvalid) {
       printf(
-        "You are unable to play 'Unfair Bargain' because no other "
-        "players have any cards in their hands\n");
+        "You are unable to play 'Glitter Tornado' because all players do "
+        "not have at least 1 card in their stables\n");
+      turn_count++;
+      return 0;
+    }
+
+    return 1;
+  }
+  case mystical_vortex:
+  {
+    // Playing Mystical Vortex:
+    // every player must DISCARD 1 card. shuffle the discard pile into the
+    // deck
+
+    // check if the current player has any cards to dispose of
+    if (player[pnum].hand.num_cards < 2) {
+      printf(
+        "You are unable to play 'Mystical Vortex' because you don't have any "
+        "cards to Discard\n");
+      turn_count++;
+      return 0;
+    }
+
+    return 1;
+  }
+  case rainbow_mane:
+  {
+    // Playing Rainbow Mane:
+    // can only enter a stable if there is a Basic Unicorn card there
+    for (int i = 0; i < player[upgrade_target].stable.size; i++) {
+      if (player[upgrade_target].stable.unicorns[i].cType == BASICUNICORN) {
+        return 1;
+      }
+    }
+
+    printf(
+      "You are unable to play 'Rainbow Mane' because there aren't any "
+      "Basic Unicorn cards in the chosen player's stable\n");
+    turn_count++;
+    return 0;
+  }
+  case re_target:
+  {
+    // Playing Re-Target:
+    // move an upgrade or downgrade card from any player's stable to any
+    // other player's stable
+
+    for (int j = 0; j < current_players; j++) {
+      for (int i = 0; i < player[j].stable.size; i++) {
+        if (player[j].stable.unicorns[i].cType == UPGRADE ||
+          player[j].stable.unicorns[i].cType == DOWNGRADE) {
+          // quit if either condition was met
+          isvalid = 1;
+          j = DESC_SIZE;
+          break;
+        }
+      }
+    }
+
+    if (!isvalid) {
+      printf(
+        "You are unable to play 'Re-Target' because there are no Upgrade "
+        "or Downgrade cards in place\n");
       turn_count++;
       return 0;
     }
@@ -981,7 +819,7 @@ int conditionalEffects(int pnum, struct Unicorn corn, int hindex, int upgrade_ta
       else {
         for (int i = 0; i < player[j].stable.size; i++) {
           if (player[j].stable.unicorns[i].cType == DOWNGRADE ||
-              player[j].stable.unicorns[i].cType == UPGRADE) {
+            player[j].stable.unicorns[i].cType == UPGRADE) {
             isvalid = 1;
           }
         }
@@ -994,6 +832,168 @@ int conditionalEffects(int pnum, struct Unicorn corn, int hindex, int upgrade_ta
       printf(
         "You are unable to play 'Reset Button' because there are not enough Upgrade "
         "or Downgrade cards in your own stable and/or other people's stables to sacrifice.\n");
+      turn_count++;
+      return 0;
+    }
+
+    return 1;
+  }
+  case targeted_destruction:
+  {
+    // Playing Targeted Destruction:
+    // you must DESTROY an upgrade card or SACRIFICE a downgrade card
+
+    for (int j = 0; j < current_players; j++) {
+      for (int i = 0; i < player[j].stable.size; i++) {
+        if (j != pnum && player[j].stable.unicorns[i].cType == UPGRADE)
+          isvalid = 1;
+        if (j == pnum &&
+          player[j].stable.unicorns[i].cType == DOWNGRADE)
+          isvalid2 = 1;
+      }
+      // quit if both conditions have been met
+      if (isvalid == 1 && isvalid2 == 1) j = current_players;
+    }
+    // quit if there isn't an upgrade card or downgrade card available
+    if (isvalid == 0 && isvalid2 == 0) {
+      printf(
+        "You are unable to play 'Targeted Destruction' because there are "
+        "no Upgrade or Downgrade cards in place\n");
+      turn_count++;
+      return 0;
+    }
+
+    return 1;
+  }
+  case two_for_one:
+  {
+    // Playing Two-For-One:
+    // SACRIFICE 1 card, then DESTROY 2 cards
+
+    // check if there is at least 1 card to sacrifice; some cards *cough puppicorn cough*
+    // are impervious to getting sacrificed
+    for (int i = 0; i < player[pnum].stable.size; i++) {
+      if (canBeSacrificed(pnum, i, ANY)) {
+        isvalid = 1;
+        break;
+      }
+    }
+
+    // check if there are at least 2 cards to destroy
+    isvalid2 = checkNumCardsToDestroy(pnum, ANY, TRUE);
+
+    // quit and reassign the card to the player's hand
+    if (!isvalid || isvalid2 < 2) {
+      printf(
+        "You are unable to play 'Two-For-One' because there are "
+        "not enough cards to Sacrifice and/or Destroy\n");
+      turn_count++;
+      return 0;
+    }
+
+    return 1;
+  }
+  case unfair_bargain:
+  {
+    // Playing Unfair Bargain:
+    // trade hands with any other player
+
+    for (int i = 0; i < current_players; i++) {
+      if (i != pnum && player[i].hand.num_cards > 0) {
+        isvalid = 1;
+        break;
+      }
+    }
+
+    if (isvalid == 0) {
+      printf(
+        "You are unable to play 'Unfair Bargain' because no other "
+        "players have any cards in their hands\n");
+      turn_count++;
+      return 0;
+    }
+
+    return 1;
+  }
+  case unicorn_poison:
+  {
+    // Playing Unicorn Poison:
+    // DESTROY 1 unicorn card
+
+    // check if there's at least 1 unicorn card to destroy first
+    isvalid = checkNumCardsToDestroy(pnum, ANYUNICORN, TRUE);
+
+    // quit and reassign the card to the player's hand
+    if (!isvalid) {
+      printf(
+        "You are unable to play 'Unicorn Poison' because there are "
+        "no available cards to Destroy\n");
+      turn_count++;
+      return 0;
+    }
+
+    return 1;
+  }
+  case unicorn_shrinkray:
+  {
+    // Playing Unicorn Shrinkray:
+    // move all player's unicorn cards to the discard pile without
+    // triggering any of their effects, then bring the same number of baby
+    // unicorns from the nursery directly into that player's stable
+
+    for (int i = 0; i < current_players; i++) {
+      if (i == pnum) continue;
+      if ((player[i].flags & pandamonium) != 0) {
+        // pandas aren't unicorns
+        isvalid2++;
+        continue;
+      }
+
+      for (int j = 0; j < player[i].stable.size; j++) {
+        if (player[i].stable.unicorns[j].cType == BASICUNICORN ||
+            player[i].stable.unicorns[j].cType == MAGICUNICORN) {
+          isvalid++;
+        }
+      }
+      // adds to a counter check if nursery size is less than the amount of non-baby unicorns
+      if (nursery.size < isvalid) {
+        isvalid2++;
+      }
+      isvalid = 0;
+    }
+
+    // if there aren't enough baby unicorns in the nursery, quit
+    if (isvalid2 == current_players - 1) {
+      printf(
+        "You are unable to play 'Unicorn Shrinkray' because there aren't "
+        "enough available Baby Unicorns to replace any player's stable\n");
+      turn_count++;
+      return 0;
+    }
+
+    return 1;
+  }
+  case unicorn_swap:
+  {
+    // Playing Unicorn Swap:
+    // move a unicorn card from your stable to any other player's then STEAL
+    // a unicorn card from that player's stable
+
+    // you can steal the card back, so the size of any other player's stable doesn't matter
+    // so long as the current player has 1 unicorn card and there are no masquerade effects in play
+    for (int i = 0; i < current_players; i++) {
+      if (i == pnum) continue;
+
+      if ((player[i].flags & pandamonium) == 0) {
+        isvalid = 1;
+        break;
+      }
+    }
+
+    if (player[pnum].stable.num_unicorns <= 0 || (player[pnum].flags & pandamonium) == pandamonium ||
+        !isvalid) {
+      printf(
+        "You are unable to play 'Unicorn Swap' because there are not enough Unicorn cards to swap.\n");
       turn_count++;
       return 0;
     }
@@ -1044,13 +1044,12 @@ void enterStableEffects(int pnum, int effect) {
   switch (effect) {
   case NOTHING:
     break;
-  case queen_bee_unicorn_effect:
+  case black_knight_unicorn_effect:
   {
-    // Playing Queen Bee Unicorn:
-    // basic unicorn cards cannot enter any player's stable except yours
-    for (int i = 0; i < current_players; i++) {
-      if (i != pnum) player[i].flags |= 32;
-    }
+    // Playing Black Knight Unicorn
+    // if a unicorn card in your stable would be destroyed, you may
+    // SACRIFICE this card instead
+    player[pnum].flags |= 1024;
     break;
   }
   case ginormous_unicorn_effect:
@@ -1060,27 +1059,89 @@ void enterStableEffects(int pnum, int effect) {
     player[pnum].flags |= 64;
     break;
   }
-  case black_knight_unicorn_effect:
+  case queen_bee_unicorn_effect:
   {
-    // Playing Black Knight Unicorn
-    // if a unicorn card in your stable would be destroyed, you may
-    // SACRIFICE this card instead
-    player[pnum].flags |= 1024;
+    // Playing Queen Bee Unicorn:
+    // basic unicorn cards cannot enter any player's stable except yours
+    for (int i = 0; i < current_players; i++) {
+      if (i != pnum) player[i].flags |= 32;
+    }
     break;
   }
-  case greedy_flying_unicorn:
+  case alluring_narwhal:
   {
-    // Playing Greedy Flying Unicorn:
-    // DRAW 1 card
-    draw(pnum, 1);
+    // Playing Alluring Narwhal:
+    // STEAL 1 upgrade card (e.y.s.)
+    for (int i = 0; i < current_players; i++) {
+      for (int j = 0; j < player[i].stable.size; j++) {
+        if (player[i].stable.unicorns[j].cType == UPGRADE && i != pnum) {
+          isvalid++;
+          i = DESC_SIZE;
+          break;
+        }
+      }
+    }
+
+    if (!isvalid)
+      return;
+
+    steal(pnum, UPGRADE);
     break;
   }
-  case unicorn_on_the_cob:
+  case americorn:
   {
-    // Playing Unicorn on the Cob:
-    // DRAW 2 cards and DISCARD 1 card
-    draw(pnum, 2);
-    discard(pnum, 1, ANY);
+    // Playing Americorn:
+    // you may pull a card at random from another player's hand into your
+    // hand
+
+    // check if other players actually have at least one card
+    for (int i = 0; i < current_players; i++) {
+      if (i != pnum && player[i].hand.num_cards > 0) {
+        isvalid = 1;
+        break;
+      }
+    }
+
+    if (!isvalid)
+      break;
+
+    printPlayers();
+    for (;;) {
+      printf("Choose a player to steal a random card from their hand: ");
+      index = numinput(buf, &end, sizeof buf) - 1;
+
+      // index validation
+      if (index < 0 || index >= current_players || index == pnum || end != (buf + strlen(buf)))
+        continue;
+
+      if (player[index].hand.num_cards > 0)
+        break;
+    }
+
+    if ((player[index].flags & nanny_cam) == nanny_cam) {
+      // pick the card if the chosen player has the nanny cam downgrade card
+      printHand(index);
+      for (;;) {
+        printf("Player #%d: %s has Nanny Cam in effect, so you may choose a card "
+          "to pull from their hand: ", index + 1, player[index].username);
+        index2 = numinput(buf, &end, sizeof buf) - 1;
+
+        // index validation
+        if (index2 >= 0 && index2 < player[index].hand.num_cards && end == (buf + strlen(buf)))
+          break;
+      }
+    }
+    else {
+      // set index2 to be some random card within the chosen player's range
+      index2 = rand() % player[index].hand.num_cards;
+    }
+
+    // discard time! pnum is current player, index is the stolen player
+    // number and index2 is the card item being transferred
+    player[pnum].hand.cards[player[pnum].hand.num_cards] =
+      player[index].hand.cards[index2];
+    player[pnum].hand.num_cards++;
+    rearrangeHand(index, index2);
     break;
   }
   case annoying_flying_unicorn:
@@ -1124,110 +1185,6 @@ void enterStableEffects(int pnum, int effect) {
     }
     break;
   }
-  case seductive_unicorn:
-  {
-    // Playing Seductive Unicorn:
-    // you may DISCARD 1 card, then STEAL a unicorn card
-
-    // check if there are unicorn cards to steal
-    for (int i = 0; i < current_players; i++) {
-      if (i != pnum && player[i].stable.num_unicorns > 0) {
-        isvalid = 1;
-        break;
-      }
-    }
-
-    if (!isvalid)
-      break;
-
-    do {
-      printf(
-        "Would you like to discard a card in order to steal a unicorn "
-        "card (y/n)?: ");
-      ans = charinput(buf, sizeof buf);
-    } while ((ans != 'y' && ans != 'n') || strlen(buf) != 2);
-
-    if (ans == 'y') {
-      discard(pnum, 1, ANY);
-      steal(pnum, ANYUNICORN);
-    }
-    break;
-  }
-  case llamacorn:
-  {
-    // Playing Llamacorn:
-    // each player must DISCARD 1 card.
-
-    if (isclient) {
-      sendInt(discard_event, sockfd);
-      // (target_pnum = ANY) represents all players
-      sendCardEffectPacket(ANY, ANY, sockfd);
-      clientDiscard(pnum, ANY, ANY);
-    }
-    else {
-      serverDiscard(pnum, ANY, ANY);
-    }
-
-    break;
-  }
-  case extremely_destructive_unicorn:
-  {
-    // Playing Extremely Destructive Unicorn:
-    // each player must SACRIFICE 1 unicorn card
-
-    // TODO: if there end up being too many isclient vs server checks, then maybe
-    // it's worth using vtables and sending their respective lookup table references?
-    if (isclient) {
-      sendInt(sacrifice_event, sockfd);
-      // (target_pnum = ANY) represents all players
-      sendCardEffectPacket(ANY, ANYUNICORN, sockfd);
-      clientSacrifice(pnum, ANY, ANYUNICORN);
-    }
-    else {
-      serverSacrifice(pnum, ANY, ANYUNICORN);
-    }
-
-    break;
-  }
-  case narwhal_torpedo:
-  {
-    // Playing Narwhal Torpedo
-    // SACRIFICE all downgrade cards
-    for (int i = player[pnum].stable.size - 1; i >= 0; i--) {
-      // start from the end so that cards/indices don't get skipped upon
-      // rearranging the stable
-      if (player[pnum].stable.unicorns[i].cType == DOWNGRADE) {
-        addDiscard(player[pnum].stable.unicorns[i]);
-        rearrangeStable(pnum, i);
-      }
-    }
-    break;
-  }
-  case shark_with_a_horn:
-  {
-    // Playing Shark With a Horn
-    // you may SACRIFICE this card, then destroy a unicorn card
-
-    // check if there are unicorn cards to destroy
-    isvalid = checkNumCardsToDestroy(pnum, ANYUNICORN, FALSE);
-    if (!isvalid)
-      break;
-
-    do {
-      printf(
-        "Would you like to sacrifice this card in order to destroy a "
-        "Unicorn card (y/n)?: ");
-      ans = charinput(buf, sizeof buf);
-    } while ((ans != 'y' && ans != 'n') || strlen(buf) != 2);
-
-    if (ans == 'y') {
-      addDiscard(player[pnum].stable.unicorns[player[pnum].stable.size - 1]);
-      // player[pnum].stable.size--; <--- this is why we can't have nice things...
-      rearrangeStable(pnum, player[pnum].stable.size - 1);
-      destroy(pnum, ANYUNICORN, FALSE);
-    }
-    break;
-  }
   case chainsaw_unicorn:
   {
     // Playing Chainsaw Unicorn:
@@ -1266,31 +1223,65 @@ void enterStableEffects(int pnum, int effect) {
     }
     break;
   }
-  case alluring_narwhal:
+  case classy_narwhal:
   {
-    // Playing Alluring Narwhal:
-    // STEAL 1 upgrade card (e.y.s.)
-    for (int i = 0; i < current_players; i++) {
-      for (int j = 0; j < player[i].stable.size; j++) {
-        if (player[i].stable.unicorns[j].cType == UPGRADE && i != pnum) {
-          isvalid++;
-          i = DESC_SIZE;
-          break;
-        }
-      }
-    }
-
-    if (!isvalid)
-      return;
-
-    steal(pnum, UPGRADE);
+    // Playing Classy Narwhal
+    // search the deck for an upgrade card and add it to your hand. shuffle
+    // the deck
+    searchPile(pnum, &deck, UPGRADE, ANY);
+    shuffleDeck(&deck);
     break;
   }
-  case majestic_flying_unicorn:
+  case extremely_destructive_unicorn:
   {
-    // Playing Majestic Flying Unicorn:
-    // you may add a Unicorn card from the discard pile to your hand
-    searchPile(pnum, &discardpile, ANYUNICORN, ANY);
+    // Playing Extremely Destructive Unicorn:
+    // each player must SACRIFICE 1 unicorn card
+
+    // TODO: if there end up being too many isclient vs server checks, then maybe
+    // it's worth using vtables and sending their respective lookup table references?
+    if (isclient) {
+      sendInt(sacrifice_event, sockfd);
+      // (target_pnum = ANY) represents all players
+      sendCardEffectPacket(ANY, ANYUNICORN, sockfd);
+      clientSacrifice(pnum, ANY, ANYUNICORN);
+    }
+    else {
+      serverSacrifice(pnum, ANY, ANYUNICORN);
+    }
+
+    break;
+  }
+  case the_great_narwhal:
+  {
+    // Playing The Great Narwhal
+    // search the deck for a card with "Narwhal" in its name and add it to
+    // your hand. shuffle the deck
+    searchPile(pnum, &deck, ANY, NARWHAL);
+    shuffleDeck(&deck);
+    break;
+  }
+  case greedy_flying_unicorn:
+  {
+    // Playing Greedy Flying Unicorn:
+    // DRAW 1 card
+    draw(pnum, 1);
+    break;
+  }
+  case llamacorn:
+  {
+    // Playing Llamacorn:
+    // each player must DISCARD 1 card.
+
+    if (isclient) {
+      sendInt(discard_event, sockfd);
+      // (target_pnum = ANY) represents all players
+      sendCardEffectPacket(ANY, ANY, sockfd);
+      clientDiscard(pnum, ANY, ANY);
+    }
+    else {
+      serverDiscard(pnum, ANY, ANY);
+    }
+
     break;
   }
   case magical_flying_unicorn:
@@ -1300,11 +1291,11 @@ void enterStableEffects(int pnum, int effect) {
     searchPile(pnum, &discardpile, MAGIC, ANY);
     break;
   }
-  case swift_flying_unicorn:
+  case majestic_flying_unicorn:
   {
-    // Playing Swift Flying Unicorn:
-    // you may add an Instant card from the discard pile to your hand
-    searchPile(pnum, &discardpile, INSTANT, ANY);
+    // Playing Majestic Flying Unicorn:
+    // you may add a Unicorn card from the discard pile to your hand
+    searchPile(pnum, &discardpile, ANYUNICORN, ANY);
     break;
   }
   case mermaid_unicorn:
@@ -1345,87 +1336,18 @@ void enterStableEffects(int pnum, int effect) {
     returnCardToHand(index, index2);
     break;
   }
-  case americorn:
+  case narwhal_torpedo:
   {
-    // Playing Americorn:
-    // you may pull a card at random from another player's hand into your
-    // hand
-
-    // check if other players actually have at least one card
-    for (int i = 0; i < current_players; i++) {
-      if (i != pnum && player[i].hand.num_cards > 0) {
-        isvalid = 1;
-        break;
+    // Playing Narwhal Torpedo
+    // SACRIFICE all downgrade cards
+    for (int i = player[pnum].stable.size - 1; i >= 0; i--) {
+      // start from the end so that cards/indices don't get skipped upon
+      // rearranging the stable
+      if (player[pnum].stable.unicorns[i].cType == DOWNGRADE) {
+        addDiscard(player[pnum].stable.unicorns[i]);
+        rearrangeStable(pnum, i);
       }
     }
-
-    if (!isvalid)
-      break;
-
-    printPlayers();
-    for (;;) {
-      printf("Choose a player to steal a random card from their hand: ");
-      index = numinput(buf, &end, sizeof buf) - 1;
-
-      // index validation
-      if (index < 0 || index >= current_players || index == pnum || end != (buf + strlen(buf)))
-        continue;
-
-      if (player[index].hand.num_cards > 0)
-        break;
-    }
-
-    if ((player[index].flags & nanny_cam) == nanny_cam) {
-      // pick the card if the chosen player has the nanny cam downgrade card
-      printHand(index);
-      for (;;) {
-        printf("Player #%d: %s has Nanny Cam in effect, so you may choose a card "
-               "to pull from their hand: ", index + 1, player[index].username);
-        index2 = numinput(buf, &end, sizeof buf) - 1;
-
-        // index validation
-        if (index2 >= 0 && index2 < player[index].hand.num_cards && end == (buf + strlen(buf)))
-          break;
-      }
-    }
-    else {
-      // set index2 to be some random card within the chosen player's range
-      index2 = rand() % player[index].hand.num_cards;
-    }
-
-    // discard time! pnum is current player, index is the stolen player
-    // number and index2 is the card item being transferred
-    player[pnum].hand.cards[player[pnum].hand.num_cards] =
-      player[index].hand.cards[index2];
-    player[pnum].hand.num_cards++;
-    rearrangeHand(index, index2);
-    break;
-  }
-  case classy_narwhal:
-  {
-    // Playing Classy Narwhal
-    // search the deck for an upgrade card and add it to your hand. shuffle
-    // the deck
-    searchPile(pnum, &deck, UPGRADE, ANY);
-    shuffleDeck(&deck);
-    break;
-  }
-  case shabby_the_narwhal:
-  {
-    // Playing Shabby the Narwhal
-    // search the deck for a downgrade card and add it to your hand. shuffle
-    // the deck
-    searchPile(pnum, &deck, DOWNGRADE, ANY);
-    shuffleDeck(&deck);
-    break;
-  }
-  case the_great_narwhal:
-  {
-    // Playing The Great Narwhal
-    // search the deck for a card with "Narwhal" in its name and add it to
-    // your hand. shuffle the deck
-    searchPile(pnum, &deck, ANY, NARWHAL);
-    shuffleDeck(&deck);
     break;
   }
   case rainbow_unicorn:
@@ -1467,6 +1389,84 @@ void enterStableEffects(int pnum, int effect) {
 
     addStable(pnum, player[pnum].hand.cards[index]);
     rearrangeHand(pnum, index);
+    break;
+  }
+  case seductive_unicorn:
+  {
+    // Playing Seductive Unicorn:
+    // you may DISCARD 1 card, then STEAL a unicorn card
+
+    // check if there are unicorn cards to steal
+    for (int i = 0; i < current_players; i++) {
+      if (i != pnum && player[i].stable.num_unicorns > 0) {
+        isvalid = 1;
+        break;
+      }
+    }
+
+    if (!isvalid)
+      break;
+
+    do {
+      printf(
+        "Would you like to discard a card in order to steal a unicorn "
+        "card (y/n)?: ");
+      ans = charinput(buf, sizeof buf);
+    } while ((ans != 'y' && ans != 'n') || strlen(buf) != 2);
+
+    if (ans == 'y') {
+      discard(pnum, 1, ANY);
+      steal(pnum, ANYUNICORN);
+    }
+    break;
+  }
+  case shabby_the_narwhal:
+  {
+    // Playing Shabby the Narwhal
+    // search the deck for a downgrade card and add it to your hand. shuffle
+    // the deck
+    searchPile(pnum, &deck, DOWNGRADE, ANY);
+    shuffleDeck(&deck);
+    break;
+  }
+  case shark_with_a_horn:
+  {
+    // Playing Shark With a Horn
+    // you may SACRIFICE this card, then destroy a unicorn card
+
+    // check if there are unicorn cards to destroy
+    isvalid = checkNumCardsToDestroy(pnum, ANYUNICORN, FALSE);
+    if (!isvalid)
+      break;
+
+    do {
+      printf(
+        "Would you like to sacrifice this card in order to destroy a "
+        "Unicorn card (y/n)?: ");
+      ans = charinput(buf, sizeof buf);
+    } while ((ans != 'y' && ans != 'n') || strlen(buf) != 2);
+
+    if (ans == 'y') {
+      addDiscard(player[pnum].stable.unicorns[player[pnum].stable.size - 1]);
+      // player[pnum].stable.size--; <--- this is why we can't have nice things...
+      rearrangeStable(pnum, player[pnum].stable.size - 1);
+      destroy(pnum, ANYUNICORN, FALSE);
+    }
+    break;
+  }
+  case swift_flying_unicorn:
+  {
+    // Playing Swift Flying Unicorn:
+    // you may add an Instant card from the discard pile to your hand
+    searchPile(pnum, &discardpile, INSTANT, ANY);
+    break;
+  }
+  case unicorn_on_the_cob:
+  {
+    // Playing Unicorn on the Cob:
+    // DRAW 2 cards and DISCARD 1 card
+    draw(pnum, 2);
+    discard(pnum, 1, ANY);
     break;
   }
   default:
@@ -1980,6 +1980,78 @@ void beginningTurnEffects(int pnum, struct Unicorn corn) {
   switch (corn.effect) {
   case NOTHING:
     break;
+  case angel_unicorn:
+  {
+    // Playing Angel Unicorn:
+    // you may sacrifice this card and bring a unicorn card from the discard
+    // pile directly into your stable
+
+    // check if there are actually cards available to take
+    for (int i = 0; i < discardpile.size; i++) {
+      if (discardpile.cards[i].cType == BASICUNICORN ||
+          discardpile.cards[i].cType == MAGICUNICORN) {
+        isvalid = 1;
+        break;
+      }
+    }
+
+    // no valid cards are available
+    if (!isvalid)
+      break;
+
+    do {
+      printf(
+        "Would you like to sacrifice this card, the Angel Unicorn, in "
+        "order to bring a unicorn card \nfrom the discard pile directly to "
+        "your stable (y/n)?: ");
+      ans = charinput(buf, sizeof buf);
+    } while ((ans != 'y' && ans != 'n') || strlen(buf) != 2);
+
+    if (ans == 'y') {
+      for (int i = 0; i < player[pnum].stable.size; i++) {
+        // ID of Angel Unicorn is 51
+        if (strcmp(player[pnum].stable.unicorns[i].name, "Angel Unicorn") == 0) {
+          index2 = i;
+          break;
+        }
+      }
+
+      // keep track of the angel unicorn card so that it's filtered outside of
+      // the discard pile. there would be no point in taking the card back
+      struct Unicorn angel_tmp = player[pnum].stable.unicorns[index2];
+      rearrangeStable(pnum, index2);
+
+      printPileFilter(discardpile, ANYUNICORN, ANY);
+      for (;;) {
+        printf("Pick a valid card number to add to your stable: ");
+        index = numinput(buf, &end, sizeof buf) - 1;
+
+        // index validation
+        if (index < 0 || index >= discardpile.size || end != (buf + strlen(buf)))
+          continue;
+
+        if (discardpile.cards[index].cType == BASICUNICORN ||
+            discardpile.cards[index].cType == MAGICUNICORN)
+          break;
+      }
+      // add it to the discard before bringing the other unicorn over in case
+      // it has a special enter stable effect that can bring unicorns from
+      // the discard pile
+      addDiscard(angel_tmp);
+
+      addStable(pnum, discardpile.cards[index]);
+      rearrangePile(&discardpile, index);
+    }
+    break;
+  }
+  case double_dutch:
+  {
+    // Playing Double Dutch:
+    // you may play 2 cards during your Action phase
+
+    turn_count++;
+    break;
+  }
   case extra_tail:
   {
     // Playing Extra Tail:
@@ -2017,68 +2089,105 @@ void beginningTurnEffects(int pnum, struct Unicorn corn) {
     }
     break;
   }
-  case zombie_unicorn:
+  case glitter_bomb:
   {
-    // Playing Zombie Unicorn:
-    // you may discard 1 unicorn card to bring a unicorn card from the
-    // discard pile directly to your stable, then immediately skip to end of
-    // turn phase
+    // Playing Glitter Bomb:
+    // you may sacrifice a card, then destroy a card
 
-    // check if there are valid unicorn cards to discard
+    // check if there are cards to sacrifice and destroy first; only worry
+    // about /that/ card in terms of sacrificing here since this can only
+    // be the current player's turn
+    isvalid = checkNumCardsToDestroy(pnum, ANY, FALSE);
+
+    if (!isvalid)
+      break;
+
+    do {
+      printf(
+        "Would you like to sacrifice a card in order to destroy another "
+        "card (y/n)?: ");
+      ans = charinput(buf, sizeof buf);
+    } while ((ans != 'y' && ans != 'n') || strlen(buf) != 2);
+
+    if (ans == 'y') {
+      sacrifice(pnum, ANY);
+      destroy(pnum, ANY, FALSE);
+    }
+    break;
+  }
+  case rainbow_mane:
+  {
+    // Playing Rainbow Mane:
+    // you may bring a Basic Unicorn card from your hand directly into your
+    // stable
+
+    // check if Basic Unicorns are even in the player's hand
     for (int i = 0; i < player[pnum].hand.num_cards; i++) {
-      if (player[pnum].hand.cards[i].cType == BASICUNICORN ||
-          player[pnum].hand.cards[i].cType == MAGICUNICORN) {
+      if (player[pnum].hand.cards[i].cType == BASICUNICORN) {
         isvalid = 1;
         break;
       }
     }
 
-    // check if there are actually cards available to take
-    for (int i = 0; i < discardpile.size; i++) {
-      if (discardpile.cards[i].cType == BASICUNICORN ||
-          discardpile.cards[i].cType == MAGICUNICORN) {
-        isvalid2 = 1;
-        break;
+    if (!isvalid)
+      break;
+
+    for (;;) {
+      printf("Choose a valid card number to place into your stable: \n");
+      for (int i = 0; i < player[pnum].hand.num_cards; i++) {
+        if (player[pnum].hand.cards[i].cType == BASICUNICORN) {
+          printf("    %d. %s [ID: %d]\n", i + 1, player[pnum].hand.cards[i].name, player[pnum].hand.cards[i].id);
+        }
       }
+      printf("Choice: ");
+      index = numinput(buf, &end, sizeof buf) - 1;
+
+      // index validation
+      if (index < 0 || index >= player[pnum].hand.num_cards || end != (buf + strlen(buf)))
+        continue;
+
+      if (player[pnum].hand.cards[index].cType == BASICUNICORN)
+        break;
     }
 
-    // no valid cards are available
-    if (isvalid == 0 || isvalid2 == 0) break;
+    addStable(pnum, player[pnum].hand.cards[index]);
+    rearrangeHand(pnum, index);
+    break;
+  }
+  case rhinocorn:
+  {
+    // Playing Rhinocorn:
+    // you may destroy a unicorn card, then immediately end your turn
+
+    // check if there are unicorn cards to destroy
+    isvalid = checkNumCardsToDestroy(pnum, ANYUNICORN, FALSE);
+    if (!isvalid)
+      break;
 
     do {
       printf(
-        "Would you like to discard a unicorn card in order to bring a "
-        "unicorn card from the discard pile directly to your stable at "
-        "the expense of immediately ending your turn (y/n)?: ");
+        "Would you like to destroy a unicorn card at the expense of "
+        "ending your turn (y/n)?: ");
       ans = charinput(buf, sizeof buf);
     } while ((ans != 'y' && ans != 'n') || strlen(buf) != 2);
 
     if (ans == 'y') {
-      discard(pnum, 1, ANYUNICORN);
-
-      printPileFilter(discardpile, ANYUNICORN, ANY);
-      for (;;) {
-        printf("Pick a valid card number to add to your stable: ");
-        index = numinput(buf, &end, sizeof buf) - 1;
-
-        // index validation
-        if (index < 0 || index >= discardpile.size || end != (buf + strlen(buf)))
-          continue;
-
-        // unicorn card check
-        if (discardpile.cards[index].cType == BASICUNICORN ||
-            discardpile.cards[index].cType == MAGICUNICORN)
-          break;
-
-      }
-
-      addStable(pnum, discardpile.cards[index]);
-      rearrangePile(&discardpile, index);
-
-      // reduce turn_count in favor of "ending turn," especially since there might
-      // be multiple "beginning of turn" effects that could be played
+      destroy(pnum, ANYUNICORN, FALSE);
       turn_count = -1;
     }
+    break;
+  }
+  case sadistic_ritual:
+  {
+    // Playing Sadistic Ritual:
+    // you must sacrifice 1 unicorn card, then draw a card
+
+    // can't draw cards if there's nothing to sacrifice
+    isvalid = sacrifice(pnum, ANYUNICORN);
+    if (!isvalid) {
+      break;
+    }
+    draw(pnum, 1);
     break;
   }
   case summoning_ritual:
@@ -2126,132 +2235,6 @@ void beginningTurnEffects(int pnum, struct Unicorn corn) {
       struct Unicorn tmp = discardpile.cards[index];
       rearrangePile(&discardpile, index);
       addStable(pnum, tmp);
-    }
-    break;
-  }
-  case angel_unicorn:
-  {
-    // Playing Angel Unicorn:
-    // you may sacrifice this card and bring a unicorn card from the discard
-    // pile directly into your stable
-
-    // check if there are actually cards available to take
-    for (int i = 0; i < discardpile.size; i++) {
-      if (discardpile.cards[i].cType == BASICUNICORN ||
-          discardpile.cards[i].cType == MAGICUNICORN) {
-        isvalid = 1;
-        break;
-      }
-    }
-
-    // no valid cards are available
-    if (!isvalid)
-      break;
-
-    do {
-      printf(
-        "Would you like to sacrifice this card, the Angel Unicorn, in "
-        "order to bring a unicorn card from the discard pile directly to "
-        "your stable (y/n)?: ");
-      ans = charinput(buf, sizeof buf);
-    } while ((ans != 'y' && ans != 'n') || strlen(buf) != 2);
-
-    if (ans == 'y') {
-      for (int i = 0; i < player[pnum].stable.size; i++) {
-        // ID of Angel Unicorn is 51
-        if (strcmp(player[pnum].stable.unicorns[i].name, "Angel Unicorn") == 0) {
-          index2 = i;
-          break;
-        }
-      }
-
-      // keep track of the angel unicorn card so that it's filtered outside of
-      // the discard pile. there would be no point in taking the card back
-      struct Unicorn angel_tmp = player[pnum].stable.unicorns[index2];
-      rearrangeStable(pnum, index2);
-
-      printPileFilter(discardpile, ANYUNICORN, ANY);
-      for (;;) {
-        printf("Pick a valid card number to add to your stable: ");
-        index = numinput(buf, &end, sizeof buf) - 1;
-
-        // index validation
-        if (index < 0 || index >= discardpile.size || end != (buf + strlen(buf)))
-          continue;
-
-        if (discardpile.cards[index].cType == BASICUNICORN ||
-            discardpile.cards[index].cType == MAGICUNICORN)
-          break;
-      }
-      // add it to the discard before bringing the other unicorn over in case
-      // it has a special enter stable effect that can bring unicorns from
-      // the discard pile
-      addDiscard(angel_tmp);
-
-      addStable(pnum, discardpile.cards[index]);
-      rearrangePile(&discardpile, index);
-    }
-    break;
-  }
-  case sadistic_ritual:
-  {
-    // Playing Sadistic Ritual:
-    // you must sacrifice 1 unicorn card, then draw a card
-
-    // can't draw cards if there's nothing to sacrifice
-    isvalid = sacrifice(pnum, ANYUNICORN);
-    if (!isvalid) {
-      break;
-    }
-    draw(pnum, 1);
-    break;
-  }
-  case glitter_bomb:
-  {
-    // Playing Glitter Bomb:
-    // you may sacrifice a card, then destroy a card
-
-    // check if there are cards to sacrifice and destroy first; only worry
-    // about /that/ card in terms of sacrificing here since this can only
-    // be the current player's turn
-    isvalid = checkNumCardsToDestroy(pnum, ANY, FALSE);
-
-    if (!isvalid)
-      break;
-
-    do {
-      printf(
-        "Would you like to sacrifice a card in order to destroy another "
-        "card (y/n)?: ");
-      ans = charinput(buf, sizeof buf);
-    } while ((ans != 'y' && ans != 'n') || strlen(buf) != 2);
-
-    if (ans == 'y') {
-      sacrifice(pnum, ANY);
-      destroy(pnum, ANY, FALSE);
-    }
-    break;
-  }
-  case rhinocorn:
-  {
-    // Playing Rhinocorn:
-    // you may destroy a unicorn card, then immediately end your turn
-
-    // check if there are unicorn cards to destroy
-    isvalid = checkNumCardsToDestroy(pnum, ANYUNICORN, FALSE);
-    if (!isvalid)
-      break;
-
-    do {
-      printf(
-        "Would you like to destroy a unicorn card at the expense of "
-        "ending your turn (y/n)?: ");
-      ans = charinput(buf, sizeof buf);
-    } while ((ans != 'y' && ans != 'n') || strlen(buf) != 2);
-
-    if (ans == 'y') {
-      destroy(pnum, ANYUNICORN, FALSE);
-      turn_count = -1;
     }
     break;
   }
@@ -2336,51 +2319,68 @@ void beginningTurnEffects(int pnum, struct Unicorn corn) {
     }
     break;
   }
-  case double_dutch:
+  case zombie_unicorn:
   {
-    // Playing Double Dutch:
-    // you may play 2 cards during your Action phase
+    // Playing Zombie Unicorn:
+    // you may discard 1 unicorn card to bring a unicorn card from the
+    // discard pile directly to your stable, then immediately skip to end of
+    // turn phase
 
-    turn_count++;
-    break;
-  }
-  case rainbow_mane:
-  {
-    // Playing Rainbow Mane:
-    // you may bring a Basic Unicorn card from your hand directly into your
-    // stable
-
-    // check if Basic Unicorns are even in the player's hand
+    // check if there are valid unicorn cards to discard
     for (int i = 0; i < player[pnum].hand.num_cards; i++) {
-      if (player[pnum].hand.cards[i].cType == BASICUNICORN) {
+      if (player[pnum].hand.cards[i].cType == BASICUNICORN ||
+          player[pnum].hand.cards[i].cType == MAGICUNICORN) {
         isvalid = 1;
         break;
       }
     }
 
-    if (!isvalid)
-      break;
-
-    for (;;) {
-      printf("Choose a valid card number to place into your stable: \n");
-      for (int i = 0; i < player[pnum].hand.num_cards; i++) {
-        if (player[pnum].hand.cards[i].cType == BASICUNICORN) {
-          printf("    %d. %s [ID: %d]\n", i + 1, player[pnum].hand.cards[i].name, player[pnum].hand.cards[i].id);
-        }
-      }
-      printf("Choice: ");
-      index = numinput(buf, &end, sizeof buf) - 1;
-
-      // index validation
-      if (index < 0 || index >= player[pnum].hand.num_cards || end != (buf + strlen(buf)))
-        continue;
-
-      if (player[pnum].hand.cards[index].cType == BASICUNICORN)
+    // check if there are actually cards available to take
+    for (int i = 0; i < discardpile.size; i++) {
+      if (discardpile.cards[i].cType == BASICUNICORN ||
+          discardpile.cards[i].cType == MAGICUNICORN) {
+        isvalid2 = 1;
         break;
+      }
     }
 
-    addStable(pnum, player[pnum].hand.cards[index]);
-    rearrangeHand(pnum, index);
+    // no valid cards are available
+    if (isvalid == 0 || isvalid2 == 0) break;
+
+    do {
+      printf(
+        "Would you like to discard a unicorn card in order to bring a "
+        "unicorn card from the discard pile directly to your stable at "
+        "the expense of immediately ending your turn (y/n)?: ");
+      ans = charinput(buf, sizeof buf);
+    } while ((ans != 'y' && ans != 'n') || strlen(buf) != 2);
+
+    if (ans == 'y') {
+      discard(pnum, 1, ANYUNICORN);
+
+      printPileFilter(discardpile, ANYUNICORN, ANY);
+      for (;;) {
+        printf("Pick a valid card number to add to your stable: ");
+        index = numinput(buf, &end, sizeof buf) - 1;
+
+        // index validation
+        if (index < 0 || index >= discardpile.size || end != (buf + strlen(buf)))
+          continue;
+
+        // unicorn card check
+        if (discardpile.cards[index].cType == BASICUNICORN ||
+            discardpile.cards[index].cType == MAGICUNICORN)
+          break;
+
+      }
+
+      addStable(pnum, discardpile.cards[index]);
+      rearrangePile(&discardpile, index);
+
+      // reduce turn_count in favor of "ending turn," especially since there might
+      // be multiple "beginning of turn" effects that could be played
+      turn_count = -1;
+    }
     break;
   }
   default:
