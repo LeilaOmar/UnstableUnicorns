@@ -11,14 +11,15 @@ int bargain_greater_check() {
 	struct Unicorn corn = deck.cards[deck.size - 1];
 	draw(0, 4);
 	draw(1, 2);
+	toggleFlags(0, yay_effect);
 
-	int ret;
 	assert(player[0].hand.num_cards == 5);
 	assert(player[1].hand.num_cards == 2);
 	assert(player[2].hand.num_cards == 0);
-	ret = conditionalEffects(0, bargain_tmp, 0, 0);
+	assert(player[0].flags == yay);
+	playCard(0);
 
-	if (turn_count != 1 || ret != 1) {
+	if (turn_count != 1) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    greater test: turn count failed\n");
@@ -59,17 +60,18 @@ int bargain_lesser_check() {
 	struct Unicorn corn = deck.cards[deck.size - 1];
 	draw(1, 5);
 	draw(0, 1);
+	toggleFlags(0, yay_effect);
 
-	int ret;
 	assert(player[0].hand.num_cards == 2);
 	assert(player[1].hand.num_cards == 5);
 	assert(player[2].hand.num_cards == 0);
-	ret = conditionalEffects(0, bargain_tmp, 0, 0);
+	assert(player[0].flags == yay);
+	playCard(0);
 
-	if (turn_count != 1 || ret != 1) {
+	if (turn_count != 1) {
 		num_fails++;
 		red();
-		fprintf(stderr, "\n    lesser test: turn count failed\n");
+		fprintf(stderr, "    lesser test: turn count failed\n");
 		reset_col();
 	}
 
@@ -78,7 +80,7 @@ int bargain_lesser_check() {
 			strcmp(player[0].hand.cards[0].name, corn.name) != 0) {
 		num_fails++;
 		red();
-		fprintf(stderr, "\n    lesser test: hand verification failed\n");
+		fprintf(stderr, "    lesser test: hand verification failed\n");
 		reset_col();
 	}
 
@@ -86,7 +88,7 @@ int bargain_lesser_check() {
 		strcmp(discardpile.cards[0].name, bargain_tmp.name) != 0) {
 		num_fails++;
 		red();
-		fprintf(stderr, "\n    lesser test: discard pile verification failed\n");
+		fprintf(stderr, "    lesser test: discard pile verification failed\n");
 		reset_col();
 	}
 
@@ -108,7 +110,6 @@ int bargain_empty_check() {
 	player[0].hand.cards[player[0].hand.num_cards++] = basic_tmp;
 
 	int ret;
-	assert(discardpile.size == 0);
 	assert(player[0].hand.num_cards == 2);
 	assert(player[1].hand.num_cards == 0);
 	ret = conditionalEffects(0, bargain_tmp, 0, 0);
@@ -119,37 +120,22 @@ int bargain_empty_check() {
 		fprintf(stderr, "    empty test (player[1]): turn count failed\n");
 		reset_col();
 	}
-
-	if (player[0].hand.num_cards != 2 ||
-		strcmp(player[0].hand.cards[0].name, bargain_tmp.name) != 0) {
-		num_fails++;
-		red();
-		fprintf(stderr, "    empty test (player[1]): hand verification failed\n");
-		reset_col();
-	}
-
-	if (discardpile.size != 0) {
-		num_fails++;
-		red();
-		fprintf(stderr, "    empty test (player[1]): discard size failed\n");
-		reset_col();
-	}
-
 	reset_players();
 	reset_discard();
-
 
 	// no cards in player[0]'s hands; should still work, actually :p
 	current_players = 2;
 	player[0].hand.cards[player[0].hand.num_cards++] = bargain_tmp;
 	player[1].hand.cards[player[1].hand.num_cards++] = basic_tmp;
 
+	toggleFlags(0, yay_effect);
 	assert(discardpile.size == 0);
 	assert(player[0].hand.num_cards == 1);
 	assert(player[1].hand.num_cards == 1);
-	ret = conditionalEffects(0, bargain_tmp, 0, 0);
+	assert(player[0].flags == yay);
+	playCard(0);
 
-	if (turn_count != 1 || ret != 1) {
+	if (turn_count != 1) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    empty test (player[0]): turn count failed\n");

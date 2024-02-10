@@ -715,9 +715,26 @@ void playCard(int pnum) {
       break;
   }
 
-  // TODO: add this after verifying that the card is actually playable, or else
-  // people might waste their neigh cards on an impossible play
-  // 
+  // get the card ID before rearranging the hand so that enter stable effects
+  // don't show the card you just played in your hand
+  struct Unicorn corn = player[pnum].hand.cards[index];
+  target_pindex = pnum;
+
+  // putting this in advance so that the neigh event stuff would only have to be written once
+  if (corn.cType == UPGRADE || corn.cType == DOWNGRADE) {
+    printPlayers();
+    do {
+      printf("Choose a player to give the upgrade/downgrade card: ");
+      target_pindex = numinput(buf, &end, sizeof buf) - 1;
+    } while (target_pindex < 0 || target_pindex >= current_players || end != (buf + strlen(buf)));
+  }
+
+  // skip over unplayable cards before the neigh prompt so that people don't waste
+  // their neighs over nothing
+  if (!conditionalEffects(pnum, corn, index, target_pindex)) {
+    return;
+  }
+
   // check if the player cannot be Neigh'd first before initiating the func
   if (canBeNeighed(pnum)) {
     int ret;
@@ -734,70 +751,27 @@ void playCard(int pnum) {
     if (ret & 1) return;
   }
 
-  // get the card ID before rearranging the hand so that when you discard
-  // cards it doesn't show the one you just used when you're doing the
-  // effect
-  struct Unicorn corn = player[pnum].hand.cards[index];
-
+  // there were no successful neighs, so play the card!
+  rearrangeHand(pnum, index);
   switch (corn.cType) {
   case BASICUNICORN:
-  {
-    if ((player[pnum].flags & queen_bee_unicorn) != 0) {
-      printf("%s is unable to play Basic Unicorns due to someone else's "
-        "Queen Bee Unicorn\n", player[pnum].username);
-      turn_count++;
-      return;
-    }
-    rearrangeHand(pnum, index);
-    addStable(pnum, corn);
-    break;
-  }
   case MAGICUNICORN:
   {
-    rearrangeHand(pnum, index);
     addStable(pnum, corn);
     break;
   }
   case UPGRADE:
   case DOWNGRADE:
   {
-    // check for Broken Stable flag
-    if (((player[pnum].flags & broken_stable) != 0) &&
-        corn.cType == UPGRADE) {
-      printf(
-        "Player %d is unable to play Upgrade cards due to the effect of "
-        "'Broken Stable'\n",
-        pnum + 1);
-      turn_count++;
-      return;
-    }
-    printPlayers();
-    do {
-      printf("Choose a player to give the upgrade/downgrade card: ");
-      target_pindex = numinput(buf, &end, sizeof buf) - 1;
-    } while (target_pindex < 0 || target_pindex >= current_players || end != (buf + strlen(buf)));
-
-    // Upgrade/Downgrade card effects here since they may affect a different
-    // stable; target_pindex is the affected player while pnum is current player
+    // assign card to the chosen stable (target_pindex)
     toggleFlags(target_pindex, corn.effect);
-
-    // assign card from current player's hand (pnum) to the chosen stable (target_pindex); 
-    // conditionalEffects does all of the card management/discarding, so only update and
-    // add to the stable if it's been skipped over
-    if (conditionalEffects(pnum, corn, index, target_pindex) == 2) {
-      player[target_pindex].stable.unicorns[player[target_pindex].stable.size] = corn;
-      player[target_pindex].stable.size++;
-      rearrangeHand(pnum, index);
-    }
+    addStable(target_pindex, corn);
     break;
   }
   case MAGIC:
     // magic cards go to the discard pile!
-    if (conditionalEffects(pnum, corn, index, pnum) == 2) {
-      addDiscard(corn);
-      rearrangeHand(pnum, index);
-      magicEffects(pnum, corn.effect);
-    }
+    addDiscard(corn);
+    magicEffects(pnum, corn.effect);
     break;
   default:
     // something went wrong here... there should be no baby unicorns, instant, or typeless cards

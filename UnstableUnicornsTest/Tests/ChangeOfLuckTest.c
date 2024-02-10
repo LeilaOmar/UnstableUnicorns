@@ -8,15 +8,16 @@ int luck_basic_check() {
 	struct Unicorn super_tmp = basedeck[128];
 	struct Unicorn neigh_tmp = basedeck[127];
 
+	toggleFlags(0, yay_effect);
 	player[0].hand.cards[player[0].hand.num_cards++] = luck_tmp;
 	player[0].hand.cards[player[0].hand.num_cards++] = basic_tmp;
 
-	int ret;
 	assert(discardpile.size == 0);
 	assert(player[0].hand.num_cards == 2);
-	ret = conditionalEffects(0, luck_tmp, 0, 0);
+	assert(player[0].flags == yay);
+	playCard(0);
 
-	if (turn_count != 2 || ret != 1) {
+	if (turn_count != 2) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    sanity test: turn count failed\n");
@@ -58,6 +59,7 @@ int luck_special_check() {
 	struct Unicorn baby_tmp = basedeck[0];
 
 	addStable(0, fertile_tmp);
+	toggleFlags(0, yay_effect);
 	player[0].hand.cards[player[0].hand.num_cards++] = luck_tmp;
 	player[0].hand.cards[player[0].hand.num_cards++] = basic_tmp;
 	player[0].hand.cards[player[0].hand.num_cards++] = basic_tmp;
@@ -66,10 +68,10 @@ int luck_special_check() {
 	assert(discardpile.size == 0);
 	assert(player[0].hand.num_cards == 3);
 	assert(player[0].stable.size == 1);
-	conditionalEffects(0, luck_tmp, 0, 0);
+	assert(player[0].flags == yay);
+	playCard(0);
 
 	if (nursery.size != (tmp_size - 1) ||
-			player[0].stable.size != 2 || player[0].stable.num_unicorns != 2 ||
 			strcmp(player[0].stable.unicorns[1].name, baby_tmp.name) != 0) {
 		num_fails++;
 		red();
@@ -98,23 +100,14 @@ int luck_empty_check() {
 
 	player[0].hand.cards[player[0].hand.num_cards++] = luck_tmp;
 
-	assert(discardpile.size == 0);
+	int ret;
 	assert(player[0].hand.num_cards == 1);
-	conditionalEffects(0, luck_tmp, 0, 0);
+	ret = conditionalEffects(0, luck_tmp, 0, 0);
 
-
-	if (player[0].hand.num_cards != 1 ||
-			strcmp(player[0].hand.cards[0].name, luck_tmp.name) != 0) {
+	if (ret != 0) {
 		num_fails++;
 		red();
-		fprintf(stderr, "    empty hand test: hand verification failed\n");
-		reset_col();
-	}
-
-	if (discardpile.size != 0) {
-		num_fails++;
-		red();
-		fprintf(stderr, "    empty hand test: discard size failed\n");
+		fprintf(stderr, "    empty hand test: conditional effect return failed\n");
 		reset_col();
 	}
 
@@ -143,15 +136,17 @@ int luck_unicorn_lasso_check() {
 	addStable(1, rainbow_tmp);
 	addStable(1, basic_tmp);
 	addStable(1, basic_tmp);
+	toggleFlags(0, yay_effect);
 
 	assert(discardpile.size == 0);
 	assert(player[0].hand.num_cards == 4);
 	assert(player[0].stable.size == 1);
 	assert(player[0].stable.num_unicorns == 0);
+	assert(player[0].flags == yay);
 
 	beginningTurnEffects(0, lasso_tmp);
 	assert(uni_lasso_flag[0] != -1);
-	conditionalEffects(0, luck_tmp, 0, 0);
+	playCard(0);
 
 	// this is checking in the middle of the 2nd turn, so player[0] still
 	// has player[1]'s card

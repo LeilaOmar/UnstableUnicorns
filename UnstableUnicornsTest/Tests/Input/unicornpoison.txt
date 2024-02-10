@@ -1,7 +1,10 @@
+// basic check
+1
 1
 2
 1
 2
+// special check
 2
 1
 y

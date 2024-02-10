@@ -16,22 +16,15 @@ int unicorn_swap_basic_check() {
 	player[0].hand.cards[player[0].hand.num_cards++] = swap_tmp;
 
 	int ret;
-	assert(player[0].hand.num_cards == 1);
 	assert(player[0].stable.size == 1);
 	assert(player[1].stable.size == 3);
 	ret = conditionalEffects(0, swap_tmp, 0, 0);
+	if (ret) magicEffects(0, swap_tmp.effect);
 
 	if (turn_count != 1 || ret != 1) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    sanity test: turn count failed\n");
-		reset_col();
-	}
-
-	if (player[0].hand.num_cards != 0) {
-		num_fails++;
-		red();
-		fprintf(stderr, "    sanity test: hand size failed\n");
 		reset_col();
 	}
 
@@ -68,7 +61,7 @@ int unicorn_swap_special_check() {
 
 	assert(player[0].hand.num_cards == 1);
 	assert(player[1].hand.num_cards == 2);
-	conditionalEffects(0, swap_tmp, 0, 0);
+	magicEffects(0, swap_tmp.effect);
 
 	if (player[0].stable.size != 1 || player[0].stable.num_unicorns != 1 ||
 			player[1].stable.size != 2 || player[1].stable.num_unicorns != 2 ||
@@ -81,8 +74,10 @@ int unicorn_swap_special_check() {
 		reset_col();
 	}
 
-	if (player[0].hand.num_cards != 1 || player[1].hand.num_cards != 0 ||
-			strcmp(player[0].hand.cards[0].name, neigh_tmp.name) != 0) {
+	// num_cards would be 1 instead of 2 in the real game, but magicEffects
+	// doesn't discard cards or rearrange hands
+	if (player[0].hand.num_cards != 2 || player[1].hand.num_cards != 0 ||
+			strcmp(player[0].hand.cards[1].name, neigh_tmp.name) != 0) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    special test: hand verification failed\n");
@@ -110,7 +105,7 @@ int unicorn_swap_toggle_check() {
 	assert((player[1].flags & queen_bee_unicorn) == queen_bee_unicorn);
 	assert((player[1].flags & ginormous_unicorn) == ginormous_unicorn);
 	assert(player[0].hand.num_cards == 1);
-	conditionalEffects(0, swap_tmp, 0, 0);
+	magicEffects(0, swap_tmp.effect);
 
 	if ((player[0].flags & queen_bee_unicorn) != queen_bee_unicorn || (player[0].flags & ginormous_unicorn) != ginormous_unicorn ||
 			(player[1].flags & queen_bee_unicorn) != 0 || (player[1].flags & ginormous_unicorn) != 0) {
@@ -152,21 +147,6 @@ int unicorn_swap_empty_check() {
 		fprintf(stderr, "    empty stable test (player[0]): turn count failed\n");
 		reset_col();
 	}
-
-	if (player[0].hand.num_cards != 1 ||
-			strcmp(player[0].hand.cards[0].name, swap_tmp.name) != 0) {
-		num_fails++;
-		red();
-		fprintf(stderr, "    empty stable test (player[0]): hand verification failed\n");
-		reset_col();
-	}
-
-	if (discardpile.size != 0) {
-		num_fails++;
-		red();
-		fprintf(stderr, "    empty stable test (player[0]): discard size failed\n");
-		reset_col();
-	}
 	reset_players();
 	reset_discard();
 
@@ -181,6 +161,7 @@ int unicorn_swap_empty_check() {
 	assert(player[1].stable.size == 1);
 	assert(player[0].hand.num_cards == 1);
 	ret = conditionalEffects(0, swap_tmp, 0, 0);
+	if (ret) magicEffects(0, swap_tmp.effect);
 
 	if (turn_count != 1 || ret != 1) {
 		num_fails++;
@@ -189,26 +170,11 @@ int unicorn_swap_empty_check() {
 		reset_col();
 	}
 
-	if (player[0].hand.num_cards != 0) {
-		num_fails++;
-		red();
-		fprintf(stderr, "    empty stable test (player[1]): hand size failed\n");
-		reset_col();
-	}
-
 	if (player[0].stable.size != 1 || player[0].stable.num_unicorns != 1 ||
 			player[1].stable.size != 1 || player[1].stable.num_unicorns != 0) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    empty stable test (player[1]): stable size failed\n");
-		reset_col();
-	}
-
-	if (discardpile.size != 1 ||
-			strcmp(player[0].hand.cards[0].name, swap_tmp.name) != 0) {
-		num_fails++;
-		red();
-		fprintf(stderr, "    empty stable test (player[1]): discard verification failed\n");
 		reset_col();
 	}
 
@@ -245,21 +211,6 @@ int unicorn_swap_masquerade_check() {
 		fprintf(stderr, "    pandamonium test (player[0]): turn count failed\n");
 		reset_col();
 	}
-
-	if (player[0].hand.num_cards != 1 ||
-		strcmp(player[0].hand.cards[0].name, swap_tmp.name) != 0) {
-		num_fails++;
-		red();
-		fprintf(stderr, "    empty stable test (player[1]): hand verification failed\n");
-		reset_col();
-	}
-
-	if (discardpile.size != 0) {
-		num_fails++;
-		red();
-		fprintf(stderr, "    empty stable test (player[1]): discard size failed\n");
-		reset_col();
-	}
 	reset_players();
 	reset_discard();
 
@@ -280,21 +231,6 @@ int unicorn_swap_masquerade_check() {
 		num_fails++;
 		red();
 		fprintf(stderr, "    pandamonium test (player[0]): turn count failed\n");
-		reset_col();
-	}
-
-	if (player[0].hand.num_cards != 1 ||
-			strcmp(player[0].hand.cards[0].name, swap_tmp.name) != 0) {
-		num_fails++;
-		red();
-		fprintf(stderr, "    empty stable test (player[1]): hand verification failed\n");
-		reset_col();
-	}
-
-	if (discardpile.size != 0) {
-		num_fails++;
-		red();
-		fprintf(stderr, "    empty stable test (player[1]): discard size failed\n");
 		reset_col();
 	}
 
@@ -343,7 +279,7 @@ int unicorn_swap_unicorn_lasso_check() {
 
 	beginningTurnEffects(0, lasso_tmp);
 	assert(uni_lasso_flag[0] != -1);
-	conditionalEffects(0, swap_tmp, 0, 0);
+	magicEffects(0, swap_tmp.effect);
 
 	// check if the lasso flag has been reset before the turn is over
 	if (uni_lasso_flag[0] != -1) {
@@ -452,8 +388,7 @@ int unicorn_swap_puppicorn_check() {
 	assert(player[1].stable.size == 2);
 	assert(puppicorn_index[0] == 4); // card index spot
 	assert(puppicorn_index[1] == 0); // player number index
-
-	conditionalEffects(0, swap_tmp, 0, 0);
+	magicEffects(0, swap_tmp.effect);
 
 	// puppicorn should have moved from player[0][4] to player[1][1]
 	if (puppicorn_index[0] != 1 || puppicorn_index[1] != 1) {

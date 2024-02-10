@@ -24,10 +24,10 @@ int back_kick_basic_check() {
 	assert(player[1].hand.num_cards == 1);
 	assert(player[1].stable.size == 3);
 	assert(player[1].stable.num_unicorns == 2);
-	conditionalEffects(0, back_kick_tmp, 0, 0);
+	magicEffects(0, back_kick_tmp.effect);
 
-	if (player[0].hand.num_cards != 1 ||
-			strcmp(player[0].hand.cards[0].name, basic_tmp3.name) != 0) {
+	// this includes back_kick
+	if (player[0].hand.num_cards != 2) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    sanity test: player[0] hand size failed\n");
@@ -49,9 +49,9 @@ int back_kick_basic_check() {
 		reset_col();
 	}
 
-	if (discardpile.size != 2 ||
-			strcmp(discardpile.cards[0].name, back_kick_tmp.name) != 0 ||
-			strcmp(discardpile.cards[1].name, basic_tmp2.name) != 0) {
+	// this does not include back_kick, although normally it would
+	if (discardpile.size != 1 ||
+			strcmp(discardpile.cards[0].name, basic_tmp2.name) != 0) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    sanity test: discard verification failed\n");
@@ -80,7 +80,7 @@ int back_kick_special_check() {
 	assert(player[1].hand.num_cards == 0);
 	assert(player[1].stable.size == 1);
 	assert((player[1].flags & yay) == yay);
-	conditionalEffects(0, back_kick_tmp, 0, 0);
+	magicEffects(0, back_kick_tmp.effect);
 
 
 	if ((player[1].flags & yay) != 0) {
@@ -97,9 +97,8 @@ int back_kick_special_check() {
 		reset_col();
 	}
 
-	if (discardpile.size != 2 ||
-			strcmp(discardpile.cards[0].name, back_kick_tmp.name) != 0 ||
-			strcmp(discardpile.cards[1].name, yay_tmp.name) != 0) {
+	if (discardpile.size != 1 ||
+			strcmp(discardpile.cards[0].name, yay_tmp.name) != 0) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    toggle test: discard verification failed\n");
@@ -120,7 +119,6 @@ int back_kick_empty_stable_check() {
 	player[0].hand.cards[player[0].hand.num_cards++] = back_kick_tmp;
 
 	int ret;
-	assert(player[0].hand.num_cards == 1);
 	assert(player[1].stable.size == 0);
 	assert(player[1].stable.num_unicorns == 0);
 	ret = conditionalEffects(0, back_kick_tmp, 0, 0);
@@ -132,21 +130,58 @@ int back_kick_empty_stable_check() {
 		reset_col();
 	}
 
-	if (player[0].hand.num_cards != 1 ||
-			strcmp(player[0].hand.cards[0].name, back_kick_tmp.name) != 0) {
+	reset_players();
+	reset_discard();
+	return num_fails;
+}
+
+// check against a player w/ only 1 baby unicorn in their stable and 0 cards in their hand
+int back_kick_baby_check() {
+	int num_fails = 0;
+	struct Unicorn back_kick_tmp = basedeck[70];
+	struct Unicorn basic_tmp = basedeck[13];
+	struct Unicorn baby_tmp = basedeck[12];
+
+	current_players = 2;
+	addStable(1, baby_tmp);
+	player[0].hand.cards[player[0].hand.num_cards++] = back_kick_tmp;
+
+	nursery.size = 5;
+	int tmp_size = nursery.size;
+	assert(discardpile.size == 0);
+	assert(player[1].hand.num_cards == 0);
+	assert(player[1].stable.size == 1);
+	magicEffects(0, back_kick_tmp.effect);
+
+	if (player[1].hand.num_cards != 0) {
 		num_fails++;
 		red();
-		fprintf(stderr, "    empty stable test: hand verification failed\n");
+		fprintf(stderr, "    baby unicorn test: player[1] hand size failed\n");
+		reset_col();
+	}
+
+	if (player[1].stable.size != 0 || player[1].stable.num_unicorns != 0) {
+		num_fails++;
+		red();
+		fprintf(stderr, "    baby unicorn test: stable size failed\n");
 		reset_col();
 	}
 
 	if (discardpile.size != 0) {
 		num_fails++;
 		red();
-		fprintf(stderr, "    empty stable test: discard size failed\n");
+		fprintf(stderr, "    sanity test: discard size failed\n");
 		reset_col();
 	}
 
+	if (nursery.size != (tmp_size + 1)) {
+		num_fails++;
+		red();
+		fprintf(stderr, "    baby unicorn test: nursery check failed\n");
+		reset_col();
+	}
+
+	reset_nursery();
 	reset_players();
 	reset_discard();
 	return num_fails;
@@ -176,6 +211,7 @@ int back_kick_tests() {
 		num_fails += back_kick_basic_check();
 		num_fails += back_kick_special_check();
 		num_fails += back_kick_empty_stable_check();
+		num_fails += back_kick_baby_check();
 	}
 	else {
 		// file input stream setup
@@ -188,12 +224,21 @@ int back_kick_tests() {
 		}
 		fpinput = fp;
 
+		// basic check
 		// input = 1; card index is actually 0
 		int events;
 		receiveInt(&events, sockfd);
 		netStates[events].recvClient(1, sockfd);
 
+		// special check
 		// input = 1; card index is actually 0
+		receiveInt(&events, sockfd);
+		netStates[events].recvClient(1, sockfd);
+
+		// empty stable check
+		// should be nothing
+
+		// baby unicorn check
 		receiveInt(&events, sockfd);
 		netStates[events].recvClient(1, sockfd);
 	}

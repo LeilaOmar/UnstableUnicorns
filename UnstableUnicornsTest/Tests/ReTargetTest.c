@@ -12,31 +12,16 @@ int re_target_upgrade_check() {
 	player[0].hand.cards[player[0].hand.num_cards++] = target_tmp;
 
 	int ret;
-	assert(player[0].hand.num_cards == 1);
 	assert(player[1].stable.size == 1);
 	assert(player[1].flags == yay);
 	assert(player[2].stable.size == 0);
 	ret = conditionalEffects(0, target_tmp, 0, 0);
+	if (ret) magicEffects(0, target_tmp.effect);
 
 	if (turn_count != 1 || ret != 1) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    upgrade test: turn count failed\n");
-		reset_col();
-	}
-
-	if (player[0].hand.num_cards != 0) {
-		num_fails++;
-		red();
-		fprintf(stderr, "    upgrade test: hand size failed\n");
-		reset_col();
-	}
-
-	if (discardpile.size != 1 ||
-			strcmp(discardpile.cards[0].name, target_tmp.name) != 0) {
-		num_fails++;
-		red();
-		fprintf(stderr, "    upgrade test: discard pile verification failed\n");
 		reset_col();
 	}
 
@@ -74,31 +59,16 @@ int re_target_downgrade_check() {
 	player[0].hand.cards[player[0].hand.num_cards++] = target_tmp;
 
 	int ret;
-	assert(player[0].hand.num_cards == 1);
 	assert(player[0].stable.size == 0);
 	assert(player[1].stable.size == 1);
 	assert(player[1].flags == barbed_wire);
 	ret = conditionalEffects(0, target_tmp, 0, 0);
+	if (ret) magicEffects(0, target_tmp.effect);
 
 	if (turn_count != 1 || ret != 1) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    downgrade test: turn count failed\n");
-		reset_col();
-	}
-
-	if (player[0].hand.num_cards != 0) {
-		num_fails++;
-		red();
-		fprintf(stderr, "    downgrade test: hand size failed\n");
-		reset_col();
-	}
-
-	if (discardpile.size != 1 ||
-			strcmp(discardpile.cards[0].name, target_tmp.name) != 0) {
-		num_fails++;
-		red();
-		fprintf(stderr, "    downgrade test: discard pile verification failed\n");
 		reset_col();
 	}
 
@@ -137,29 +107,14 @@ int re_target_empty_check() {
 	player[0].hand.cards[player[0].hand.num_cards++] = target_tmp;
 
 	int ret;
-	assert(discardpile.size == 0);
-	assert(player[0].hand.num_cards == 1);
+	assert(player[0].stable.size == 1);
+	assert(player[1].stable.size == 1);
 	ret = conditionalEffects(0, target_tmp, 0, 0);
 
 	if (turn_count != 2 || ret != 0) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    empty test: turn count failed\n");
-		reset_col();
-	}
-
-	if (player[0].hand.num_cards != 1 ||
-			strcmp(player[0].hand.cards[0].name, target_tmp.name) != 0) {
-		num_fails++;
-		red();
-		fprintf(stderr, "    empty test: hand verification failed\n");
-		reset_col();
-	}
-
-	if (discardpile.size != 0) {
-		num_fails++;
-		red();
-		fprintf(stderr, "    empty test: discard size failed\n");
 		reset_col();
 	}
 

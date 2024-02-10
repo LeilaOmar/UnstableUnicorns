@@ -7,15 +7,16 @@ int rainbow_mane_basic_check() {
 	struct Unicorn basic_tmp = basedeck[13];
 
 	addStable(0, basic_tmp);
+	toggleFlags(0, yay_effect);
 	player[0].hand.cards[player[0].hand.num_cards++] = rainmane_tmp;
 	player[0].hand.cards[player[0].hand.num_cards++] = basic_tmp;
 
-	int ret;
 	assert(player[0].stable.size == 1);
 	assert(player[0].hand.num_cards == 2);
-	ret = conditionalEffects(0, rainmane_tmp, 0, 0);
+	assert(player[0].flags == yay);
+	playCard(0);
 
-	if (turn_count != 1 || ret != 1) {
+	if (turn_count != 1) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    sanity test: turn count failed\n");
@@ -57,30 +58,13 @@ int rainbow_mane_empty_check() {
 	player[0].hand.cards[player[0].hand.num_cards++] = rainmane_tmp;
 
 	int ret;
-	assert(discardpile.size == 0);
 	assert(player[0].stable.size == 0);
-	assert(player[0].hand.num_cards == 1);
 	ret = conditionalEffects(0, rainmane_tmp, 0, 0);
 
 	if (turn_count != 2 || ret != 0) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    empty stable test: turn count failed\n");
-		reset_col();
-	}
-
-	if (player[0].hand.num_cards != 1 ||
-		strcmp(player[0].hand.cards[0].name, rainmane_tmp.name) != 0) {
-		num_fails++;
-		red();
-		fprintf(stderr, "    empty stable test: hand verification failed\n");
-		reset_col();
-	}
-
-	if (player[0].stable.size != 0 || player[0].stable.num_unicorns != 0) {
-		num_fails++;
-		red();
-		fprintf(stderr, "    empty stable test: stable size failed\n");
 		reset_col();
 	}
 
@@ -101,7 +85,7 @@ int rainbow_mane_tests() {
 
 		// file input stream setup
 		FILE* fp;
-		fopen_s(&fp, "Tests/Input/line_1.txt", "r");
+		fopen_s(&fp, "Tests/Input/line_1_1_1.txt", "r");
 		if (fp == NULL) {
 			magenta();
 			fprintf(stderr, "    file input failed :(");

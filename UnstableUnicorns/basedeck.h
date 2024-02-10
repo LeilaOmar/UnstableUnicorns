@@ -96,7 +96,7 @@ void sacrificeDestroyEffects(int pnum, int cindex, int effect);
 
 // switch cases for cards that may be unable to be played due to certain circumstances;
 // this is separated so that the hand is not rearranged unnecessarily;
-// 0 = returned prematurely, conditions not met (FALSE)
+// 0 = conditions not met (FALSE)
 // 1 = success (TRUE)
 // 2 = effect is not conditional/relevant; skip
 int conditionalEffects(int pnum, struct Unicorn corn, int hindex, int upgrade_target);
