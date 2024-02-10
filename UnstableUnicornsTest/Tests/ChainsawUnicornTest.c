@@ -129,23 +129,25 @@ int chainsaw_empty_check() {
 int chainsaw_unicorn_tests() {
 	int num_fails = 0;
 
-	rainbow_error("\nStarting Chainsaw Unicorn tests...\n");
+	if (!isclient) {
+		rainbow_error("\nStarting Chainsaw Unicorn tests...\n");
 
-	// file input stream setup
-	FILE* fp;
-	fopen_s(&fp, "Tests/Input/chainsawunicorn.txt", "r");
-	if (fp == NULL) {
-		magenta();
-		fprintf(stderr, "    file input failed :(");
-		reset_col();
-		return 1;
+		// file input stream setup
+		FILE* fp;
+		fopen_s(&fp, "Tests/Input/chainsawunicorn.txt", "r");
+		if (fp == NULL) {
+			magenta();
+			fprintf(stderr, "    file input failed :(");
+			reset_col();
+			return 1;
+		}
+		fpinput = fp;
+
+		num_fails += chainsaw_upgrade_check();
+		num_fails += chainsaw_downgrade_check();
+		num_fails += chainsaw_empty_check();
+
+		fclose(fp);
 	}
-	fpinput = fp;
-
-	num_fails += chainsaw_upgrade_check();
-	num_fails += chainsaw_downgrade_check();
-	num_fails += chainsaw_empty_check();
-
-	fclose(fp);
 	return num_fails;
 }

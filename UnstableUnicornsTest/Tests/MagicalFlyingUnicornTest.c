@@ -75,22 +75,24 @@ int magical_flying_empty_check() {
 int magical_flying_unicorn_tests() {
 	int num_fails = 0;
 
-	rainbow_error("\nStarting Magical Flying Unicorn tests...\n");
+	if (!isclient) {
+		rainbow_error("\nStarting Magical Flying Unicorn tests...\n");
 
-	// file input stream setup
-	FILE* fp;
-	fopen_s(&fp, "Tests/Input/line_1.txt", "r");
-	if (fp == NULL) {
-		magenta();
-		fprintf(stderr, "    file input failed :(");
-		reset_col();
-		return 1;
+		// file input stream setup
+		FILE* fp;
+		fopen_s(&fp, "Tests/Input/line_1.txt", "r");
+		if (fp == NULL) {
+			magenta();
+			fprintf(stderr, "    file input failed :(");
+			reset_col();
+			return 1;
+		}
+		fpinput = fp;
+
+		num_fails += magical_flying_basic_check();
+		num_fails += magical_flying_empty_check();
+
+		fclose(fp);
 	}
-	fpinput = fp;
-
-	num_fails += magical_flying_basic_check();
-	num_fails += magical_flying_empty_check();
-
-	fclose(fp);
 	return num_fails;
 }

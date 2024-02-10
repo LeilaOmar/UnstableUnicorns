@@ -155,23 +155,25 @@ int summoning_empty_hand_check() {
 int summoning_ritual_tests() {
 	int num_fails = 0;
 
-	rainbow_error("\nStarting Summoning Ritual tests...\n");
+	if (!isclient) {
+		rainbow_error("\nStarting Summoning Ritual tests...\n");
 
-	// file input stream setup
-	FILE* fp;
-	fopen_s(&fp, "Tests/Input/summoningritual.txt", "r");
-	if (fp == NULL) {
-		magenta();
-		fprintf(stderr, "    file input failed :(");
-		reset_col();
-		return 1;
+		// file input stream setup
+		FILE* fp;
+		fopen_s(&fp, "Tests/Input/summoningritual.txt", "r");
+		if (fp == NULL) {
+			magenta();
+			fprintf(stderr, "    file input failed :(");
+			reset_col();
+			return 1;
+		}
+		fpinput = fp;
+
+		num_fails += summoning_basic_check();
+		num_fails += summoning_empty_discard_check();
+		num_fails += summoning_empty_hand_check();
+
+		fclose(fp);
 	}
-	fpinput = fp;
-
-	num_fails += summoning_basic_check();
-	num_fails += summoning_empty_discard_check();
-	num_fails += summoning_empty_hand_check();
-
-	fclose(fp);
 	return num_fails;
 }

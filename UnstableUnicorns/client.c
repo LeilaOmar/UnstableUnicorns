@@ -185,7 +185,6 @@ int clientMain(void) {
     "\n");
 
   int counter = 0;
-  int didWin = 0, winningpnum = 0;
 
   // loop until win condition occurs (7 unicorns in stable)
   do {
@@ -201,15 +200,16 @@ int clientMain(void) {
 
     if (counter == clientpnum) {
       // it's your turn! do your thing :>
-      beginningOfTurn(counter);
+      beginningOfTurn(clientpnum);
 
-      actionPhase(counter);
+      actionPhase(clientpnum);
 
-      didWin = endOfTurn(counter);
-      if (didWin == 1) {
+      if (endOfTurn(clientpnum)) {
         sendInt(end_game, sockfd);
         sendGamePacket(sockfd);
-        winningpnum = counter;
+
+        // the current client won the game :D
+        endGame(clientpnum);
         break;
       }
 
@@ -219,8 +219,9 @@ int clientMain(void) {
     }
     else {
       printf("waiting for %s to make a move...\n", player[counter].username);
+      int eventloop = 0;
 
-      for (;;) {
+      do {
         ret = WSAPoll(pfd, 2, -1);
         if (ret == SOCKET_ERROR) {
           fprintf(stderr, "ERROR: poll() failed. Error code : %d", WSAGetLastError());
@@ -234,61 +235,11 @@ int clientMain(void) {
         if (pfd[1].revents & POLLIN) {
           receiveInt(&network_events, sockfd);
 
-          if (network_events == neigh_event) {
-            int orig_pnum, orig_cindex;
-            receiveInt(&orig_pnum, sockfd);
-            receiveInt(&orig_cindex, sockfd);
-
-            clientNeigh(clientpnum, orig_pnum, &orig_cindex);
-          }
-          else if (network_events == discard_event) {
-            int target_player;
-            int desired_type;
-            receiveCardEffectPacket(&target_player, &desired_type, sockfd);
-
-            clientDiscard(clientpnum, target_player, desired_type);
-          }
-          else if (network_events == sacrifice_event) {
-            int target_player;
-            int desired_type;
-            receiveCardEffectPacket(&target_player, &desired_type, sockfd);
-
-            clientSacrifice(clientpnum, target_player, desired_type);
-          }
-          else if (network_events == enter_stable_event) {
-            struct Unicorn corn;
-            int orig_pnum;
-            receiveEnterStablePacket(&corn, &orig_pnum, sockfd);
-
-            printf("\n\033[1;31m%s\033[0m sent you the card \033[1;31m'%s'\033[0m.\n", player[orig_pnum].username, corn.name);
-            addStable(clientpnum, corn);
-
-            if (!checkWin(clientpnum)) {
-              sendInt(quit_loop, sockfd);
-              sendGamePacket(sockfd);
-            }
-            else {
-              didWin = 1;
-              winningpnum = clientpnum;
-              sendInt(end_game, sockfd);
-              sendGamePacket(sockfd);
-              break;
-            }
-          }
-          else if (network_events == end_turn) {
-            receiveGamePacket(sockfd);
-            break;
-          }
-          else if (network_events == end_game) {
-            receiveInt(&winningpnum, sockfd);
-            receiveGamePacket(sockfd);
-            didWin = 1;
-            break;
-          }
+          eventloop = netStates[network_events].recvClient(clientpnum, sockfd);
         }
 
         Sleep(20);
-      }
+      } while (!eventloop);
     }
 
     // print state of nursery and discard piles
@@ -303,37 +254,11 @@ int clientMain(void) {
       reset_col();
     }
 
-    counter = (counter < current_players - 1) ? counter + 1 : 0;
-  } while (!didWin);
+    counter = (counter + 1) % current_players;
+  } while (42);
 
-  printf("\n********************************************************************************\n");
-  red();
-  printf("\nPlayer Stables\n");
-  reset_col();
-  printStableGrid();
-
-  // https://www.asciiart.eu/mythology/unicorns
-  printf("\n\n"
-    "                    /  \n"
-    "               ,.. /   \n"
-    "             ,'   ';        _____                         _____      _   _ \n"
-    "  ,,.__    _,' /';  .      / ____|                       / ____|    | | | |\n"
-    " :','  ~~~~    '. '~      | |  __  __ _ _ __ ___   ___  | (___   ___| |_| |\n"
-    ":' (   )         )::,     | | |_ |/ _` | '_ ` _ \\ / _ \\  \\___ \\ / _ \\ __| |\n"
-    "'. '. .=----=..-~  .;'    | |__| | (_| | | | | | |  __/  ____) |  __/ |_|_|\n"
-    " '  ;'  ::   ':.  '\"       \\_____|\\__,_|_| |_| |_|\\___| |_____/ \\___|\\__(_)\n"
-    "   (:   ':    ;)       \n"
-    "    \\\\   '\"  ./        \n"
-    "     '\"      '\"     *ASCII unicorn by Dr J   \n"
-    "\n");
-
-  char winmsg[DESC_SIZE];
-  sprintf_s(winmsg, NAME_SIZE + 18, "%s won the game!!!\n", player[winningpnum].username);
-  rainbow(winmsg);
-
-  printf("\nPress any key to close the window...");
-
-	return 0;
+  // this shouldn't happen
+	return 1;
 }
 
 int clientJoin(short portno) {

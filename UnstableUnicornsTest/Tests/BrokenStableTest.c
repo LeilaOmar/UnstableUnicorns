@@ -40,21 +40,23 @@ int broken_basic_check() {
 int broken_stable_tests() {
 	int num_fails = 0;
 
-	rainbow_error("\nStarting Broken Stable tests...\n");
+	if (!isclient) {
+		rainbow_error("\nStarting Broken Stable tests...\n");
 
-	// file input stream setup
-	FILE* fp;
-	fopen_s(&fp, "Tests/Input/line_1.txt", "r");
-	if (fp == NULL) {
-		magenta();
-		fprintf(stderr, "    file input failed :(");
-		reset_col();
-		return 1;
+		// file input stream setup
+		FILE* fp;
+		fopen_s(&fp, "Tests/Input/line_1.txt", "r");
+		if (fp == NULL) {
+			magenta();
+			fprintf(stderr, "    file input failed :(");
+			reset_col();
+			return 1;
+		}
+		fpinput = fp;
+
+		num_fails += broken_basic_check();
+
+		fclose(fp);
 	}
-	fpinput = fp;
-
-	num_fails += broken_basic_check();
-
-	fclose(fp);
 	return num_fails;
 }

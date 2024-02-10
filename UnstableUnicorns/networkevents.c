@@ -859,11 +859,9 @@ void serverDiscard(int orig_pnum, int target_pnum, int cType) {
   }
 }
 
-int clientEnterStable(int clientpnum) {
+void clientEnterStable(int clientpnum) {
   int ret2;
   int eventloop = 0;
-  int didWin = 0;
-  int winningpnum = 0;
 
   WSAPOLLFD pfd;
   pfd.fd = sockfd;
@@ -883,72 +881,21 @@ int clientEnterStable(int clientpnum) {
     if (pfd.revents & POLLIN) {
       receiveInt(&network_events, sockfd);
 
-      if (network_events == discard_event) {
-        int target_player;
-        int desired_type;
-        receiveCardEffectPacket(&target_player, &desired_type, sockfd);
-
-        clientDiscard(clientpnum, target_player, desired_type);
-      }
-      else if (network_events == sacrifice_event) {
-        int target_player;
-        int desired_type;
-        receiveCardEffectPacket(&target_player, &desired_type, sockfd);
-
-        clientSacrifice(clientpnum, target_player, desired_type);
-      }
-      else if (network_events == enter_stable_event) {
-        struct Unicorn corn;
-        int orig_pnum;
-        receiveEnterStablePacket(&corn, &orig_pnum, sockfd);
-
-        printf("\n\033[1;31m%s\033[0m sent you the card \033[1;31m'%s'\033[0m.\n", player[orig_pnum].username, corn.name);
-        addStable(clientpnum, corn);
-
-        if (!checkWin(clientpnum)) {
-          sendInt(quit_loop, sockfd);
-          sendGamePacket(sockfd);
-        }
-        else {
-          eventloop = 1;
-          didWin = 1;
-          winningpnum = clientpnum;
-          sendInt(end_game, sockfd);
-          sendGamePacket(sockfd);
-          break;
-        }
-      }
-      else if (network_events == quit_loop) {
-        receiveGamePacket(sockfd);
-        eventloop = 1;
-        break;
-      }
-      else if (network_events == end_game) {
-        receiveInt(&winningpnum, sockfd);
-        receiveGamePacket(sockfd);
-        eventloop = 1;
-        didWin = 1;
-        break;
-      }
+      eventloop = netStates[network_events].recvClient(clientpnum, sockfd);
     }
 
     Sleep(20);
 
   } while (!eventloop);
-
-  return didWin;
 }
 
-// TODO: write a proper endGame function...
 // TODO: check if the target player wins the game inadvertedly through
 // an enter stable effect sacrificing masquerade cards
-int serverEnterStable(int orig_pnum, int target_pnum) {
-  // can always assume that target_pnum is a separate player from the host (or else this function wouldn't be called)
+void serverEnterStable(int orig_pnum, int target_pnum) {
+  // can always assume that target_pnum is a separate player from the host (or else this function wouldn't be called);
   // orig_pnum can either be the host or a player that's different from target_pnum
   int ret2;
   int eventloop = 0;
-  int didWin = 0;
-  int winningpnum = 0;
 
   WSAPOLLFD pfd[2] = { -1 };  // original sockfd + relevant client
   pfd[0].fd = sockfd;
@@ -974,81 +921,16 @@ int serverEnterStable(int orig_pnum, int target_pnum) {
       // the catalyst that starts the next nested loop
       receiveInt(&network_events, clientsockfd[target_pnum - 1]);
 
-      if (network_events == discard_event) {
-        int target_player;
-        int desired_type;
-        receiveCardEffectPacket(&target_player, &desired_type, clientsockfd[target_pnum - 1]);
-        serverDiscard(target_pnum, target_player, desired_type);
-      }
-      else if (network_events == sacrifice_event) {
-        int target_player;
-        int desired_type;
-        receiveCardEffectPacket(&target_player, &desired_type, clientsockfd[target_pnum - 1]);
-        serverSacrifice(target_pnum, target_player, desired_type);
-      }
-      else if (network_events == enter_stable_event) {
-        struct Unicorn corn;
-        int pindex;
-        receiveEnterStablePacket(&corn, &pindex, clientsockfd[target_pnum - 1]);
+      eventloop = netStates[network_events].recvServer(target_pnum, clientsockfd[target_pnum - 1]);
 
-        if (pindex != 0) {
-          sendInt(enter_stable_event, clientsockfd[pindex - 1]);
-          // target_pnum represents the original player
-          sendEnterStablePacket(corn, target_pnum, clientsockfd[pindex - 1]);
-          serverEnterStable(target_pnum, pindex);
-        }
-        else {
-          addStable(0, corn);
-
-          if (!checkWin(0)) {
-            sendInt(quit_loop, clientsockfd[target_pnum - 1]);
-            sendGamePacket(clientsockfd[target_pnum - 1]);
-          }
-          else {
-            eventloop = 1;
-            didWin = 1;
-            winningpnum = 0;
-
-            for (int i = 0; i < current_players - 1; i++) {
-              sendInt(end_game, clientsockfd[i]);
-              sendInt(winningpnum, clientsockfd[i]);
-              sendGamePacket(clientsockfd[i]);
-            }
-            break;
-          }
-        }
-      }
-      else if (network_events == quit_loop) {
-        // this looping nightmare is over!
-        receiveGamePacket(clientsockfd[target_pnum - 1]);
-        eventloop = 1;
-
-        if (orig_pnum != 0) {
-          sendInt(quit_loop, clientsockfd[orig_pnum - 1]);
-          sendGamePacket(clientsockfd[orig_pnum - 1]);
-        }
-        break;
-      }
-      else if (network_events == end_game) {
-        receiveGamePacket(clientsockfd[target_pnum - 1]);
-        eventloop = 1;
-        didWin = 1;
-        winningpnum = target_pnum;
-
-        for (int i = 0; i < current_players - 1; i++) {
-          if ((target_pnum - 1) == i) continue;
-
-          sendInt(end_game, clientsockfd[i]);
-          sendInt(winningpnum, clientsockfd[i]);
-          sendGamePacket(clientsockfd[i]);
-        }
-        break;
+      // this is all to avoid adding a 3rd parameter just for one instance...
+      if (eventloop && orig_pnum != 0) {
+        sendInt(quit_loop, clientsockfd[orig_pnum - 1]);
+        sendGamePacket(clientsockfd[orig_pnum - 1]);
       }
     }
 
     Sleep(20);
 
   } while (!eventloop);
-
-  return didWin;
 }

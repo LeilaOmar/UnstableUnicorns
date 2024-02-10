@@ -80,24 +80,26 @@ int lasso_empty_check() {
 int unicorn_lasso_tests() {
 	int num_fails = 0;
 
-	rainbow_error("\nStarting Unicorn Lasso tests...\n");
+	if (!isclient) {
+		rainbow_error("\nStarting Unicorn Lasso tests...\n");
 
-	// file input stream setup
-	FILE* fp;
-	fopen_s(&fp, "Tests/Input/unicornlasso.txt", "r");
-	if (fp == NULL) {
-		magenta();
-		fprintf(stderr, "    file input failed :(");
-		reset_col();
-		return 1;
+		// file input stream setup
+		FILE* fp;
+		fopen_s(&fp, "Tests/Input/unicornlasso.txt", "r");
+		if (fp == NULL) {
+			magenta();
+			fprintf(stderr, "    file input failed :(");
+			reset_col();
+			return 1;
+		}
+		fpinput = fp;
+
+		// there are other tests featuring unique edge cases with other cards
+		// in their own respective card tests
+		num_fails += lasso_basic_check();
+		num_fails += lasso_empty_check();
+
+		fclose(fp);
 	}
-	fpinput = fp;
-
-	// there are other tests featuring unique edge cases with other cards
-	// in their own respective card tests
-	num_fails += lasso_basic_check();
-	num_fails += lasso_empty_check();
-
-	fclose(fp);
 	return num_fails;
 }

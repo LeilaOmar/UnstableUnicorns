@@ -92,22 +92,24 @@ int blatant_empty_check() {
 int blatant_thievery_tests() {
 	int num_fails = 0;
 
-	rainbow_error("\nStarting Blatant Thievery tests...\n");
+	if (!isclient) {
+		rainbow_error("\nStarting Blatant Thievery tests...\n");
 
-	// file input stream setup
-	FILE* fp;
-	fopen_s(&fp, "Tests/Input/blatantthievery.txt", "r");
-	if (fp == NULL) {
-		magenta();
-		fprintf(stderr, "    file input failed :(");
-		reset_col();
-		return 1;
+		// file input stream setup
+		FILE* fp;
+		fopen_s(&fp, "Tests/Input/blatantthievery.txt", "r");
+		if (fp == NULL) {
+			magenta();
+			fprintf(stderr, "    file input failed :(");
+			reset_col();
+			return 1;
+		}
+		fpinput = fp;
+
+		num_fails += blatant_basic_check();
+		num_fails += blatant_empty_check();
+
+		fclose(fp);
 	}
-	fpinput = fp;
-
-	num_fails += blatant_basic_check();
-	num_fails += blatant_empty_check();
-
-	fclose(fp);
 	return num_fails;
 }

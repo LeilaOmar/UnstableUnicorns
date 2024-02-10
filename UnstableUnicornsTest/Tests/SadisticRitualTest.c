@@ -267,25 +267,27 @@ int sadistic_barbed_wire_check() {
 int sadistic_ritual_tests() {
 	int num_fails = 0;
 
-	rainbow_error("\nStarting Sadistic Ritual tests...\n");
+	if (!isclient) {
+		rainbow_error("\nStarting Sadistic Ritual tests...\n");
 
-	// file input stream setup
-	FILE* fp;
-	fopen_s(&fp, "Tests/Input/sadisticritual.txt", "r");
-	if (fp == NULL) {
-		magenta();
-		fprintf(stderr, "    file input failed :(");
-		reset_col();
-		return 1;
+		// file input stream setup
+		FILE* fp;
+		fopen_s(&fp, "Tests/Input/sadisticritual.txt", "r");
+		if (fp == NULL) {
+			magenta();
+			fprintf(stderr, "    file input failed :(");
+			reset_col();
+			return 1;
+		}
+		fpinput = fp;
+
+		num_fails += sadistic_basic_check();
+		num_fails += sadistic_empty_check();
+		num_fails += sadistic_pandamonium_check();
+		num_fails += sadistic_puppicorn_check();
+		num_fails += sadistic_barbed_wire_check();
+
+		fclose(fp);
 	}
-	fpinput = fp;
-
-	num_fails += sadistic_basic_check();
-	num_fails += sadistic_empty_check();
-	num_fails += sadistic_pandamonium_check();
-	num_fails += sadistic_puppicorn_check();
-	num_fails += sadistic_barbed_wire_check();
-
-	fclose(fp);
 	return num_fails;
 }

@@ -6,46 +6,6 @@
 // Full card description list -
 // http://unstablegameswiki.com/index.php?title=Unstable_Unicorns_-_1st_%26_2nd_Edition_Comparisons
 //
-// Conflicts and other things to look out for!
-// - which should take priority when cards contradict each other (e.g. in an
-// expansion pack, dragon slayer unicorn and dragon skies directly oppose each
-// other, so would dragon slayer unicorn take priority or whichever came first?
-// leaning towards the former in that case)
-// - some cards have passive effects that may occur when it's not your turn
-// (e.g. "barbed wire" activates anytime a card enters or leaves your stable);
-// so how do you deal with that
-// - loophole between the card "tiny stable" and any card that has an effect
-// that negates sacrifices; tiny stable actually goes into effect immediately so
-// it cannot be bypassed
-// - synergy between unicorn shrinkray and barbed wire; you discard however many
-// were in your stable
-// - what happens if there are multiple cards with the condition that no one
-// else can have [xx] (e.g. Queen Bee Unicorn); this is only if the deck is like
-// doubled for whatever reason
-// - should check for unicorn count every time something enters a stable instead
-// of by the end of someone's turn; e.g. if somoene uses unicorn swap against
-// someone with 6 unicorns, then they'd technically win the game in the middle
-// of their turn. also this would get rid of the need to remove cards
-// potentially at the end of your turn if you happen to have 7 unicorns anyways
-// - what happens when you mix tiny stable (sacrifice a card if at any time you
-// have more than 5 unicorns) and unicorn lasso or puppicorn where the acquired
-// card is technically not yours; sacrificing someone elses card would be lame
-// and puppicorn can't be sacrificed or destroyed
-// - for glitter tornado, the user chooses the cards to return to each player's
-// hand
-//
-// *** TODO (maybe?): move the potentially unplayable cards (i.e. the ones that
-// increase turncount and move the card back to the bottom of the player's hand
-// after being removed from the stable) to a different function that gets
-// called before the hand is rearranged; this is so that it doesn't need to
-// leave the hand and briefly enter the stable, and that may also cause a bug
-// if it's a unicorn card and that would bring the number of unicorns up to 7
-// if I ever put that in the addStable function
-// *** TODO: find a way to deal with edge cases in unicorn lasso where the
-// beginning effect or action phase card has some way to sacrifice the stolen
-// card, thus making it unable to be given back to the original owner (currently
-// it would probably bug out and pass over an incorrect card from the "original
-// index") [i think this is fixed already?]
 // *** TODO: do not actually shuffle the discard pile into the deck if the
 // deck is empty. that's actually game-over, and the person with the most
 // unicorns in their stable at that time wins. tiebreakers are decided through
@@ -59,6 +19,7 @@
 
 #include "client.h"
 #include "server.h"
+#include "networkstates.h"
 #include "windowsapp.h"
 
 // ******************** Deck List and IDs ********************
@@ -352,6 +313,9 @@ int mainlet(int argc, char* argv[]) {
   // initialize the deck here for now
   init_deck(&nursery, &deck, &discardpile);
 
+  // initialize the network states too
+  init_network_states();
+
   // file stream pointer to use as a placeholder for stdin or the test input files
   fpinput = stdin;
 
@@ -462,5 +426,6 @@ int mainlet(int argc, char* argv[]) {
     }
   }
 
-  exit(0);
+  // this shouldn't happen
+  exit(1);
 }

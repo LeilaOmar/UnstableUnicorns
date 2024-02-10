@@ -48,21 +48,23 @@ int classy_basic_check() {
 int classy_narwhal_tests() {
 	int num_fails = 0;
 
-	rainbow_error("\nStarting Classy Narwhal tests...\n");
+	if (!isclient) {
+		rainbow_error("\nStarting Classy Narwhal tests...\n");
 
-	// file input stream setup
-	FILE* fp;
-	fopen_s(&fp, "Tests/Input/classynarwhal.txt", "r");
-	if (fp == NULL) {
-		magenta();
-		fprintf(stderr, "    file input failed :(");
-		reset_col();
-		return 1;
+		// file input stream setup
+		FILE* fp;
+		fopen_s(&fp, "Tests/Input/classynarwhal.txt", "r");
+		if (fp == NULL) {
+			magenta();
+			fprintf(stderr, "    file input failed :(");
+			reset_col();
+			return 1;
+		}
+		fpinput = fp;
+
+		num_fails += classy_basic_check();
+
+		fclose(fp);
 	}
-	fpinput = fp;
-
-	num_fails += classy_basic_check();
-
-	fclose(fp);
 	return num_fails;
 }

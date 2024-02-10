@@ -98,3 +98,5 @@ void steal(int pnum, int cType);
 // ********************************************************************************
 
 void playCard(int pnum);
+
+void endGame(int winningpnum);

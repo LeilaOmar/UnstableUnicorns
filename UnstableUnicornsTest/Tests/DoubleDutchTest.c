@@ -62,21 +62,23 @@ int dutch_basic_check() {
 int double_dutch_tests() {
 	int num_fails = 0;
 
-	rainbow_error("\nStarting Double Dutch tests...\n");
+	if (!isclient) {
+		rainbow_error("\nStarting Double Dutch tests...\n");
 
-	// file input stream setup
-	FILE* fp;
-	fopen_s(&fp, "Tests/Input/doubledutch.txt", "r");
-	if (fp == NULL) {
-		magenta();
-		fprintf(stderr, "    file input failed :(");
-		reset_col();
-		return 1;
+		// file input stream setup
+		FILE* fp;
+		fopen_s(&fp, "Tests/Input/doubledutch.txt", "r");
+		if (fp == NULL) {
+			magenta();
+			fprintf(stderr, "    file input failed :(");
+			reset_col();
+			return 1;
+		}
+		fpinput = fp;
+
+		num_fails += dutch_basic_check();
+
+		fclose(fp);
 	}
-	fpinput = fp;
-
-	num_fails += dutch_basic_check();
-
-	fclose(fp);
 	return num_fails;
 }

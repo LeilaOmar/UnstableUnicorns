@@ -48,21 +48,23 @@ int great_narwhal_basic_check() {
 int the_great_narwhal_tests() {
 	int num_fails = 0;
 
-	rainbow_error("\nStarting The Great Narwhal tests...\n");
+	if (!isclient) {
+		rainbow_error("\nStarting The Great Narwhal tests...\n");
 
-	// file input stream setup
-	FILE* fp;
-	fopen_s(&fp, "Tests/Input/thegreatnarwhal.txt", "r");
-	if (fp == NULL) {
-		magenta();
-		fprintf(stderr, "    file input failed :(");
-		reset_col();
-		return 1;
+		// file input stream setup
+		FILE* fp;
+		fopen_s(&fp, "Tests/Input/thegreatnarwhal.txt", "r");
+		if (fp == NULL) {
+			magenta();
+			fprintf(stderr, "    file input failed :(");
+			reset_col();
+			return 1;
+		}
+		fpinput = fp;
+
+		num_fails += great_narwhal_basic_check();
+
+		fclose(fp);
 	}
-	fpinput = fp;
-
-	num_fails += great_narwhal_basic_check();
-
-	fclose(fp);
 	return num_fails;
 }

@@ -173,23 +173,25 @@ int tiny_stable_pandamonium_check() {
 int tiny_stable_tests() {
 	int num_fails = 0;
 
-	rainbow_error("\nStarting Tiny Stable tests...\n");
+	if (!isclient) {
+		rainbow_error("\nStarting Tiny Stable tests...\n");
 
-	// file input stream setup
-	FILE* fp;
-	fopen_s(&fp, "Tests/Input/line_1_1.txt", "r");
-	if (fp == NULL) {
-		magenta();
-		fprintf(stderr, "    file input failed :(");
-		reset_col();
-		return 1;
+		// file input stream setup
+		FILE* fp;
+		fopen_s(&fp, "Tests/Input/line_1_1.txt", "r");
+		if (fp == NULL) {
+			magenta();
+			fprintf(stderr, "    file input failed :(");
+			reset_col();
+			return 1;
+		}
+		fpinput = fp;
+
+		num_fails += tiny_stable_basic_check();
+		num_fails += tiny_stable_puppicorn_check();
+		num_fails += tiny_stable_pandamonium_check();
+
+		fclose(fp);
 	}
-	fpinput = fp;
-
-	num_fails += tiny_stable_basic_check();
-	num_fails += tiny_stable_puppicorn_check();
-	num_fails += tiny_stable_pandamonium_check();
-
-	fclose(fp);
 	return num_fails;
 }

@@ -26,11 +26,10 @@ int slowdown_basic_check() {
 int slowdown_tests() {
 	int num_fails = 0;
 
-	rainbow_error("\nStarting Slowdown tests...\n");
+	if (!isclient) {
+		rainbow_error("\nStarting Slowdown tests...\n");
 
-	// file input stream setup
-
-	num_fails += slowdown_basic_check();
-
+		num_fails += slowdown_basic_check();
+	}
 	return num_fails;
 }
