@@ -45,7 +45,7 @@ int broken_stable_tests() {
 
 		// file input stream setup
 		FILE* fp;
-		fopen_s(&fp, "Tests/Input/line_1.txt", "r");
+		fopen_s(&fp, "Tests/Input/line_1_1.txt", "r");
 		if (fp == NULL) {
 			magenta();
 			fprintf(stderr, "    file input failed :(");

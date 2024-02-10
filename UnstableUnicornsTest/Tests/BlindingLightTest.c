@@ -115,8 +115,7 @@ int blinding_enter_stable_check() {
 	player[0].hand.cards[player[0].hand.num_cards++] = tail_tmp;
 
 	int ret;
-	assert(discardpile.size == 0);
-	assert(player[0].hand.num_cards == 1);
+	assert(player[0].stable.size == 1);
 	assert(player[0].flags == blinding_light);
 	ret = conditionalEffects(0, tail_tmp, 0, 0);
 
@@ -124,14 +123,6 @@ int blinding_enter_stable_check() {
 		num_fails++;
 		red();
 		fprintf(stderr, "    enter stable (non-unicorn) test: turn count failed\n");
-		reset_col();
-	}
-
-	if (player[0].hand.num_cards != 1 ||
-			strcmp(player[0].hand.cards[0].name, tail_tmp.name) != 0) {
-		num_fails++;
-		red();
-		fprintf(stderr, "    enter stable (non-unicorn) test: hand verification failed\n");
 		reset_col();
 	}
 

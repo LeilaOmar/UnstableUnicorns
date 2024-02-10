@@ -803,9 +803,10 @@ int main(int argc, char* argv[]) {
 	num_fails += classy_narwhal_tests();
 	num_fails += the_great_narwhal_tests();
 
-	// magic cards
+	// magic cards; note that some tests use magicEffects instead of playCard,
+	// so the magic cards don't always get discarded
 	num_fails += unicorn_poison_tests();
-	num_fails += back_kick_tests();
+	num_fails += back_kick_tests(); // TODO: test w/ solo baby unicorn
 	num_fails += change_of_luck_tests();
 	num_fails += glitter_tornado_tests();
 	num_fails += unicorn_swap_tests();

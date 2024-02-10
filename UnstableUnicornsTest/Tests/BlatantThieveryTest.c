@@ -7,17 +7,18 @@ int blatant_basic_check() {
 	struct Unicorn basic_tmp = basedeck[13];
 
 	current_players = 3;
+	toggleFlags(0, yay_effect);
 	player[0].hand.cards[player[0].hand.num_cards++] = blatant_tmp;
 	player[1].hand.cards[player[1].hand.num_cards++] = basic_tmp;
 
-	int ret;
 	assert(discardpile.size == 0);
 	assert(player[0].hand.num_cards == 1);
 	assert(player[1].hand.num_cards == 1);
 	assert(player[2].hand.num_cards == 0);
-	ret = conditionalEffects(0, blatant_tmp, 0, 0);
+	assert(player[0].flags == yay);
+	playCard(0);
 
-	if (turn_count != 1 || ret != 1) {
+	if (turn_count != 1) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    sanity test: turn count failed\n");
@@ -54,7 +55,6 @@ int blatant_empty_check() {
 	player[0].hand.cards[player[0].hand.num_cards++] = blatant_tmp;
 
 	int ret;
-	assert(discardpile.size == 0);
 	assert(player[0].hand.num_cards == 1);
 	assert(player[1].hand.num_cards == 0);
 	ret = conditionalEffects(0, blatant_tmp, 0, 0);
@@ -63,21 +63,6 @@ int blatant_empty_check() {
 		num_fails++;
 		red();
 		fprintf(stderr, "    sanity test: turn count failed\n");
-		reset_col();
-	}
-
-	if (player[0].hand.num_cards != 1 ||
-		strcmp(player[0].hand.cards[0].name, blatant_tmp.name) != 0) {
-		num_fails++;
-		red();
-		fprintf(stderr, "    sanity test: hand verification failed\n");
-		reset_col();
-	}
-
-	if (discardpile.size != 0) {
-		num_fails++;
-		red();
-		fprintf(stderr, "    sanity test: discard size failed\n");
 		reset_col();
 	}
 

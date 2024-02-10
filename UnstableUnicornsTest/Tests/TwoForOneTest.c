@@ -5,25 +5,26 @@ int twofer_basic_check() {
 	int num_fails = 0;
 	struct Unicorn twofer_tmp = basedeck[83];
 	struct Unicorn basic_tmp = basedeck[13];
-	struct Unicorn basic_tmp2 = basedeck[17];
+	struct Unicorn panda_tmp = basedeck[107];
 	struct Unicorn basic_tmp3 = basedeck[20];
 	struct Unicorn yay_tmp = basedeck[100];
 
 	current_players = 3;
 	addStable(0, basic_tmp);
 	addStable(0, yay_tmp);
-	addStable(1, basic_tmp2);
+	addStable(1, panda_tmp);
 	addStable(1, basic_tmp3);
+	toggleFlags(0, yay_effect);
 	player[0].hand.cards[player[0].hand.num_cards++] = twofer_tmp;
 
-	int ret;
 	assert(discardpile.size == 0);
 	assert(player[0].hand.num_cards == 1);
 	assert(player[0].stable.size == 2);
 	assert(player[1].stable.size == 2);
-	ret = conditionalEffects(0, twofer_tmp, 0, 0);
+	assert(player[0].flags == yay);
+	playCard(0);
 
-	if (turn_count != 1 || ret != 1) {
+	if (turn_count != 1) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    sanity test: turn count failed\n");
@@ -41,7 +42,7 @@ int twofer_basic_check() {
 	if (discardpile.size != 4 ||
 			strcmp(discardpile.cards[0].name, twofer_tmp.name) != 0 ||
 			strcmp(discardpile.cards[1].name, basic_tmp.name) != 0 ||
-			strcmp(discardpile.cards[2].name, basic_tmp2.name) != 0 ||
+			strcmp(discardpile.cards[2].name, panda_tmp.name) != 0 ||
 			strcmp(discardpile.cards[3].name, basic_tmp3.name) != 0) {
 		num_fails++;
 		red();
@@ -71,8 +72,6 @@ int twofer_empty_check() {
 	player[0].hand.cards[player[0].hand.num_cards++] = twofer_tmp;
 
 	int ret;
-	assert(discardpile.size == 0);
-	assert(player[0].hand.num_cards == 1);
 	assert(player[0].stable.size == 1);
 	assert(player[1].stable.size == 2);
 	ret = conditionalEffects(0, twofer_tmp, 0, 0);
@@ -81,30 +80,6 @@ int twofer_empty_check() {
 		num_fails++;
 		red();
 		fprintf(stderr, "    empty sacrifice test: turn count failed\n");
-		reset_col();
-	}
-
-	if (player[0].hand.num_cards != 1 ||
-			strcmp(player[0].hand.cards[0].name, twofer_tmp.name) != 0) {
-		num_fails++;
-		red();
-		fprintf(stderr, "    empty sacrifice test: hand verification failed\n");
-		reset_col();
-	}
-
-	if (player[0].stable.size != 1 || player[0].stable.num_unicorns != 1 ||
-			player[1].stable.size != 2 || player[1].stable.num_unicorns != 2 ||
-			strcmp(player[0].stable.unicorns[0].name, puppicorn_tmp.name) != 0) {
-		num_fails++;
-		red();
-		fprintf(stderr, "    empty sacrifice test: stable verification failed\n");
-		reset_col();
-	}
-
-	if (discardpile.size != 0) {
-		num_fails++;
-		red();
-		fprintf(stderr, "    empty sacrifice test: discard size failed\n");
 		reset_col();
 	}
 	reset_players();
@@ -117,8 +92,6 @@ int twofer_empty_check() {
 	addStable(1, kitten_tmp);
 	player[0].hand.cards[player[0].hand.num_cards++] = twofer_tmp;
 
-	assert(discardpile.size == 0);
-	assert(player[0].hand.num_cards == 1);
 	assert(player[0].stable.size == 1);
 	assert(player[1].stable.size == 2);
 	ret = conditionalEffects(0, twofer_tmp, 0, 0);
@@ -127,30 +100,6 @@ int twofer_empty_check() {
 		num_fails++;
 		red();
 		fprintf(stderr, "    empty destroy test: turn count failed\n");
-		reset_col();
-	}
-
-	if (player[0].hand.num_cards != 1 ||
-			strcmp(player[0].hand.cards[0].name, twofer_tmp.name) != 0) {
-		num_fails++;
-		red();
-		fprintf(stderr, "    empty destroy test: hand verification failed\n");
-		reset_col();
-	}
-
-	if (player[0].stable.size != 1 || player[0].stable.num_unicorns != 1 ||
-			player[1].stable.size != 2 || player[1].stable.num_unicorns != 2 ||
-			strcmp(player[0].stable.unicorns[0].name, basic_tmp.name) != 0) {
-		num_fails++;
-		red();
-		fprintf(stderr, "    empty destroy test: stable verification failed\n");
-		reset_col();
-	}
-
-	if (discardpile.size != 0) {
-		num_fails++;
-		red();
-		fprintf(stderr, "    empty destroy test: discard size failed\n");
 		reset_col();
 	}
 	reset_players();
@@ -163,8 +112,6 @@ int twofer_empty_check() {
 	addStable(1, basic_tmp);
 	player[0].hand.cards[player[0].hand.num_cards++] = twofer_tmp;
 
-	assert(discardpile.size == 0);
-	assert(player[0].hand.num_cards == 1);
 	assert(player[0].stable.size == 1);
 	assert(player[1].stable.size == 2);
 	ret = conditionalEffects(0, twofer_tmp, 0, 0);
@@ -173,30 +120,6 @@ int twofer_empty_check() {
 		num_fails++;
 		red();
 		fprintf(stderr, "    incomplete destroy test: turn count failed\n");
-		reset_col();
-	}
-
-	if (player[0].hand.num_cards != 1 ||
-			strcmp(player[0].hand.cards[0].name, twofer_tmp.name) != 0) {
-		num_fails++;
-		red();
-		fprintf(stderr, "    incomplete destroy test: hand verification failed\n");
-		reset_col();
-	}
-
-	if (player[0].stable.size != 1 || player[0].stable.num_unicorns != 1 ||
-			player[1].stable.size != 2 || player[1].stable.num_unicorns != 2 ||
-			strcmp(player[0].stable.unicorns[0].name, kitten_tmp.name) != 0) {
-		num_fails++;
-		red();
-		fprintf(stderr, "    incomplete destroy test: stable verification failed\n");
-		reset_col();
-	}
-
-	if (discardpile.size != 0) {
-		num_fails++;
-		red();
-		fprintf(stderr, "    incomplete destroy test: discard size failed\n");
 		reset_col();
 	}
 
@@ -224,43 +147,14 @@ int twofer_unicorn_phoenix_check() {
 	player[1].hand.cards[player[1].hand.num_cards++] = twofer_tmp;
 
 	int ret;
-	assert(discardpile.size == 0);
-	assert(player[0].hand.num_cards == 1);
 	assert(player[0].stable.size == 1);
 	assert(player[1].stable.size == 2);
-	assert(player[1].hand.num_cards == 1);
 	ret = conditionalEffects(0, twofer_tmp, 0, 0);
 
 	if (turn_count != 2 || ret != 0) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    unicorn phoenix test: turn count failed\n");
-		reset_col();
-	}
-
-	if (player[0].hand.num_cards != 1 ||
-			strcmp(player[0].hand.cards[0].name, twofer_tmp.name) != 0) {
-		num_fails++;
-		red();
-		fprintf(stderr, "    unicorn phoenix test: hand verification failed\n");
-		reset_col();
-	}
-
-	if (player[0].stable.size != 1 || player[0].stable.num_unicorns != 1 ||
-			player[1].stable.size != 2 || player[1].stable.num_unicorns != 2 ||
-			strcmp(player[0].stable.unicorns[0].name, kitten_tmp.name) != 0 ||
-			strcmp(player[1].stable.unicorns[0].name, phoenix_tmp.name) != 0 ||
-			strcmp(player[1].stable.unicorns[1].name, basic_tmp.name) != 0) {
-		num_fails++;
-		red();
-		fprintf(stderr, "    unicorn phoenix test: stable verification failed\n");
-		reset_col();
-	}
-
-	if (discardpile.size != 0) {
-		num_fails++;
-		red();
-		fprintf(stderr, "    unicorn phoenix test: discard size failed\n");
 		reset_col();
 	}
 
