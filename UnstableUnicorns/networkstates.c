@@ -1,6 +1,16 @@
 #include "gamemechanics.h"
 #include "networkevents.h"
 
+// was unable to properly link this with an external file ;~;
+#ifdef TEST_RUN
+#define endGame endGame_mock
+
+void endGame_mock(int winningpnum) {
+  // blank function to avoid ending the tests prematurely
+  return;
+}
+#endif
+
 void init_network_states() {
   netStates[end_turn]           = (NetworkStateManager){ clientStateEndTurn,     serverStateEndTurn };
   netStates[end_game]           = (NetworkStateManager){ clientStateEndGame,     serverStateEndGame };
@@ -14,6 +24,18 @@ void init_network_states() {
 // ********************************************************************************
 // ********************************* Client States ********************************
 // ********************************************************************************
+
+void clientSendEndGame(int winningpnum, int fd) {
+  if (winningpnum == -1) {
+    winningpnum = tiebreaker();
+  }
+
+  sendInt(end_game, fd);
+  sendInt(winningpnum, fd);
+  sendGamePacket(fd);
+
+  endGame(winningpnum);
+}
 
 int clientStateEndTurn(int orig_pnum, int fd) {
   receiveGamePacket(fd);
@@ -76,10 +98,7 @@ int clientStateEnterStable(int clientpnum, int fd) {
     sendGamePacket(sockfd);
   }
   else {
-    sendInt(end_game, sockfd);
-    sendGamePacket(sockfd);
-
-    // didWin = 1
+    clientSendEndGame(clientpnum, sockfd);
     return 1;
   }
 
@@ -89,6 +108,21 @@ int clientStateEnterStable(int clientpnum, int fd) {
 // ********************************************************************************
 // ********************************* Server States ********************************
 // ********************************************************************************
+
+void serverSendEndGame(int winningpnum) {
+  // check if winningpnum = -1 or not
+  if (winningpnum == -1) {
+    winningpnum = tiebreaker();
+  }
+
+  for (int i = 0; i < current_players - 1; i++) {
+    sendInt(end_game, clientsockfd[i]);
+    sendInt(winningpnum, clientsockfd[i]);
+    sendGamePacket(clientsockfd[i]);
+  }
+
+  endGame(winningpnum);
+}
 
 int serverStateEndTurn(int orig_pnum, int fd) {
   receiveGamePacket(fd);
@@ -104,9 +138,10 @@ int serverStateEndTurn(int orig_pnum, int fd) {
 }
 
 int serverStateEndGame(int orig_pnum, int fd) {
+  int winningpnum;
+
+  receiveInt(&winningpnum, fd);
   receiveGamePacket(fd);
-  int didWin = 1;
-  int winningpnum = orig_pnum;
 
   for (int i = 0; i < current_players - 1; i++) {
     if (orig_pnum == (i + 1)) continue;
@@ -177,7 +212,7 @@ int serverStateEnterStable(int orig_pnum, int fd) {
     }
     else {
       // winningpnum = 0 since that's the host
-      endGame(0);
+      serverSendEndGame(0);
     }
   }
 

@@ -139,7 +139,6 @@ int back_kick_empty_stable_check() {
 int back_kick_baby_check() {
 	int num_fails = 0;
 	struct Unicorn back_kick_tmp = basedeck[70];
-	struct Unicorn basic_tmp = basedeck[13];
 	struct Unicorn baby_tmp = basedeck[12];
 
 	current_players = 2;

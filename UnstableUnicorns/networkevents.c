@@ -908,12 +908,12 @@ void serverEnterStable(int orig_pnum, int target_pnum) {
     if (ret2 == SOCKET_ERROR) {
       fprintf(stderr, "ERROR: poll() failed. Error code : %d", WSAGetLastError());
       closesocket(sockfd);
-      return 2;
+      exit(2);
     }
     else if (ret2 == 0) {
       fprintf(stderr, "ERROR: server timed out. Error code : %d", WSAGetLastError());
       closesocket(sockfd);
-      return 2;
+      exit(2);
     }
 
     if (pfd[1].revents & POLLIN) {
