@@ -806,7 +806,7 @@ int main(int argc, char* argv[]) {
 	// magic cards; note that some tests use magicEffects instead of playCard,
 	// so the magic cards don't always get discarded
 	num_fails += unicorn_poison_tests();
-	num_fails += back_kick_tests(); // TODO: test w/ solo baby unicorn
+	num_fails += back_kick_tests();
 	num_fails += change_of_luck_tests();
 	num_fails += glitter_tornado_tests();
 	num_fails += unicorn_swap_tests();

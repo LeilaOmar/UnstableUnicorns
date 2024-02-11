@@ -250,32 +250,32 @@ int unicorn_swap_unicorn_lasso_check() {
 	struct Unicorn lasso_tmp = basedeck[102];
 
 	// playing hot potato with the stolen lasso card
-	// i.e. player[0] takes card (ginormous_tmp) from player[1]
-	// player[0] activates unicorn swap and moves card (ginormous_tmp) to player[2]'s stable
-	// player[0] then steals some random card (queen_tmp) from player[2]'s stable
-	// player[1] gets nothing back at the end of player[0]'s turn
+	// i.e. player[0] takes card (ginormous_tmp) from player[2]
+	// player[0] activates unicorn swap and moves card (ginormous_tmp) to player[1]'s stable
+	// player[0] then steals some random card (queen_tmp) from player[1]'s stable
+	// player[2] gets nothing back at the end of player[0]'s turn
 	current_players = 3;
 	player[0].hand.cards[player[0].hand.num_cards++] = swap_tmp;
 
 	addStable(0, lasso_tmp);
 	addStable(0, basic_tmp);
-	addStable(1, ginormous_tmp);
-	addStable(2, basic_tmp2);
-	addStable(2, queen_tmp);
+	addStable(2, ginormous_tmp);
+	addStable(1, basic_tmp2);
+	addStable(1, queen_tmp);
 
 	assert(player[0].hand.num_cards == 1);
 	assert(player[0].stable.size == 2);
 	assert(player[0].stable.num_unicorns == 1);
 	assert(player[0].flags == queen_bee_unicorn);
 
-	assert(player[1].stable.size == 1);
-	assert(player[1].stable.num_unicorns == 1);
-	assert((player[1].flags & ginormous_unicorn) == ginormous_unicorn);
-	assert((player[1].flags & queen_bee_unicorn) == queen_bee_unicorn);
+	assert(player[2].stable.size == 1);
+	assert(player[2].stable.num_unicorns == 1);
+	assert((player[2].flags & ginormous_unicorn) == ginormous_unicorn);
+	assert((player[2].flags & queen_bee_unicorn) == queen_bee_unicorn);
 
-	assert(player[2].stable.size == 2);
-	assert(player[2].stable.num_unicorns == 2);
-	assert(player[2].flags == 0);
+	assert(player[1].stable.size == 2);
+	assert(player[1].stable.num_unicorns == 2);
+	assert(player[1].flags == 0);
 
 	beginningTurnEffects(0, lasso_tmp);
 	assert(uni_lasso_flag[0] != -1);
@@ -290,12 +290,12 @@ int unicorn_swap_unicorn_lasso_check() {
 	}
 
 	// player[0]'s size and number of unicorns should go up by 1 because of unicorn lasso
-	// player[1]'s size and number of unicorns should go down by 1 because of unicorn lasso
-	// player[2]'s size and number of unicorns stay the same since unicorn swap is an
+	// player[1]'s size and number of unicorns stay the same since unicorn swap is an
 	// equivalent exchange number-wise
+	// player[2]'s size and number of unicorns should go down by 1 because of unicorn lasso
 	if (player[0].stable.size != 3 || player[0].stable.num_unicorns != 2 ||
-			player[1].stable.size != 0 || player[1].stable.num_unicorns != 0 ||
-			player[2].stable.size != 2 || player[2].stable.num_unicorns != 2) {
+			player[2].stable.size != 0 || player[2].stable.num_unicorns != 0 ||
+			player[1].stable.size != 2 || player[1].stable.num_unicorns != 2) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    unicorn lasso test: stable size pre-end of turn failed\n");
@@ -303,11 +303,11 @@ int unicorn_swap_unicorn_lasso_check() {
 	}
 
 	// checks the last unicorn in player[0] (index 2, 3rd card) against the swapped
-	// card from player[2] (queen_tmp)
-	// the stolen/swapped card (ginormous_tmp) is the last card of player[2] at index 1
+	// card from player[1] (queen_tmp)
+	// the stolen/swapped card (ginormous_tmp) is the last card of player[1] at index 1
 	if (strcmp(player[0].stable.unicorns[2].name, queen_tmp.name) != 0 ||
-			strcmp(player[2].stable.unicorns[0].name, basic_tmp2.name) != 0 ||
-			strcmp(player[2].stable.unicorns[1].name, ginormous_tmp.name) != 0) {
+			strcmp(player[1].stable.unicorns[0].name, basic_tmp2.name) != 0 ||
+			strcmp(player[1].stable.unicorns[1].name, ginormous_tmp.name) != 0) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    unicorn lasso test: stable unicorn check pre-end of turn failed\n");
@@ -315,10 +315,10 @@ int unicorn_swap_unicorn_lasso_check() {
 	}
 	
 	// player[0] has queen bee unicorn, so that flag should be set for every /other/ player but them
-	// player[2] has ginormous unicorn, so that flag should be set for themself
+	// player[1] has ginormous unicorn, so that flag should be set for themself
 	if ((player[0].flags & ginormous_unicorn) != 0 || (player[0].flags & queen_bee_unicorn) != 0 ||
-			(player[1].flags & ginormous_unicorn) != 0 || (player[1].flags & queen_bee_unicorn) != queen_bee_unicorn ||
-			(player[2].flags & ginormous_unicorn) != ginormous_unicorn || (player[2].flags & queen_bee_unicorn) != queen_bee_unicorn) {
+			(player[1].flags & ginormous_unicorn) != ginormous_unicorn || (player[1].flags & queen_bee_unicorn) != queen_bee_unicorn ||
+			(player[2].flags & ginormous_unicorn) != 0 || (player[2].flags & queen_bee_unicorn) != queen_bee_unicorn) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    unicorn lasso test: toggle flags check pre-end of turn failed\n");
@@ -329,8 +329,8 @@ int unicorn_swap_unicorn_lasso_check() {
 
 	// the unicorn locations, stable sizes, and flags should all stay the same at the end of the turn
 	if (player[0].stable.size != 3 || player[0].stable.num_unicorns != 2 ||
-			player[1].stable.size != 0 || player[1].stable.num_unicorns != 0 ||
-			player[2].stable.size != 2 || player[2].stable.num_unicorns != 2) {
+			player[1].stable.size != 2 || player[1].stable.num_unicorns != 2 ||
+			player[2].stable.size != 0 || player[2].stable.num_unicorns != 0) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    unicorn lasso test: stable size post-end of turn failed\n");
@@ -338,8 +338,8 @@ int unicorn_swap_unicorn_lasso_check() {
 	}
 	
 	if (strcmp(player[0].stable.unicorns[2].name, queen_tmp.name) != 0 ||
-			strcmp(player[2].stable.unicorns[0].name, basic_tmp2.name) != 0 ||
-			strcmp(player[2].stable.unicorns[1].name, ginormous_tmp.name) != 0) {
+			strcmp(player[1].stable.unicorns[0].name, basic_tmp2.name) != 0 ||
+			strcmp(player[1].stable.unicorns[1].name, ginormous_tmp.name) != 0) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    unicorn lasso test: stable unicorn check post-end of turn failed\n");
@@ -347,11 +347,11 @@ int unicorn_swap_unicorn_lasso_check() {
 	}
 	
 	// queen bee unicorn is in the same spot as the stolen unicorn from unicorn lasso,
-	// so the end of turn phase mistakenly swapped unicorns again when the original lasso'd unicorn is gone,
+	// so if the end of turn phase mistakenly swapped unicorns again when the original lasso'd unicorn is gone,
 	// then everyone's flags should change as if player[1] has queen bee unicorn now
 	if ((player[0].flags & ginormous_unicorn) != 0 || (player[0].flags & queen_bee_unicorn) != 0 ||
-			(player[1].flags & ginormous_unicorn) != 0 || (player[1].flags & queen_bee_unicorn) != queen_bee_unicorn ||
-			(player[2].flags & ginormous_unicorn) != ginormous_unicorn || (player[2].flags & queen_bee_unicorn) != queen_bee_unicorn) {
+			(player[1].flags & ginormous_unicorn) != ginormous_unicorn || (player[1].flags & queen_bee_unicorn) != queen_bee_unicorn ||
+			(player[2].flags & ginormous_unicorn) != 0 || (player[2].flags & queen_bee_unicorn) != queen_bee_unicorn) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    unicorn lasso test: toggle flags check post-end of turn failed\n");
@@ -439,7 +439,7 @@ int unicorn_swap_tests() {
 		num_fails += unicorn_swap_toggle_check();
 		num_fails += unicorn_swap_empty_check();
 		num_fails += unicorn_swap_masquerade_check();
-		// num_fails += unicorn_swap_unicorn_lasso_check();
+		num_fails += unicorn_swap_unicorn_lasso_check();
 		num_fails += unicorn_swap_puppicorn_check();
 
 	}
@@ -474,15 +474,14 @@ int unicorn_swap_tests() {
 		// masquerade check
 		// should get no prompt
 
-		// unicorn lasso check
-		// receiveInt(&events, sockfd);
-		// netStates[events].recvClient(1, sockfd);
+		// unicorn lasso check; should require no input
+		receiveInt(&events, sockfd);
+		netStates[events].recvClient(1, sockfd);
 
 		// puppicorn check
 		receiveInt(&events, sockfd);
 		netStates[events].recvClient(1, sockfd);
 
-		// TOOD: unicorn lasso (soonTM)
 		// TODO: unicorn swap & some destroy event like extremely destructive unicorn
 		// TODO: unicorn swap & checking endGame triggers [would have to use mock functions so that the exe doesn't shut down early]
 		//	 -   1) after the other player adds the swapped unicorn to their stable (before the original person steals it)
