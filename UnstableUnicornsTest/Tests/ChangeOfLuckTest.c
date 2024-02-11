@@ -1,4 +1,5 @@
 #include "MagicTests.h"
+#include "networkevents.h"
 
 // sanity check
 int luck_basic_check() {
@@ -207,9 +208,8 @@ int luck_unicorn_lasso_check() {
 int change_of_luck_tests() {
 	int num_fails = 0;
 
+	rainbow_error("\nStarting Change of Luck tests...\n");
 	if (!isclient) {
-		rainbow_error("\nStarting Change of Luck tests...\n");
-
 		// file input stream setup
 		FILE* fp;
 		fopen_s(&fp, "Tests/Input/changeofluck.txt", "r");
@@ -227,6 +227,12 @@ int change_of_luck_tests() {
 		num_fails += luck_unicorn_lasso_check();
 
 		fclose(fp);
+	}
+	else {
+		// should be no input required
+		int events;
+		receiveInt(&events, sockfd);
+		netStates[events].recvClient(1, sockfd);
 	}
 	return num_fails;
 }

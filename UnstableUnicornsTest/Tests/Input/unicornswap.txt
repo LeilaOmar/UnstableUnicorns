@@ -17,6 +17,12 @@
 1
 2
 // unicorn lasso
+y
+3
+1
+2
+3
+2
 // puppicorn
 2
 5
