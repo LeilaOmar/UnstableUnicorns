@@ -380,6 +380,160 @@ void rearrange_stable_tests() {
 	fclose(fp);
 }
 
+int tiebreaker_tests() {
+
+	rainbow_error("\nStarting tiebreaker tests...\n");
+	
+	// the colors actually count for the name count lol
+	int ret;
+	struct Unicorn basic_tmp = basedeck[13];
+	struct Unicorn basic_tmp2 = basedeck[17];
+	struct Unicorn panda_tmp = basedeck[107];
+	struct Unicorn ginormous_tmp = basedeck[48];
+	struct Unicorn blinding_tmp = basedeck[112];
+
+	// test for unicorn majority
+	current_players = 3;
+	addStable(0, basic_tmp);
+	addStable(0, basic_tmp);
+	addStable(0, basic_tmp2);
+
+	addStable(1, basic_tmp);
+	addStable(1, panda_tmp);
+	addStable(1, panda_tmp);
+	addStable(1, panda_tmp);
+
+	addStable(2, basic_tmp);
+	addStable(2, basic_tmp);
+	
+	ret = tiebreaker();
+
+	// player[0] wins
+	if (ret != 0) {
+		num_fails++;
+		red();
+		fprintf(stderr, "    max number of unicorns test failed\n");
+		reset_col();
+	}
+	reset_players();
+
+	// test for the longest total unicorn card character length
+	current_players = 3;
+	addStable(0, basic_tmp);
+	addStable(0, basic_tmp);
+	addStable(0, basic_tmp);
+	addStable(0, blinding_tmp); // just to pad character count
+	addStable(0, blinding_tmp);
+
+	addStable(1, basic_tmp);
+	addStable(1, basic_tmp);
+
+	addStable(2, basic_tmp);
+	addStable(2, basic_tmp);
+	addStable(2, basic_tmp2);
+
+	ret = tiebreaker();
+
+	// player[2] wins
+	if (ret != 2) {
+		num_fails++;
+		red();
+		fprintf(stderr, "    longest name test failed\n");
+		reset_col();
+	}
+	reset_players();
+
+	// check for a complete tie breaker
+	current_players = 3;
+	addStable(0, basic_tmp2);
+	addStable(0, basic_tmp);
+	addStable(0, basic_tmp2);
+	addStable(0, basic_tmp);
+
+	addStable(1, basic_tmp);
+	addStable(1, basic_tmp);
+
+	addStable(2, basic_tmp);
+	addStable(2, basic_tmp2);
+	addStable(2, basic_tmp);
+	addStable(2, basic_tmp2);
+
+	ret = tiebreaker();
+
+	// nobody wins
+	if (ret != -1) {
+		num_fails++;
+		red();
+		fprintf(stderr, "    equal name test failed\n");
+		reset_col();
+	}
+	reset_players();
+
+	// check to see if pandamonium affects it or not
+	current_players = 2;
+	addStable(0, basic_tmp);
+	addStable(0, basic_tmp);
+	addStable(0, panda_tmp);
+	toggleFlags(0, panda_tmp.effect);
+
+	addStable(1, basic_tmp);
+
+	assert(player[0].flags == pandamonium);
+	ret = tiebreaker();
+
+	// player[0] has pandas, so player[1] should win
+	if (ret != 1) {
+		num_fails++;
+		red();
+		fprintf(stderr, "    pandamonium test failed\n");
+		reset_col();
+	}
+	reset_players();
+
+	// check to see if ginormous unicorn works
+	current_players = 2;
+	addStable(0, basic_tmp);
+	addStable(0, basic_tmp);
+
+	addStable(1, basic_tmp);
+	addStable(1, ginormous_tmp);
+
+	ret = tiebreaker();
+
+	// ginormous unicorn has less characters than "basic unicorn (red)," but
+	// its effect counts for 2 unicorns, so player[1] should win
+	if (ret != 1) {
+		num_fails++;
+		red();
+		fprintf(stderr, "    ginormous unicorn test failed\n");
+		reset_col();
+	}
+	reset_players();
+
+	// check to see if blinding light disables ginormous unicorn
+	current_players = 2;
+	addStable(0, basic_tmp);
+	addStable(0, basic_tmp);
+
+	addStable(1, basic_tmp);
+	addStable(1, ginormous_tmp);
+	addStable(1, blinding_tmp);
+	toggleFlags(1, blinding_tmp.effect);
+
+	assert((player[1].flags & blinding_light) == blinding_light);
+	ret = tiebreaker();
+
+	// player[0] should win because blinding light makes ginormous unicorn act like a basic unicorn,
+	// and "ginormous unicorn" has less characters than "basic unicorn (red)"
+	if (ret != 0) {
+		num_fails++;
+		red();
+		fprintf(stderr, "    ginormous unicorn w/ blinding light test failed\n");
+		reset_col();
+	}
+	reset_players();
+}
+
 // ********************************************************************************
 // **************************** Basic Card Effect Tests ***************************
 // ********************************************************************************
@@ -388,30 +542,15 @@ void draw_tests() {
 
 	rainbow_error("\nStarting draw tests...\n");
 
-	// TODO: the game should actually end at this point
-	// check if it correctly draws when the deck is about to be empty
+	// check if it ends the game when the deck is about to be empty
 	deck.size = 1;
 	int tmp_hand_size = player[0].hand.num_cards;
 	int ret = draw(0, 1);
 
-	if (player[0].hand.num_cards != (tmp_hand_size + 1) || deck.size != 0 || ret != -1) {
+	if (player[0].hand.num_cards != tmp_hand_size || ret != -1) {
 		num_fails++;
 		red();
-		fprintf(stderr, "    draw until empty deck test failed\n");
-		reset_col();
-	}
-	reset_players();
-	reset_deck();
-
-	// check if it skips drawing when the number of cards goes past the size
-	deck.size = 1;
-	tmp_hand_size = player[0].hand.num_cards;
-	ret = draw(0, 2);
-
-	if (player[0].hand.num_cards != tmp_hand_size || deck.size != 1 || ret != -1) {
-		num_fails++;
-		red();
-		fprintf(stderr, "    draw past empty deck test failed\n");
+		fprintf(stderr, "    empty deck end game test failed\n");
 		reset_col();
 	}
 	reset_players();
@@ -760,6 +899,7 @@ int main(int argc, char* argv[]) {
 		add_nursery_tests();
 		add_stable_tests();
 		rearrange_stable_tests();
+		tiebreaker_tests();
 
 		// basic card effect tests
 		draw_tests();

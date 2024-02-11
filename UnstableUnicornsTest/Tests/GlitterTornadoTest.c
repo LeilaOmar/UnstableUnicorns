@@ -17,7 +17,6 @@ int glitter_tornado_basic_check() {
 	toggleFlags(0, yay_effect);
 	player[0].hand.cards[player[0].hand.num_cards++] = tornado_tmp;
 
-	int ret;
 	assert(player[0].hand.num_cards == 1);
 	assert(player[1].hand.num_cards == 0);
 	assert(player[2].hand.num_cards == 0);

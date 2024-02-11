@@ -56,6 +56,11 @@ void addStable(int pnum, struct Unicorn corn);
 // return card from stable to hand, or the nursery if it's a baby
 void returnCardToHand(int pnum, int cindex);
 
+// utility tie-breaker func for games that end early
+// return [0-7] == winning player index
+// return    -1 == complete tie, nobody wins
+int tiebreaker();
+
 // ********************************************************************************
 // **************************** Boolean Check Functions ***************************
 // ********************************************************************************

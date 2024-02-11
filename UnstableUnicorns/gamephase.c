@@ -140,7 +140,6 @@ int endOfTurn(int pnum) {
       // need to look out for nested network events
       serverEnterStable(pnum, owner);
     }
-    // addStable(owner, tmp);
   }
 
   // puppicorn swap; pnum isn't always equal to the current puppicorn_index[1]

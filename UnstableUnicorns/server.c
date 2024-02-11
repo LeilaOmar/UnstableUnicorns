@@ -301,14 +301,8 @@ int serverMain(void) {
       actionPhase(counter);
 
       if (endOfTurn(counter)) {
-        for (int i = 0; i < current_players - 1; i++) {
-          sendInt(end_game, clientsockfd[i]);
-          sendInt(counter, clientsockfd[i]);
-          sendGamePacket(clientsockfd[i]);
-        }
-
-        // player 0 must have played the winning card
-        endGame(0);
+        serverSendEndGame(counter);
+        // break just to avoid looping in case the function actually returns
         break;
       }
 
