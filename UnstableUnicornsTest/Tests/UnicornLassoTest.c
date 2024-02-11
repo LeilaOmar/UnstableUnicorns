@@ -1,4 +1,5 @@
 #include "UpgradeTests.h"
+#include "networkevents.h"
 
 // sanity test
 int lasso_basic_check() {
@@ -80,11 +81,11 @@ int lasso_empty_check() {
 int unicorn_lasso_tests() {
 	int num_fails = 0;
 
-	if (!isclient) {
-		rainbow_error("\nStarting Unicorn Lasso tests...\n");
+	rainbow_error("\nStarting Unicorn Lasso tests...\n");
+	FILE* fp;
 
+	if (!isclient) {
 		// file input stream setup
-		FILE* fp;
 		fopen_s(&fp, "Tests/Input/unicornlasso.txt", "r");
 		if (fp == NULL) {
 			magenta();
@@ -99,7 +100,23 @@ int unicorn_lasso_tests() {
 		num_fails += lasso_basic_check();
 		num_fails += lasso_empty_check();
 
-		fclose(fp);
 	}
+	else {
+		// file input stream setup
+		fopen_s(&fp, "Tests/Input/line_1.txt", "r");
+		if (fp == NULL) {
+			magenta();
+			fprintf(stderr, "    file input failed :(");
+			reset_col();
+			return 1;
+		}
+		fpinput = fp;
+
+		int events;
+		receiveInt(&events, sockfd);
+		netStates[events].recvClient(1, sockfd);
+	}
+
+	fclose(fp);
 	return num_fails;
 }

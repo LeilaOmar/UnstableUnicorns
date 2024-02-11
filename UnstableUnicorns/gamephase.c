@@ -1,5 +1,6 @@
 #pragma once
 #include "gamephase.h"
+#include "networkevents.h"
 
 // beginning turn effects all trigger at once, so any cards that enter before
 // the action phase do not count towards these card effects
@@ -124,7 +125,22 @@ int endOfTurn(int pnum) {
     // this will (hopefully) prevent dupes from card effect shenanigans
     rearrangeStable(thief, cindex);
 
-    addStable(owner, tmp);
+    // send a notice to add a card to the person's stable outside of their normal turn
+    if (isclient) {
+      sendInt(enter_stable_event, sockfd);
+      sendEnterStablePacket(tmp, owner, sockfd); // index = target player index
+    
+      // need to look out for nested network events
+      clientEnterStable(pnum);
+    }
+    else {
+      sendInt(enter_stable_event, clientsockfd[owner - 1]);
+      sendEnterStablePacket(tmp, pnum, clientsockfd[owner - 1]); // pnum = original player index
+    
+      // need to look out for nested network events
+      serverEnterStable(pnum, owner);
+    }
+    // addStable(owner, tmp);
   }
 
   // puppicorn swap; pnum isn't always equal to the current puppicorn_index[1]

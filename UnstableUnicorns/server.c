@@ -344,7 +344,7 @@ int serverMain(void) {
           }
 
           Sleep(20);
-        } // network_events polling
+        }
 
       } while (!eventloop);
     }
