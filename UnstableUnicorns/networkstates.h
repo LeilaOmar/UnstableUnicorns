@@ -11,6 +11,7 @@ NetworkStateManager netStates[num_network_events];
 
 void init_network_states();
 
+void clientSendEndGame(int winningpnum, int fd);
 int clientStateEndTurn(int orig_pnum, int fd);
 int clientStateEndGame(int orig_pnum, int fd);
 int clientStateNeigh(int orig_pnum, int fd);
@@ -18,6 +19,7 @@ int clientStateDiscard(int orig_pnum, int fd);
 int clientStateSacrifice(int orig_pnum, int fd);
 int clientStateEnterStable(int orig_pnum, int fd);
 
+void serverSendEndGame(int winningpnum);
 int serverStateEndTurn(int orig_pnum, int fd);
 int serverStateEndGame(int orig_pnum, int fd);
 int serverStateQuitLoop(int orig_pnum, int fd);

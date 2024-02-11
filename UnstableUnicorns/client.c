@@ -205,11 +205,8 @@ int clientMain(void) {
       actionPhase(clientpnum);
 
       if (endOfTurn(clientpnum)) {
-        sendInt(end_game, sockfd);
-        sendGamePacket(sockfd);
-
-        // the current client won the game :D
-        endGame(clientpnum);
+        clientSendEndGame(clientpnum, sockfd);
+        // break just to avoid looping in case the function actually returns
         break;
       }
 

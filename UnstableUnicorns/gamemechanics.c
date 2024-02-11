@@ -390,6 +390,55 @@ void returnCardToHand(int pnum, int cindex) {
   rearrangeStable(pnum, cindex);
 }
 
+// utility tie-breaker func for games that end early
+// return [0-7] == winning player index
+// return    -1 == complete tie, nobody wins
+int tiebreaker() {
+  int winningpnum = 0;
+  int maximum = 0;
+  int tie = 0;
+  int letters[MAX_PLAYERS] = { 0 };
+
+  for (int i = 0; i < current_players; i++) {
+    if ((player[i].flags & pandamonium) != 0)
+      continue;
+
+    int extra = 0;
+    if ((player[i].flags & ginormous_unicorn) != 0 &&
+      (player[i].flags & blinding_light) == 0)
+      extra = 1;
+
+    for (int j = 0; j < player[i].stable.size; j++) {
+      if (player[i].stable.unicorns[j].species != NOSPECIES) {
+        // technically, this is including non-alphanumeric characters (i.e. spaces and parentheses)
+        // the real game specifically counts letters
+        letters[i] += strlen(player[i].stable.unicorns[j].name);
+      }
+    }
+
+    if ((player[i].stable.num_unicorns + extra) == maximum) {
+      // compare the character count of all unicorns in the event of ties
+      // between the number of unicorns
+      if (letters[i] > letters[winningpnum]) {
+        winningpnum = i;
+        tie = 0;
+      }
+      else if (letters[i] == letters[winningpnum]) {
+        tie = 1;
+      }
+    }
+    else if ((player[i].stable.num_unicorns + extra) > maximum) {
+      maximum = player[i].stable.num_unicorns + extra;
+      winningpnum = i;
+      tie = 0;
+    }
+  }
+
+  // if there's STILL a tie, then nobody wins! (boo)
+  return tie ? -1 : winningpnum;
+}
+
+
 // ********************************************************************************
 // **************************** Boolean Check Functions ***************************
 // ********************************************************************************
@@ -499,19 +548,20 @@ int canBeSacrificed(int pindex, int cindex, int cType) {
 
 int draw(int pnum, int num_drawn) {
   // game is over when the deck is empty
-  // TODO: add a variable here or something to keep track, because a function wouldn't
-  // work unless it's linked to the networking code
-  if (deck.size - num_drawn < 0) {
+  if (deck.size - num_drawn <= 0) {
+    if (isclient)
+      clientSendEndGame(-1, sockfd);
+    else
+      serverSendEndGame(-1);
+
     return -1;
   }
+
   for (int i = 0; i < num_drawn; i++) {
     player[pnum].hand.cards[player[pnum].hand.num_cards] = deck.cards[deck.size - 1];
     player[pnum].hand.num_cards++;
     deck.size--;
   }
-
-  if (deck.size == 0)
-    return -1;
 
   return 0;
 }
@@ -803,9 +853,17 @@ void endGame(int winningpnum) {
     "     '\"      '\"     *ASCII unicorn by Dr J   \n"
     "\n");
 
-  char winmsg[DESC_SIZE];
-  sprintf_s(winmsg, NAME_SIZE + 18, "%s won the game!!!\n", player[winningpnum].username);
-  rainbow(winmsg);
+  // check if there's still a tie
+  if (winningpnum != -1) {
+    char winmsg[DESC_SIZE];
+    sprintf_s(winmsg, NAME_SIZE + 18, "%s won the game!!!\n", player[winningpnum].username);
+    rainbow(winmsg);
+  }
+  else {
+    blue();
+    printf("The game ended in a tie! Nobody wins :(\n");
+    reset_col();
+  }
 
   printf("\nPress any key to close the window...");
   exit(0);
