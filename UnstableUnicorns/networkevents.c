@@ -461,20 +461,10 @@ void clientSacrifice(int clientpnum, int target_pnum, int cType) {
         break;
       }
       else if (signal == incoming_msg) {
-        int count = DESC_SIZE;
-        int rc;
-        int offset = 0;
         char stdinbuf[DESC_SIZE] = { 0 };
 
-        while (count > 0) {
-          rc = recv(sockfd, stdinbuf + offset, count, 0);
-          if (rc >= 0) {
-            offset += rc;
-            count -= rc;
-          }
-        }
+        receiveMsg(stdinbuf, sockfd);
         printf("\n%s\n", stdinbuf);
-        memset(stdinbuf, '\0', sizeof stdinbuf);
       }
     }
 
@@ -578,7 +568,7 @@ void serverSacrifice(int orig_pnum, int target_pnum, int cType) {
 
           for (int j = 0; j < current_players - 1; j++) {
             sendInt(incoming_msg, clientsockfd[j]);
-            send(clientsockfd[j], stdinbuf, sizeof stdinbuf, 0); // TODO: (maybe) check that it sends every byte
+            sendMsg(stdinbuf, sizeof stdinbuf, clientsockfd[j]);
           }
         }
       }
@@ -603,7 +593,7 @@ void serverSacrifice(int orig_pnum, int target_pnum, int cType) {
           if (j == i) continue;
 
           sendInt(incoming_msg, clientsockfd[j]);
-          send(clientsockfd[j], stdinbuf, sizeof stdinbuf, 0); // TODO: (maybe) check that it sends every byte
+          sendMsg(stdinbuf, sizeof stdinbuf, clientsockfd[j]);
         }
 
         printf("\n%s\n", stdinbuf);
@@ -697,20 +687,10 @@ void clientDiscard(int clientpnum, int target_pnum, int cType) {
         break;
       }
       else if (signal == incoming_msg) {
-        int count = DESC_SIZE;
-        int rc;
-        int offset = 0;
         char stdinbuf[DESC_SIZE] = { 0 };
 
-        while (count > 0) {
-          rc = recv(sockfd, stdinbuf + offset, count, 0);
-          if (rc >= 0) {
-            offset += rc;
-            count -= rc;
-          }
-        }
+        receiveMsg(stdinbuf, sockfd);
         printf("\n%s\n", stdinbuf);
-        memset(stdinbuf, '\0', sizeof stdinbuf);
       }
     }
 
@@ -807,7 +787,7 @@ void serverDiscard(int orig_pnum, int target_pnum, int cType) {
 
           for (int j = 0; j < current_players - 1; j++) {
             sendInt(incoming_msg, clientsockfd[j]);
-            send(clientsockfd[j], stdinbuf, sizeof stdinbuf, 0); // TODO: (maybe) check that it sends every byte
+            sendMsg(stdinbuf, sizeof stdinbuf, clientsockfd[j]);
           }
         }
       }
@@ -833,7 +813,7 @@ void serverDiscard(int orig_pnum, int target_pnum, int cType) {
           if (j == i) continue;
 
           sendInt(incoming_msg, clientsockfd[j]);
-          send(clientsockfd[j], stdinbuf, sizeof stdinbuf, 0); // TODO: (maybe) check that it sends every byte
+          sendMsg(stdinbuf, sizeof stdinbuf, clientsockfd[j]);
         }
 
         printf("\n%s\n", stdinbuf);
@@ -856,7 +836,9 @@ void serverDiscard(int orig_pnum, int target_pnum, int cType) {
   }
 }
 
-void clientDestroyEffect(int clientpnum) {
+// idle function that handles nested network events;
+// this works for both enter stable effects and unicorn sacrificeDestroy effects
+void clientEnterLeaveStable(int clientpnum) {
   int ret2;
   int eventloop = 0;
 
@@ -886,84 +868,12 @@ void clientDestroyEffect(int clientpnum) {
   } while (!eventloop);
 }
 
-void serverDestroyEffect(int orig_pnum, int target_pnum) {
-  // can always assume that target_pnum is a separate player from the host (or else this function wouldn't be called);
-  // orig_pnum can either be the host or a player that's different from target_pnum
-  int ret2;
-  int eventloop = 0;
-
-  WSAPOLLFD pfd[2] = { -1 };  // original sockfd + relevant client
-  pfd[0].fd = sockfd;
-  pfd[0].events = POLLIN | POLLOUT;
-  pfd[1].fd = clientsockfd[target_pnum - 1];
-  pfd[1].events = POLLIN | POLLOUT;
-
-  do {
-    ret2 = WSAPoll(pfd, 2, -1);
-    if (ret2 == SOCKET_ERROR) {
-      fprintf(stderr, "ERROR: poll() failed. Error code : %d", WSAGetLastError());
-      closesocket(sockfd);
-      exit(2);
-    }
-    else if (ret2 == 0) {
-      fprintf(stderr, "ERROR: server timed out. Error code : %d", WSAGetLastError());
-      closesocket(sockfd);
-      exit(2);
-    }
-
-    if (pfd[1].revents & POLLIN) {
-      // target_pnum becomes the new "orig_pnum" because that player is
-      // the catalyst that starts the next nested loop
-      receiveInt(&network_events, clientsockfd[target_pnum - 1]);
-
-      eventloop = netStates[network_events].recvServer(target_pnum, clientsockfd[target_pnum - 1]);
-
-      // this is all to avoid adding a 3rd parameter just for one instance...
-      if (eventloop && orig_pnum != 0) {
-        sendInt(quit_loop, clientsockfd[orig_pnum - 1]);
-        sendGamePacket(clientsockfd[orig_pnum - 1]);
-      }
-    }
-
-    Sleep(20);
-
-  } while (!eventloop);
-}
-
-void clientEnterStable(int clientpnum) {
-  int ret2;
-  int eventloop = 0;
-
-  WSAPOLLFD pfd;
-  pfd.fd = sockfd;
-  pfd.events = POLLIN | POLLOUT;
-
-  do {
-    ret2 = WSAPoll(&pfd, 1, -1);
-    if (ret2 == SOCKET_ERROR) {
-      fprintf(stderr, "ERROR: poll() failed. Error code : %d", WSAGetLastError());
-      exit(2);
-    }
-    else if (ret2 == 0) {
-      fprintf(stderr, "ERROR: server timed out. Error code : %d", WSAGetLastError());
-      exit(2);
-    }
-
-    if (pfd.revents & POLLIN) {
-      receiveInt(&network_events, sockfd);
-
-      eventloop = netStates[network_events].recvClient(clientpnum, sockfd);
-    }
-
-    Sleep(20);
-
-  } while (!eventloop);
-}
-
+// idle function that handles nested network events;
+// this works for both enter stable effects and unicorn sacrificeDestroy effects
+// 
 // TODO: check if the target player wins the game inadvertedly through
 // an enter stable effect sacrificing masquerade cards
-// TODO: rename and combine this with serverDestroyEffect (same goes for client ver.)
-void serverEnterStable(int orig_pnum, int target_pnum) {
+void serverEnterLeaveStable(int orig_pnum, int target_pnum) {
   // can always assume that target_pnum is a separate player from the host (or else this function wouldn't be called);
   // orig_pnum can either be the host or a player that's different from target_pnum
   int ret2;

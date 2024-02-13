@@ -13,10 +13,6 @@ int current_players = 0;
 int turn_count = 0;     // number of moves during the action phase
 int WIN_CONDITION = 7;  // usually 7, but can be 6 with 6-8 players
 
-unsigned char deck_flag = 0;    // toggles whether deck is printed out or not
-unsigned char discard_flag = 0;
-unsigned char nursery_flag = 0;
-
 FILE* fpinput; // stand-in for stdin in case it needs to read from a file instead
 
 int numinput(char* buf, char** end, int size) {
@@ -81,7 +77,7 @@ void init_deck(struct Deck* nursery, struct Deck* deck, struct Deck* discard) {
 
 void cleanup(void) {
   // hangs on exit until the user inputs something
-  _getch();
+  (void)_getch();
 
   if (!isclient) {
     for (int i = 0; i < current_players - 1; i++) {

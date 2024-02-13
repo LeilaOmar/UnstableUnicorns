@@ -24,9 +24,6 @@ void beginningOfTurn(int pnum) {
 }
 
 // choose between drawing or playing a card
-// OPTIMIZE: skip go straight to drawing another card in case all cards in
-// hand are impossible plays (e.g. you MUST [xxx] when there are no
-// available cards to be affected)
 void actionPhase(int pnum) {
   int index;
   char* end, buf[LINE_MAX];
@@ -131,14 +128,14 @@ int endOfTurn(int pnum) {
       sendEnterStablePacket(tmp, owner, sockfd); // index = target player index
     
       // need to look out for nested network events
-      clientEnterStable(pnum);
+      clientEnterLeaveStable(pnum);
     }
     else {
       sendInt(enter_stable_event, clientsockfd[owner - 1]);
       sendEnterStablePacket(tmp, pnum, clientsockfd[owner - 1]); // pnum = original player index
     
       // need to look out for nested network events
-      serverEnterStable(pnum, owner);
+      serverEnterLeaveStable(pnum, owner);
     }
   }
 

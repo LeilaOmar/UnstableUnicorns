@@ -19,8 +19,10 @@ void serverDiscard(int orig_pnum, int target_pnum, int cType);
 void clientSacrifice(int clientpnum, int target_pnum, int cType);
 void serverSacrifice(int orig_pnum, int target_pnum, int cType);
 
-void clientDestroyEffect(int clientpnum);
-void serverDestroyEffect(int orig_pnum, int target_pnum);
+// idle function that handles nested network events;
+// this works for both enter stable effects and unicorn sacrificeDestroy effects
+void clientEnterLeaveStable(int clientpnum);
 
-void clientEnterStable(int clientpnum);
-void serverEnterStable(int orig_pnum, int target_pnum);
+// idle function that handles nested network events;
+// this works for both enter stable effects and unicorn sacrificeDestroy effects
+void serverEnterLeaveStable(int orig_pnum, int target_pnum);
