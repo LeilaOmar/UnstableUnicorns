@@ -324,12 +324,27 @@ int receiveEnterStablePacket(struct Unicorn* corn, int* pnum, int fd) {
   return 0;
 }
 
-void receiveMsg(char* str, int count, int fd) {
-  int pnum;
+int sendMsg(char* str, int count, int fd) {
+  int rc;
+
+  sendInt(count, fd);
+  do {
+    rc = send(fd, str, count, 0);
+    if (rc >= 0) {
+      str += rc;
+      count -= rc;
+    }
+  } while (count > 0);
+
+  return 0;
+}
+
+int receiveMsg(char* str, int fd) {
+  int count;
   int offset = 0;
   int rc;
 
-  receiveInt(&pnum, fd);
+  receiveInt(&count, fd);
 
   while (count > 0) {
     rc = recv(fd, str + offset, count, 0);
@@ -339,10 +354,7 @@ void receiveMsg(char* str, int count, int fd) {
     }
   }
 
-  red();
-  printf("%s: ", player[pnum].username);
-  reset_col();
-  printf("%s\n", str);
+  return 0;
 }
 
 // handles stdin events and filters everything but keydown presses

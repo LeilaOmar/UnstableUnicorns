@@ -1916,14 +1916,14 @@ void magicEffects(int pnum, int effect) {
       sendEnterStablePacket(tmp, index, sockfd); // index = target player index
 
       // need to look out for nested network events
-      clientEnterStable(pnum);
+      clientEnterLeaveStable(pnum);
     }
     else {
       sendInt(enter_stable_event, clientsockfd[index - 1]);
       sendEnterStablePacket(tmp, pnum, clientsockfd[index - 1]); // pnum = original player index
 
       // need to look out for nested network events
-      serverEnterStable(pnum, index);
+      serverEnterLeaveStable(pnum, index);
     }
 
     // steal a unicorn from the chosen player's stable

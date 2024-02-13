@@ -5,13 +5,6 @@
 //
 // Full card description list -
 // http://unstablegameswiki.com/index.php?title=Unstable_Unicorns_-_1st_%26_2nd_Edition_Comparisons
-//
-// *** TODO: (low priority) balance the game for 2 players as described in the
-// rules -> https://www.unstablegames.com/pages/unstable-unicorns-rules
-// https://12ax7web.s3.amazonaws.com/accounts/1/homepage/2-Player-rules.pdf
-// *** TODO: (low priority) toggle between "easy" and "hard" mode where neighs
-// are taken into consideration either after or before a player chooses their
-// target respectively
 
 #include "client.h"
 #include "server.h"
@@ -148,12 +141,7 @@
 // 115: Neigh [ID: 127]
 // 116: Super Neigh [ID: 128]
 
-int main(int argc, char* argv[]) {
-  for (int i = 0; i < argc; i++) {
-    if (strcmp(argv[i], "deck") == 0) deck_flag = 1;
-    if (strcmp(argv[i], "discard") == 0) discard_flag = 1;
-    if (strcmp(argv[i], "nursery") == 0) nursery_flag = 1;
-  }
+int main(void) {
 
   // register the termination function
   atexit(cleanup);
@@ -166,6 +154,9 @@ int main(int argc, char* argv[]) {
 
   // file stream pointer to use as a placeholder for stdin or the test input files
   fpinput = stdin;
+
+  // seed for randomized pulls
+  srand((unsigned int)time(NULL));
 
   // create a log file for all input
   /*char filename[40];
@@ -182,9 +173,6 @@ int main(int argc, char* argv[]) {
   //int fd = _open_osfhandle(new_stdout, O_WRONGLY | O_TEXT);
   //dup2(fd, STDOUT_FILENO);
   //close(fd);
-
-  // seed for randomized pulls
-  srand((unsigned int)time(NULL));
 
   // *****************************************************
   // ***************** Networking Set-up *****************

@@ -79,11 +79,6 @@ extern int current_players;
 extern int turn_count;
 extern int WIN_CONDITION;
 
-// toggles whether the deck piles are printed out or not
-extern unsigned char deck_flag;
-extern unsigned char discard_flag;
-extern unsigned char nursery_flag;
-
 extern FILE* fpinput; // stand-in for stdin in case it needs to read from a file instead
 int numinput(char*, char**, int);
 char charinput(char*, int);

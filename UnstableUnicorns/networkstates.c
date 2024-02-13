@@ -221,7 +221,7 @@ int serverStateDestroy(int orig_pnum, int fd) {
   if (target_player != 0) {
     sendInt(destroy_event, clientsockfd[target_player - 1]);
     sendCardEffectPacket(target_player, cindex, clientsockfd[target_player - 1]);
-    serverDestroyEffect(orig_pnum, target_player);
+    serverEnterLeaveStable(orig_pnum, target_player);
   }
   else {
     printf("\n\033[1;31m%s\033[0m wants to destroy your card \033[1;31m'%s'\033[0m.\n",
@@ -245,7 +245,7 @@ int serverStateEnterStable(int orig_pnum, int fd) {
   if (target_player != 0) {
     sendInt(enter_stable_event, clientsockfd[target_player - 1]);
     sendEnterStablePacket(corn, orig_pnum, clientsockfd[target_player - 1]);
-    serverEnterStable(orig_pnum, target_player);
+    serverEnterLeaveStable(orig_pnum, target_player);
   }
   else {
     printf("\n\033[1;31m%s\033[0m sent you the card \033[1;31m'%s'\033[0m.\n", player[orig_pnum].username, corn.name);
