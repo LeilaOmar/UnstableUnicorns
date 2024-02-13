@@ -1,6 +1,6 @@
 #pragma once
 
-enum NetworkEvents { player_join = 1, incoming_msg, start_game, end_turn, neigh_event, discard_event, sacrifice_event, destroy_event, enter_stable_event, quit_loop, end_game, num_network_events };
+enum NetworkEvents { player_join = 1, player_disconnect, incoming_msg, start_game, end_turn, neigh_event, discard_event, sacrifice_event, destroy_event, enter_stable_event, quit_loop, end_game, num_network_events };
 
 typedef struct {
   int (*recvClient)(int pnum, int fd);

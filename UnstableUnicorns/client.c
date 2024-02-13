@@ -4,7 +4,7 @@
 #include <windows.h>
 
 int clientMain(void) {
-  int isvalid, clientpnum, index;
+  int isvalid = 0, clientpnum, index;
   short portno;
   char *end, buf[BUF_SIZE];
   struct sockaddr_in server;
@@ -37,7 +37,6 @@ int clientMain(void) {
   }
 
   do {
-    isvalid = 0;
     printf("\nEnter your desired username (max 32 chars): ");
     fgets(buf, sizeof buf, stdin);
     buf[strlen(buf) - 1] = 0;
@@ -46,14 +45,14 @@ int clientMain(void) {
       send(sockfd, buf, strlen(buf), 0);
       receiveInt(&isvalid, sockfd);
 
-      if (isvalid == 1) {
+      if (!isvalid) {
         printf("The username '%s' is already taken by another player.\n", buf);
       }
     }
     else {
-      isvalid = 1;
+      isvalid = 0;
     }
-  } while (isvalid == 1);
+  } while (!isvalid);
 
   receiveInt(&clientpnum, sockfd);
   isclient = 1;
@@ -68,6 +67,8 @@ int clientMain(void) {
   printf("\n\nYou have successfully joined the lobby!"
     "\nType and enter any messages you wish to send to your party.");
   reset_col();
+
+  printf("\033[1;31m%s\033[0m: ", buf);
 
   // *****************************************************
   // ******************** Game Set-up ********************
@@ -94,7 +95,6 @@ int clientMain(void) {
       exit(2);
     }
 
-
     if (WaitForSingleObject(GetStdHandle(STD_INPUT_HANDLE), 0) == WAIT_OBJECT_0) {
       processStdin(stdinbuf, &bufindex);
       if (bufindex >= (sizeof(stdinbuf) - 1) || stdinbuf[bufindex - 1] == '\r' || stdinbuf[bufindex - 1] == '\n') {
@@ -105,6 +105,8 @@ int clientMain(void) {
 
         memset(stdinbuf, '\0', sizeof stdinbuf);
         bufindex = 0;
+
+        printf("\033[1;31m%s\033[0m: ", player[clientpnum].username);
       }
     }
 
@@ -113,26 +115,73 @@ int clientMain(void) {
 
       if (network_events == player_join) {
         receivePlayers(sockfd);
+
+        // erase the player's name and incomplete message; the extra 2 comes from the colon and space
+        for (int i = 0; i < strlen(player[clientpnum].username) + bufindex + 2; i++) {
+          printf("\b \b");
+        }
+
         printf("\nCurrent list of players:\n");
         for (int i = 0; i < current_players; i++) {
           printf("  %d: %s\n", i + 1, player[i].username);
         }
+
+        // rewrite the typed message
+        printf("\033[1;31m%s\033[0m: %s", player[clientpnum].username, stdinbuf);
+      }
+      else if (network_events == player_disconnect) {
+        int tmp;
+        receiveInt(&tmp, sockfd);
+
+        // erase the player's name and incomplete message; the extra 2 comes from the colon and space
+        for (int i = 0; i < strlen(player[clientpnum].username) + bufindex + 2; i++) {
+          printf("\b \b");
+        }
+
+        printf("\nPlayer ");
+        red();
+        printf("%s", player[tmp].username);
+        reset_col();
+        printf(" disconnected :(\n");
+
+        receivePlayers(sockfd);
+        printf("\nCurrent list of players:\n");
+        for (int i = 0; i < current_players; i++) {
+          printf("  %d: %s\n", i + 1, player[i].username);
+        }
+
+        // update clientpnum
+        if (tmp < clientpnum)
+          clientpnum--;
+
+        // rewrite the typed message
+        printf("\033[1;31m%s\033[0m: %s", player[clientpnum].username, stdinbuf);
       }
       else if (network_events == incoming_msg) {
         int pnum;
+        char recvbuf[MSGBUF] = { 0 };
 
         receiveInt(&pnum, sockfd);
-        receiveMsg(stdinbuf, sockfd);
+        receiveMsg(recvbuf, sockfd);
+
+        // erase the player's name and incomplete message; the extra 2 comes from the colon and space
+        for (int i = 0; i < strlen(player[clientpnum].username) + bufindex + 2; i++) {
+          printf("\b \b");
+        }
 
         red();
         printf("%s: ", player[pnum].username);
         reset_col();
-        printf("%s\n", stdinbuf);
+        printf("%s\n", recvbuf);
 
-        memset(stdinbuf, '\0', sizeof stdinbuf);
-        bufindex = 0;
+        // rewrite the typed message
+        printf("\033[1;31m%s\033[0m: %s", player[clientpnum].username, stdinbuf);
       }
       else if (network_events == start_game) {
+        // erase the player's name and incomplete message; the extra 2 comes from the colon and space
+        for (int i = 0; i < strlen(player[clientpnum].username) + bufindex + 2; i++) {
+          printf("\b \b");
+        }
         break;
       }
     }

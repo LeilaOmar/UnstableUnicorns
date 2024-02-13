@@ -64,6 +64,7 @@ int serverMain(void) {
   // *****************************************************
 
   int ret, isvalid;
+  int connected_players = 1;
   char stdinbuf[MSGBUF] = { 0 };
   int bufindex = 0;
 
@@ -109,14 +110,21 @@ int serverMain(void) {
     if (WaitForSingleObject(GetStdHandle(STD_INPUT_HANDLE), 0) == WAIT_OBJECT_0) {
       processStdin(stdinbuf, &bufindex);
       if (bufindex >= (sizeof(stdinbuf) - 1) || stdinbuf[bufindex - 1] == '\r' || stdinbuf[bufindex - 1] == '\n') {
-        if (strncmp(stdinbuf, "start", 5) == 0 && current_players >= 2) {
+        if (strncmp(stdinbuf, "start", 5) == 0 && current_players >= 2 && connected_players == current_players) {
           for (int i = 0; i < current_players - 1; i++) {
             sendInt(start_game, clientsockfd[i]);
+          }
+
+          // erase the player's name and incomplete message; the extra 2 comes from the colon and space
+          for (int i = 0; i < strlen(player[0].username) + bufindex + 2; i++) {
+            printf("\b \b");
           }
           break;
         }
 
         for (int i = 0; i < current_players - 1; i++) {
+          if (player[i + 1].username[0] == '\0') continue;
+
           sendInt(incoming_msg, clientsockfd[i]);
           sendInt(0, clientsockfd[i]);
           sendMsg(stdinbuf, sizeof stdinbuf, clientsockfd[i]);
@@ -124,6 +132,8 @@ int serverMain(void) {
 
         memset(stdinbuf, '\0', sizeof stdinbuf);
         bufindex = 0;
+
+        printf("\033[1;31m%s\033[0m: ", player[0].username);
       }
     }
 
@@ -134,19 +144,25 @@ int serverMain(void) {
         if (player[i + 1].username[0] == '\0') {
           memset(buf, '\0', sizeof buf);
           recv(clientsockfd[i], buf, LINE_MAX, 0);
-          isvalid = 0;
+          isvalid = 1;
 
           for (int j = 0; j < current_players; j++) {
             if (strcmp(buf, player[j].username) == 0) {
-              isvalid = 1;
+              isvalid = 0;
               break;
             }
           }
 
           sendInt(isvalid, clientsockfd[i]);
 
-          if (!isvalid) {
+          if (isvalid) {
+            connected_players++;
             sendInt(i + 1, clientsockfd[i]);
+
+            // erase the player's name and incomplete message; the extra 2 comes from the colon and space
+            for (int i = 0; i < strlen(player[0].username) + bufindex + 2; i++) {
+              printf("\b \b");
+            }
 
             strcpy_s(player[i + 1].username, sizeof player[i + 1].username, buf);
             printf("Player ");
@@ -155,7 +171,12 @@ int serverMain(void) {
             reset_col();
             puts(" has joined the game!\n");
 
+            // rewrite the typed message
+            printf("\033[1;31m%s\033[0m: %s", player[0].username, stdinbuf);
+
             for (int j = 0; j < current_players - 1; j++) {
+              if (player[j + 1].username[0] == '\0') continue;
+
               sendInt(player_join, clientsockfd[j]);
               sendPlayers(clientsockfd[j]);
             }
@@ -166,43 +187,70 @@ int serverMain(void) {
 
           if (network_events == incoming_msg) {
             int pnum;
+            char recvbuf[MSGBUF] = { 0 };
 
             receiveInt(&pnum, clientsockfd[i]);
-            receiveMsg(stdinbuf, clientsockfd[i]);
+            receiveMsg(recvbuf, clientsockfd[i]);
+
+            // erase the player's name and incomplete message; the extra 2 comes from the colon and space
+            for (int i = 0; i < strlen(player[0].username) + bufindex + 2; i++) {
+              printf("\b \b");
+            }
 
             red();
             printf("%s: ", player[pnum].username);
             reset_col();
-            printf("%s\n", stdinbuf);
+            printf("%s\n", recvbuf);
+
+            // rewrite the typed message
+            printf("\033[1;31m%s\033[0m: %s", player[0].username, stdinbuf);
 
             // the pnum in receiveMsg is the same as the client socket number (i.e. clientsockfd[i])
             for (int j = 0; j < current_players - 1; j++) {
-              if (j == i) continue;
+              if (j == i || player[j + 1].username[0] == '\0') continue;
+
               sendInt(network_events, clientsockfd[j]);
               sendInt(i + 1, clientsockfd[j]);
-              sendMsg(stdinbuf, sizeof stdinbuf, clientsockfd[j]);
+              sendMsg(recvbuf, sizeof recvbuf, clientsockfd[j]);
             }
-
-            memset(stdinbuf, '\0', sizeof stdinbuf);
-            bufindex = 0;
           }
         }
       }
 
       if (pfd[i + 2].revents & (POLLHUP | POLLERR)) {
+        // erase the player's name and incomplete message; the extra 2 comes from the colon and space
+        for (int i = 0; i < strlen(player[0].username) + bufindex + 2; i++) {
+          printf("\b \b");
+        }
+
         printf("Player ");
         red();
         printf("%s", player[i + 1].username);
         reset_col();
         printf(" disconnected :(\n");
 
-        closesocket(clientsockfd[i]);
+        // rewrite the typed message
+        printf("\033[1;31m%s\033[0m: %s", player[0].username, stdinbuf);
+
         current_players--;
+        connected_players--;
 
         for (int j = i; j < current_players - 1; j++) {
           clientsockfd[j] = clientsockfd[j + 1];
+          player[j + 1] = player[j + 2];
+          pfd[j + 2] = pfd[j + 3];
         }
 
+        memset(player[current_players].username, '\0', sizeof player[0].username);
+        clientsockfd[current_players - 1] = 0;
+        closesocket(clientsockfd[current_players - 1]);
+
+        // update the rest of the party
+        for (int j = 0; j < current_players - 1; j++) {
+          sendInt(player_disconnect, clientsockfd[j]);
+          sendInt(i + 1, clientsockfd[j]); // i + 1 == player that left
+          sendPlayers(clientsockfd[j]);
+        }
       }
     }
 
