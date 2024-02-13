@@ -1,4 +1,5 @@
 #include "MagicUnicornTests.h"
+#include "networkevents.h"
 
 // sanity check
 int shark_basic_check() {
@@ -79,9 +80,8 @@ int shark_empty_check() {
 int shark_with_a_horn_tests() {
 	int num_fails = 0;
 
+	rainbow_error("\nStarting Shark With a Horn tests...\n");
 	if (!isclient) {
-		rainbow_error("\nStarting Shark With a Horn tests...\n");
-
 		// file input stream setup
 		FILE* fp;
 		fopen_s(&fp, "Tests/Input/sharkwithahorn.txt", "r");
@@ -97,6 +97,12 @@ int shark_with_a_horn_tests() {
 		num_fails += shark_empty_check();
 
 		fclose(fp);
+	}
+	else {
+		// basic check, no input
+		int events;
+		receiveInt(&events, sockfd);
+		netStates[events].recvClient(1, sockfd);
 	}
 	return num_fails;
 }

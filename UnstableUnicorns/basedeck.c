@@ -544,6 +544,33 @@ void sacrificeDestroyEffects(int pnum, int cindex, int effect) {
       (player[pnum].flags & pandamonium) == 0)
     effect = NOTHING;
 
+  // black unicorn knight check; make sure that pandamonium is not active
+  if (player[pnum].stable.unicorns[cindex].species != NOSPECIES && 
+      (player[pnum].flags & black_knight_unicorn) != 0 &&
+      (player[pnum].flags & blinding_light) == 0 &&
+      (player[pnum].flags & pandamonium) == 0 &&
+    strcmp(player[pnum].stable.unicorns[cindex].name, "Black Knight Unicorn") != 0) {
+    // ask player pindex if they'd like to sacrifice bku instead of cindex (unicorn)
+    do {
+      printf(
+        "Would you like to sacrifice 'Black Knight Unicorn' instead of "
+        "card '%s' (y/n)?: ",
+        player[pnum].stable.unicorns[cindex].name);
+      ans = charinput(buf, sizeof buf);
+    } while (ans != 'y' && ans != 'n' && strlen(buf) != 2);
+
+    if (ans == 'y') {
+      for (int i = 0; i < player[pnum].stable.size; i++) {
+        if (strcmp(player[pnum].stable.unicorns[i].name,
+          "Black Knight Unicorn") == 0) {
+          cindex = i;
+          effect = NOTHING;
+          break;
+        }
+      }
+    }
+  }
+
   switch (effect) {
   case NOTHING:
     break;
@@ -580,28 +607,21 @@ void sacrificeDestroyEffects(int pnum, int cindex, int effect) {
   case unicorn_phoenix:
   {
     // Playing Unicorn Phoenix
-    // if this card would be sacrificed or destroyed, you may DISCARD a
-    // unicorn card instead
+    // if this card would be sacrificed or destroyed, you may DISCARD a card instead
 
-    // check if there are unicorn cards to discard
-    for (int i = 0; i < player[pnum].hand.num_cards; i++) {
-      if (player[pnum].hand.cards[i].species != NOSPECIES) {
-        isvalid = 1;
-        break;
-      }
-    }
-    if (!isvalid)
+    // check if there are any cards to actually discard
+    if (player[pnum].hand.num_cards <= 0)
       break;
 
     do {
       printf(
-        "Would you like to discard a Unicorn card instead of disposing "
+        "Would you like to discard a card instead of disposing "
         "the card \033[1;31m'Unicorn Phoenix'\033[0m (y/n)?: ");
       ans = charinput(buf, sizeof buf);
     } while ((ans != 'y' && ans != 'n') || strlen(buf) != 2);
 
     if (ans == 'y') {
-      discard(pnum, 1, ANYUNICORN);
+      discard(pnum, 1, ANY);
       return;
     }
     break;

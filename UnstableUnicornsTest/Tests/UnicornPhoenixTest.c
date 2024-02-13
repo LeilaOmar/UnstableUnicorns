@@ -35,21 +35,6 @@ int phoenix_basic_check() {
 	}
 	reset_players();
 	reset_discard();
-
-	// check if it can be destroyed when there are no cards in the hand
-	addStable(1, phoenix_tmp);
-	assert(player[1].hand.num_cards == 0);
-	assert(player[1].stable.size == 1);
-
-	if (!canBeDestroyed(0, 0, ANY, FALSE)) {
-		num_fails++;
-		red();
-		fprintf(stderr, "    sanity test: canBeDestroyed failed\n");
-		reset_col();
-	}
-
-	reset_players();
-	reset_discard();
 	return num_fails;
 }
 

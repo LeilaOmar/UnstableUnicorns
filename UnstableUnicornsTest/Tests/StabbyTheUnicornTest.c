@@ -1,4 +1,5 @@
 #include "MagicUnicornTests.h"
+#include "networkevents.h"
 
 // sanity check
 int stabby_basic_check() {
@@ -43,9 +44,8 @@ int stabby_basic_check() {
 int stabby_the_unicorn_tests() {
 	int num_fails = 0;
 
+	rainbow_error("\nStarting Stabby the Unicorn tests...\n");
 	if (!isclient) {
-		rainbow_error("\nStarting Stabby the Unicorn tests...\n");
-
 		// file input stream setup
 		FILE* fp;
 		fopen_s(&fp, "Tests/Input/stabbytheunicorn.txt", "r");
@@ -60,6 +60,12 @@ int stabby_the_unicorn_tests() {
 		num_fails += stabby_basic_check();
 
 		fclose(fp);
+	}
+	else {
+		// basic check, no input
+		int events;
+		receiveInt(&events, sockfd);
+		netStates[events].recvClient(1, sockfd);
 	}
 	return num_fails;
 }
