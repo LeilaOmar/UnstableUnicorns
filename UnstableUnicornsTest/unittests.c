@@ -381,7 +381,7 @@ void rearrange_stable_tests() {
 	fclose(fp);
 }
 
-int tiebreaker_tests() {
+void tiebreaker_tests() {
 
 	rainbow_error("\nStarting tiebreaker tests...\n");
 	
@@ -1032,6 +1032,6 @@ int main(int argc, char* argv[]) {
 		fclose(fp);
 	WSACleanup();
 
-	_getch();
+	(void)_getch();
 	exit(0);
 }

@@ -103,7 +103,7 @@ int clientMain(void) {
 
         sendInt(incoming_msg, sockfd);
         sendInt(clientpnum, sockfd);
-        send(sockfd, stdinbuf, sizeof stdinbuf, 0);
+        sendMsg(stdinbuf, sizeof stdinbuf, sockfd);
 
         memset(stdinbuf, '\0', sizeof stdinbuf);
         bufindex = 0;
@@ -121,8 +121,18 @@ int clientMain(void) {
         }
       }
       else if (network_events == incoming_msg) {
-        receiveMsg(stdinbuf, sizeof stdinbuf, sockfd);
+        int pnum;
+
+        receiveInt(&pnum, sockfd);
+        receiveMsg(stdinbuf, sockfd);
+
+        red();
+        printf("%s: ", player[pnum].username);
+        reset_col();
+        printf("%s\n", stdinbuf);
+
         memset(stdinbuf, '\0', sizeof stdinbuf);
+        bufindex = 0;
       }
       else if (network_events == start_game) {
         break;
@@ -240,16 +250,17 @@ int clientMain(void) {
     }
 
     // print state of nursery and discard piles
-    if (nursery_flag) {
+    #ifdef SHOWNURSERY
       yellow();
       printPile(nursery);
       reset_col();
-    }
-    if (discard_flag) {
+    #endif
+      
+    #ifdef SHOWDISCARD
       magenta();
       printPile(discardpile);
       reset_col();
-    }
+    #endif
 
     counter = (counter + 1) % current_players;
   } while (42);

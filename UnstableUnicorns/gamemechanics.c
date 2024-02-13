@@ -178,12 +178,12 @@ void shuffleDeck(struct Deck *d) {
     d->cards[i] = d->cards[j];
     d->cards[j] = tmp;
   }
-
-  if (deck_flag) {
+  
+  #ifdef SHOWDECK
     blue();
     printPile(*d);
     reset_col();
-  }
+  #endif
 }
 
 // shuffles the discard pile into the deck, then shuffles the entire deck
@@ -673,14 +673,14 @@ void destroy(int pnum, int cType, int isMagicCard) {
       sendCardEffectPacket(pindex, cindex, sockfd); // send card index instead of type
 
       // need to look out for nested network events
-      clientDestroyEffect(pnum);
+      clientEnterLeaveStable(pnum);
     }
     else {
       sendInt(destroy_event, clientsockfd[pindex - 1]);
       sendCardEffectPacket(pnum, cindex, clientsockfd[pindex - 1]); // send orig_pnum (pnum) instead of target_pnum (pindex), and send card index instead of type
 
       // need to look out for nested network events
-      serverDestroyEffect(pnum, pindex);
+      serverEnterLeaveStable(pnum, pindex);
     }
   }
 }

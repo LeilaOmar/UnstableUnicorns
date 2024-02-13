@@ -48,7 +48,8 @@ int sendEnterStablePacket(struct Unicorn corn, int pnum, int fd);
 // server receives target_pnum under pnum
 int receiveEnterStablePacket(struct Unicorn* corn, int* pnum, int fd);
 
-void receiveMsg(char* str, int count, int fd);
+int sendMsg(char* str, int count, int fd);
+int receiveMsg(char* str, int fd);
 
 // handles stdin events and filters everything but keydown presses
 // https://stackoverflow.com/questions/19955617/win32-read-from-stdin-with-timeout

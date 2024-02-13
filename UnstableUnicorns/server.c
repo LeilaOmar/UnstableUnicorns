@@ -113,18 +113,16 @@ int serverMain(void) {
       processStdin(stdinbuf, &bufindex);
       if (bufindex >= (sizeof(stdinbuf) - 1) || stdinbuf[bufindex - 1] == '\r' || stdinbuf[bufindex - 1] == '\n') {
         if (strncmp(stdinbuf, "start", 5) == 0 && current_players >= 2) {
-          network_events = start_game;
           for (int i = 0; i < current_players - 1; i++) {
-            sendInt(network_events, clientsockfd[i]);
+            sendInt(start_game, clientsockfd[i]);
           }
           break;
         }
 
-        network_events = incoming_msg;
         for (int i = 0; i < current_players - 1; i++) {
-          sendInt(network_events, clientsockfd[i]);
+          sendInt(incoming_msg, clientsockfd[i]);
           sendInt(0, clientsockfd[i]);
-          send(clientsockfd[i], stdinbuf, MSGBUF, 0);
+          sendMsg(stdinbuf, sizeof stdinbuf, clientsockfd[i]);
         }
 
         memset(stdinbuf, '\0', sizeof stdinbuf);
@@ -138,8 +136,8 @@ int serverMain(void) {
         // new player
         if (player[i + 1].username[0] == '\0') {
           memset(buf, '\0', sizeof buf);
-          isvalid = 0;
           recv(clientsockfd[i], buf, LINE_MAX, 0);
+          isvalid = 0;
 
           for (int j = 0; j < current_players; j++) {
             if (strcmp(buf, player[j].username) == 0) {
@@ -160,33 +158,46 @@ int serverMain(void) {
             reset_col();
             puts(" has joined the game!\n");
 
-            network_events = player_join;
             for (int j = 0; j < current_players - 1; j++) {
-              sendInt(network_events, clientsockfd[j]);
+              sendInt(player_join, clientsockfd[j]);
               sendPlayers(clientsockfd[j]);
             }
           }
         }
         else {
           receiveInt(&network_events, clientsockfd[i]);
+
           if (network_events == incoming_msg) {
-            receiveMsg(stdinbuf, sizeof stdinbuf, clientsockfd[i]);
+            int pnum;
+
+            receiveInt(&pnum, clientsockfd[i]);
+            receiveMsg(stdinbuf, clientsockfd[i]);
+
+            red();
+            printf("%s: ", player[pnum].username);
+            reset_col();
+            printf("%s\n", stdinbuf);
 
             // the pnum in receiveMsg is the same as the client socket number (i.e. clientsockfd[i])
             for (int j = 0; j < current_players - 1; j++) {
               if (j == i) continue;
               sendInt(network_events, clientsockfd[j]);
               sendInt(i + 1, clientsockfd[j]);
-              send(clientsockfd[j], stdinbuf, sizeof stdinbuf, 0);
+              sendMsg(stdinbuf, sizeof stdinbuf, clientsockfd[j]);
             }
 
             memset(stdinbuf, '\0', sizeof stdinbuf);
+            bufindex = 0;
           }
         }
       }
 
       if (pfd[i + 2].revents & (POLLHUP | POLLERR)) {
-        printf("Player %s disconnected :(\n", player[i + 1].username);
+        printf("Player ");
+        red();
+        printf("%s", player[i + 1].username);
+        reset_col();
+        printf(" disconnected :(\n");
 
         closesocket(clientsockfd[i]);
         current_players--;
@@ -248,12 +259,6 @@ int serverMain(void) {
 
   // all of the baby unicorns have been chosen, now initialize the hands/deck
   shuffleDeck(&deck);
-
-  if (deck_flag) {
-    blue();
-    printPile(deck);
-    reset_col();
-  }
 
   // initialize variables, draw 5 cards and "pick" username
   for (int i = 0; i < current_players; i++) {
@@ -347,16 +352,17 @@ int serverMain(void) {
     }
 
     // print state of nursery and discard piles
-    if (nursery_flag) {
+    #ifdef SHOWNURSERY
       yellow();
       printPile(nursery);
       reset_col();
-    }
-    if (discard_flag) {
+    #endif
+      
+    #ifdef SHOWDISCARD
       magenta();
       printPile(discardpile);
       reset_col();
-    }
+    #endif
 
     counter = (counter + 1) % current_players;
   } while (42);
