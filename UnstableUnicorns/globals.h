@@ -64,7 +64,6 @@ struct Player {
   struct CardsInHand hand;
   struct Stable stable;
   char username[NAME_SIZE];
-  enum BabySelection icon;
   short flags;  // enum baseflag
   short filler; // padding for prev variable
 };

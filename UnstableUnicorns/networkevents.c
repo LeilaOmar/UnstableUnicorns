@@ -103,10 +103,7 @@ int clientNeigh(int clientpnum, int orig_pnum, int *orig_cindex) {
             buf[strlen(buf) - 1] = 0;
             selection = strtol(buf, &end, 10) - 1;
 
-            memset(buf, '\0', sizeof buf);
-            input_index = 0;
-
-            if (selection == -1) {
+            if (selection == -1 && strlen(buf) > 0) {
               sendInt(selection, sockfd);
               isvalid = 1;
             }
@@ -121,6 +118,9 @@ int clientNeigh(int clientpnum, int orig_pnum, int *orig_cindex) {
               sendInt(selection, sockfd);
               isvalid = 1;
             }
+
+            memset(buf, '\0', sizeof buf);
+            input_index = 0;
           }
         }
 
@@ -267,10 +267,7 @@ int serverNeigh(int orig_pnum, int *orig_cindex) {
           buf[strlen(buf) - 1] = 0;
           selection = strtol(buf, &end, 10) - 1;
 
-          memset(buf, '\0', sizeof buf);
-          input_index = 0;
-
-          if (selection == -1) {
+          if (selection == -1 && strlen(buf) > 0) {
             playerneighflag |= (1 << 0);
           }
 
@@ -288,6 +285,9 @@ int serverNeigh(int orig_pnum, int *orig_cindex) {
             playerneighflag |= (1 << 0);
             break;
           }
+
+          memset(buf, '\0', sizeof buf);
+          input_index = 0;
         }
       }
 
@@ -439,7 +439,7 @@ void clientSacrifice(int clientpnum, int target_pnum, int cType) {
         input_index = 0;
 
         // index validation
-        if (selection < -1 || selection >= player[clientpnum].stable.size ||
+        if (selection < 0 || selection >= player[clientpnum].stable.size ||
             !canBeSacrificed(clientpnum, selection, cType) ||
             !checkType(cType, player[clientpnum].stable.unicorns[selection].cType)) {
           printf("Pick a valid card number to sacrifice: ");
@@ -550,7 +550,7 @@ void serverSacrifice(int orig_pnum, int target_pnum, int cType) {
         input_index = 0;
 
         // index validation
-        if (selection < -1 || selection >= player[0].stable.size ||
+        if (selection < 0 || selection >= player[0].stable.size ||
             !canBeSacrificed(0, selection, cType) ||
             !checkType(cType, player[0].stable.unicorns[selection].cType)) {
           printf("Pick a valid card number to sacrifice: ");
@@ -666,7 +666,7 @@ void clientDiscard(int clientpnum, int target_pnum, int cType) {
         input_index = 0;
 
         // index validation
-        if (selection < -1 || selection >= player[clientpnum].hand.num_cards ||
+        if (selection < 0 || selection >= player[clientpnum].hand.num_cards ||
             !checkType(cType, player[clientpnum].hand.cards[selection].cType)) {
           printf("Pick a valid card number to discard: ");
         }
@@ -769,7 +769,7 @@ void serverDiscard(int orig_pnum, int target_pnum, int cType) {
         input_index = 0;
 
         // index validation
-        if (selection < -1 || selection >= player[0].hand.num_cards ||
+        if (selection < 0 || selection >= player[0].hand.num_cards ||
             !checkType(cType, player[0].hand.cards[selection].cType)) {
           printf("Pick a valid card number to discard: ");
         }
@@ -871,7 +871,7 @@ void clientEnterLeaveStable(int clientpnum) {
 // idle function that handles nested network events;
 // this works for both enter stable effects and unicorn sacrificeDestroy effects
 // 
-// TODO: check if the target player wins the game inadvertedly through
+// TODO: check if the target player wins the game inadvertently through
 // an enter stable effect sacrificing masquerade cards
 void serverEnterLeaveStable(int orig_pnum, int target_pnum) {
   // can always assume that target_pnum is a separate player from the host (or else this function wouldn't be called);
