@@ -1,4 +1,5 @@
 #include "UpgradeTests.h"
+#include "networkevents.h"
 
 // sanity test
 int rainbow_aura_basic_check() {
@@ -97,18 +98,18 @@ int rainbow_aura_pandamonium_check() {
 	struct Unicorn panda_tmp = basedeck[107];
 
 	current_players = 2;
-	addStable(0, rainaura_tmp);
-	addStable(0, panda_tmp);
-	addStable(0, basic_tmp);
-	addStable(1, bomb_tmp);
-	toggleFlags(0, rainaura_tmp.effect);
-	toggleFlags(0, panda_tmp.effect);
-	assert(player[0].stable.size == 3);
-	assert((player[0].flags & rainbow_aura) == rainbow_aura);
-	assert((player[0].flags & pandamonium) == pandamonium);
+	addStable(1, rainaura_tmp);
+	addStable(1, panda_tmp);
+	addStable(1, basic_tmp);
+	addStable(0, bomb_tmp);
+	toggleFlags(1, rainaura_tmp.effect);
+	toggleFlags(1, panda_tmp.effect);
+	assert(player[1].stable.size == 3);
+	assert((player[1].flags & rainbow_aura) == rainbow_aura);
+	assert((player[1].flags & pandamonium) == pandamonium);
 
 	// first just check canBeDestroyed; card referenced is player[0][1]
-	if (!canBeDestroyed(0, 2, ANY, FALSE)) {
+	if (!canBeDestroyed(1, 2, ANY, FALSE)) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    non-unicorn test: canBeDestroyed failed\n");
@@ -117,12 +118,12 @@ int rainbow_aura_pandamonium_check() {
 
 	// try destroying it with glitter bomb
 	assert(discardpile.size == 0);
-	assert(player[1].stable.size == 1);
-	beginningTurnEffects(1, bomb_tmp);
+	assert(player[0].stable.size == 1);
+	beginningTurnEffects(0, bomb_tmp);
 
 
-	if (player[0].stable.size != 2 || player[0].stable.num_unicorns != 0 ||
-			player[1].stable.size != 0 || player[1].stable.num_unicorns != 0) {
+	if (player[0].stable.size != 0 || player[0].stable.num_unicorns != 0 ||
+			player[1].stable.size != 2 || player[1].stable.num_unicorns != 0) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    pandamonium test: stable size failed\n");
@@ -149,9 +150,8 @@ int rainbow_aura_pandamonium_check() {
 int rainbow_aura_tests() {
 	int num_fails = 0;
 
+	rainbow_error("\nStarting Rainbow Aura tests...\n");
 	if (!isclient) {
-		rainbow_error("\nStarting Rainbow Aura tests...\n");
-
 		// file input stream setup
 		FILE* fp;
 		fopen_s(&fp, "Tests/Input/rainbowaura.txt", "r");
@@ -168,6 +168,12 @@ int rainbow_aura_tests() {
 		num_fails += rainbow_aura_pandamonium_check();
 
 		fclose(fp);
+	}
+	else {
+		// basic check, no input
+		int events;
+		receiveInt(&events, sockfd);
+		netStates[events].recvClient(1, sockfd);
 	}
 	return num_fails;
 }

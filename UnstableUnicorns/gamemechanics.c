@@ -438,7 +438,6 @@ int tiebreaker() {
   return tie ? -1 : winningpnum;
 }
 
-
 // ********************************************************************************
 // **************************** Boolean Check Functions ***************************
 // ********************************************************************************
@@ -494,14 +493,6 @@ int canBeDestroyed(int pindex, int cindex, int cType, int isMagicCard) {
   // magical kittencorn can't be destroyed by magic cards
   if (isMagicCard &&
       strcmp(player[pindex].stable.unicorns[cindex].name, "Magical Kittencorn") == 0)
-    return 0;
-
-  // unicorn phoenix can stay in the stable so long the owner has at least
-  // one card in their hand
-  // TODO: this might not be necessary because the unicorn phoenix could probably
-  // take some W's if they only have 1 card
-  if (strcmp(player[pindex].stable.unicorns[cindex].name, "Unicorn Phoenix") == 0 &&
-      player[pindex].hand.num_cards >= 1)
     return 0;
 
   return 1;
@@ -665,38 +656,33 @@ void destroy(int pnum, int cType, int isMagicCard) {
     if (!canBeDestroyed(pindex, cindex, cType, isMagicCard)) {
       cindex = -1;
     }
-    // TODO: (maybe) create a function for "martyr" cards that sacrifice themselves upon
-    // another card getting destroyed
-    else if (player[pindex].stable.unicorns[cindex].species != NOSPECIES &&
-      (player[pindex].flags & black_knight_unicorn) != 0 &&
-      (player[pindex].flags & blinding_light) == 0 &&
-      (player[pindex].flags & pandamonium) == 0 &&
-      strcmp(player[pindex].stable.unicorns[cindex].name, "Black Knight Unicorn") != 0) {
-      // blinding light and pandamonium aren't active, but the black knight unicorn is
-      // ask player pindex if they'd like to sacrifice bku instead of cindex (unicorn)
-      //
-      // TODO: since this is asking the chosen victim, this should be sent through the network
-      do {
-        printf(
-          "Would you like to sacrifice 'Black Knight Unicorn' instead of "
-          "card '%s' (y/n)?: ",
-          player[pindex].stable.unicorns[cindex].name);
-        ans = charinput(buf2, sizeof buf2);
-      } while (ans != 'y' && ans != 'n' && strlen(buf2) != 2);
-
-      if (ans == 'y') {
-        for (int i = 0; i < player[pindex].stable.size; i++) {
-          if (strcmp(player[pindex].stable.unicorns[i].name,
-            "Black Knight Unicorn") == 0) {
-            cindex = i;
-            break;
-          }
-        }
-      }
-    }
   } while (cindex < 0 || cindex >= player[pindex].stable.size || end != (buf + strlen(buf)));
 
-  sacrificeDestroyEffects(pindex, cindex, player[pindex].stable.unicorns[cindex].effect);
+  if (player[pindex].stable.unicorns[cindex].species == NOSPECIES) {
+    // sacrificeDestroyEffects(pindex, cindex, player[pindex].stable.unicorns[cindex].effect);
+
+    // there's no need to send data over to the victim because upgrade/downgrade cards don't
+    // have any special sacrifice/destroy effects
+    addDiscard(player[pindex].stable.unicorns[cindex]);
+    rearrangeStable(pindex, cindex);
+  }
+  else {
+    // send a notice to players to apply special sacrifice/destroy effects
+    if (isclient) {
+      sendInt(destroy_event, sockfd);
+      sendCardEffectPacket(pindex, cindex, sockfd); // send card index instead of type
+
+      // need to look out for nested network events
+      clientDestroyEffect(pnum);
+    }
+    else {
+      sendInt(destroy_event, clientsockfd[pindex - 1]);
+      sendCardEffectPacket(pnum, cindex, clientsockfd[pindex - 1]); // send orig_pnum (pnum) instead of target_pnum (pindex), and send card index instead of type
+
+      // need to look out for nested network events
+      serverDestroyEffect(pnum, pindex);
+    }
+  }
 }
 
 // treat ANYUNICORN as all unicorns when checking cType for Unicorn cards

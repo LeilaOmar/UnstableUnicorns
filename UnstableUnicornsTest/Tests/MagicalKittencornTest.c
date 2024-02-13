@@ -1,4 +1,5 @@
 #include "MagicUnicornTests.h"
+#include "networkevents.h"
 
 // sanity check
 int kittencorn_basic_check() {
@@ -6,10 +7,10 @@ int kittencorn_basic_check() {
 	struct Unicorn kitten_tmp = basedeck[39];
 
 	current_players = 2;
-	addStable(0, kitten_tmp);
+	addStable(1, kitten_tmp);
 
 	// destroyed by a magic card; should not work
-	if (canBeDestroyed(0, 0, ANY, TRUE)) {
+	if (canBeDestroyed(1, 0, ANY, TRUE)) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    sanity test: canBeDestroyed failed\n");
@@ -18,11 +19,12 @@ int kittencorn_basic_check() {
 	reset_players();
 
 	// destroyed by a non-magic card
-	addStable(0, kitten_tmp);
+	current_players = 2;
+	addStable(1, kitten_tmp);
 
-	destroy(1, ANY, FALSE);
+	destroy(0, ANY, FALSE);
 
-	if (player[0].stable.size != 0 || player[0].stable.num_unicorns != 0) {
+	if (player[1].stable.size != 0 || player[1].stable.num_unicorns != 0) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    sanity test: destruction by non-magic card failed\n");
@@ -39,12 +41,12 @@ int kittencorn_basic_check() {
 int magical_kittencorn_tests() {
 	int num_fails = 0;
 
+	rainbow_error("\nStarting Magical Kittencorn tests...\n");
 	if (!isclient) {
-		rainbow_error("\nStarting Magical Kittencorn tests...\n");
 
 		// file input stream setup
 		FILE* fp;
-		fopen_s(&fp, "Tests/Input/line_1_1.txt", "r");
+		fopen_s(&fp, "Tests/Input/line_2_1.txt", "r");
 		if (fp == NULL) {
 			magenta();
 			fprintf(stderr, "    file input failed :(");
@@ -56,6 +58,12 @@ int magical_kittencorn_tests() {
 		num_fails += kittencorn_basic_check();
 
 		fclose(fp);
+	}
+	else {
+		// basic check, no input
+		int events;
+		receiveInt(&events, sockfd);
+		netStates[events].recvClient(1, sockfd);
 	}
 	return num_fails;
 }

@@ -21,7 +21,7 @@ int newConnection(SOCKET *cfd) {
 int serverMain(void) {
   short portno;
   struct sockaddr_in addr;
-  char *end, buf[LINE_MAX];
+  char* end, buf[LINE_MAX];
 
   // *****************************************************
   // ******************* Server Set-up *******************
@@ -81,7 +81,7 @@ int serverMain(void) {
     // timeout after 150 seconds
     ret = WSAPoll(pfd, MAX_PLAYERS + 1, -1);
     if (ret == SOCKET_ERROR) {
-      printf( "ERROR: poll() failed. Error code : %d", WSAGetLastError());
+      printf("ERROR: poll() failed. Error code : %d", WSAGetLastError());
       exit(2);
     }
     else if (ret == 0) {
@@ -239,7 +239,7 @@ int serverMain(void) {
     player[i].stable.unicorns[0] = nursery.cards[index];
     player[i].stable.size = 1;
     player[i].stable.num_unicorns = 1;
-    
+
     rearrangePile(&nursery, index);
   }
 
@@ -330,6 +330,9 @@ int serverMain(void) {
         for (int k = 0; k < current_players - 1; k++) {
           if (pfd[k + 2].revents & POLLIN) {
             receiveInt(&network_events, clientsockfd[k]);
+
+            // delayed input from timing issues
+            if (network_events < 0) continue;
 
             eventloop = netStates[network_events].recvServer(k + 1, clientsockfd[k]);
           }

@@ -639,7 +639,7 @@ void clientDiscard(int clientpnum, int target_pnum, int cType) {
 
   if (target_pnum == ANY || target_pnum == clientpnum) {
     if (player[clientpnum].hand.num_cards <= 0) {
-      sendInt(-1, sockfd); // no available cards to sacrifice
+      sendInt(-1, sockfd); // no available cards to discard
     }
     else {
       isvalid = 0;
@@ -859,6 +859,80 @@ void serverDiscard(int orig_pnum, int target_pnum, int cType) {
   }
 }
 
+void clientDestroyEffect(int clientpnum) {
+  int ret2;
+  int eventloop = 0;
+
+  WSAPOLLFD pfd;
+  pfd.fd = sockfd;
+  pfd.events = POLLIN | POLLOUT;
+
+  do {
+    ret2 = WSAPoll(&pfd, 1, -1);
+    if (ret2 == SOCKET_ERROR) {
+      fprintf(stderr, "ERROR: poll() failed. Error code : %d", WSAGetLastError());
+      exit(2);
+    }
+    else if (ret2 == 0) {
+      fprintf(stderr, "ERROR: server timed out. Error code : %d", WSAGetLastError());
+      exit(2);
+    }
+
+    if (pfd.revents & POLLIN) {
+      receiveInt(&network_events, sockfd);
+
+      eventloop = netStates[network_events].recvClient(clientpnum, sockfd);
+    }
+
+    Sleep(20);
+
+  } while (!eventloop);
+}
+
+void serverDestroyEffect(int orig_pnum, int target_pnum) {
+  // can always assume that target_pnum is a separate player from the host (or else this function wouldn't be called);
+  // orig_pnum can either be the host or a player that's different from target_pnum
+  int ret2;
+  int eventloop = 0;
+
+  WSAPOLLFD pfd[2] = { -1 };  // original sockfd + relevant client
+  pfd[0].fd = sockfd;
+  pfd[0].events = POLLIN | POLLOUT;
+  pfd[1].fd = clientsockfd[target_pnum - 1];
+  pfd[1].events = POLLIN | POLLOUT;
+
+  do {
+    ret2 = WSAPoll(pfd, 2, -1);
+    if (ret2 == SOCKET_ERROR) {
+      fprintf(stderr, "ERROR: poll() failed. Error code : %d", WSAGetLastError());
+      closesocket(sockfd);
+      exit(2);
+    }
+    else if (ret2 == 0) {
+      fprintf(stderr, "ERROR: server timed out. Error code : %d", WSAGetLastError());
+      closesocket(sockfd);
+      exit(2);
+    }
+
+    if (pfd[1].revents & POLLIN) {
+      // target_pnum becomes the new "orig_pnum" because that player is
+      // the catalyst that starts the next nested loop
+      receiveInt(&network_events, clientsockfd[target_pnum - 1]);
+
+      eventloop = netStates[network_events].recvServer(target_pnum, clientsockfd[target_pnum - 1]);
+
+      // this is all to avoid adding a 3rd parameter just for one instance...
+      if (eventloop && orig_pnum != 0) {
+        sendInt(quit_loop, clientsockfd[orig_pnum - 1]);
+        sendGamePacket(clientsockfd[orig_pnum - 1]);
+      }
+    }
+
+    Sleep(20);
+
+  } while (!eventloop);
+}
+
 void clientEnterStable(int clientpnum) {
   int ret2;
   int eventloop = 0;
@@ -891,6 +965,7 @@ void clientEnterStable(int clientpnum) {
 
 // TODO: check if the target player wins the game inadvertedly through
 // an enter stable effect sacrificing masquerade cards
+// TODO: rename and combine this with serverDestroyEffect (same goes for client ver.)
 void serverEnterStable(int orig_pnum, int target_pnum) {
   // can always assume that target_pnum is a separate player from the host (or else this function wouldn't be called);
   // orig_pnum can either be the host or a player that's different from target_pnum

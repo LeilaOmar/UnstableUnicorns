@@ -1,4 +1,5 @@
 #include "UpgradeTests.h"
+#include "networkevents.h"
 
 // sanity test
 int glitter_bomb_basic_check() {
@@ -81,9 +82,8 @@ int glitter_bomb_empty_check() {
 int glitter_bomb_tests() {
 	int num_fails = 0;
 
+	rainbow_error("\nStarting Glitter Bomb tests...\n");
 	if (!isclient) {
-		rainbow_error("\nStarting Glitter Bomb tests...\n");
-
 		// file input stream setup
 		FILE* fp;
 		fopen_s(&fp, "Tests/Input/glitterbomb.txt", "r");
@@ -99,6 +99,12 @@ int glitter_bomb_tests() {
 		num_fails += glitter_bomb_empty_check();
 
 		fclose(fp);
+	}
+	else {
+		// basic check, no input
+		int events;
+		receiveInt(&events, sockfd);
+		netStates[events].recvClient(1, sockfd);
 	}
 	return num_fails;
 }

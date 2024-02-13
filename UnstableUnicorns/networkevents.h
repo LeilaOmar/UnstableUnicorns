@@ -19,5 +19,8 @@ void serverDiscard(int orig_pnum, int target_pnum, int cType);
 void clientSacrifice(int clientpnum, int target_pnum, int cType);
 void serverSacrifice(int orig_pnum, int target_pnum, int cType);
 
+void clientDestroyEffect(int clientpnum);
+void serverDestroyEffect(int orig_pnum, int target_pnum);
+
 void clientEnterStable(int clientpnum);
 void serverEnterStable(int orig_pnum, int target_pnum);
