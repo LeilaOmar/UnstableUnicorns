@@ -8,7 +8,6 @@ int re_target_upgrade_check() {
 
 	current_players = 3;
 	addStable(1, yay_tmp);
-	toggleFlags(1, yay_tmp.effect);
 	player[0].hand.cards[player[0].hand.num_cards++] = target_tmp;
 
 	int ret;
@@ -55,7 +54,6 @@ int re_target_downgrade_check() {
 
 	current_players = 2;
 	addStable(1, barbed_tmp);
-	toggleFlags(1, barbed_tmp.effect);
 	player[0].hand.cards[player[0].hand.num_cards++] = target_tmp;
 
 	int ret;

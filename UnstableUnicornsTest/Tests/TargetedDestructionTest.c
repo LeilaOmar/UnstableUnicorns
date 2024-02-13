@@ -10,7 +10,6 @@ int targeted_destruction_upgrade_check() {
 	current_players = 3;
 	addStable(1, yay_tmp);
 	addStable(2, basic_tmp);
-	toggleFlags(1, yay_tmp.effect);
 	player[0].hand.cards[player[0].hand.num_cards++] = targeted_tmp;
 
 	int ret;
@@ -70,7 +69,6 @@ int targeted_destruction_downgrade_check() {
 	current_players = 3;
 	addStable(0, barbed_tmp);
 	addStable(2, basic_tmp);
-	toggleFlags(0, barbed_tmp.effect);
 	player[0].hand.cards[player[0].hand.num_cards++] = targeted_tmp;
 
 	int ret;

@@ -5,6 +5,7 @@
 #include "Tests/DowngradeTests.h"
 #include "Tests/InstantTests.h"
 #include "networkstates.h"
+#include "networkfuncs.h"
 #include <conio.h>
 
 // void processStdin_mock(char* stdinbuf, int* bufindex) {
@@ -474,7 +475,6 @@ int tiebreaker_tests() {
 	addStable(0, basic_tmp);
 	addStable(0, basic_tmp);
 	addStable(0, panda_tmp);
-	toggleFlags(0, panda_tmp.effect);
 
 	addStable(1, basic_tmp);
 
@@ -518,7 +518,6 @@ int tiebreaker_tests() {
 	addStable(1, basic_tmp);
 	addStable(1, ginormous_tmp);
 	addStable(1, blinding_tmp);
-	toggleFlags(1, blinding_tmp.effect);
 
 	assert((player[1].flags & blinding_light) == blinding_light);
 	ret = tiebreaker();

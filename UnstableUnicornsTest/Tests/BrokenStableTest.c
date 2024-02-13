@@ -7,7 +7,6 @@ int broken_basic_check() {
 	struct Unicorn yay_tmp = basedeck[100];
 
 	addStable(0, broken_tmp);
-	toggleFlags(0, broken_tmp.effect);
 	player[0].hand.cards[player[0].hand.num_cards++] = yay_tmp;
 	assert(player[0].flags == broken_stable);
 

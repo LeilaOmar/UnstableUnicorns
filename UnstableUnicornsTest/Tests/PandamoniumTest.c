@@ -14,7 +14,6 @@ int pandamonium_win_check() {
 	addStable(0, basic_tmp);
 	addStable(0, basic_tmp);
 	addStable(0, basic_tmp);
-	toggleFlags(0, panda_tmp.effect);
 
 	assert(player[0].stable.size == 8);
 	assert(player[0].stable.num_unicorns == 7);
@@ -41,7 +40,6 @@ int pandamonium_destroy_check() {
 
 	addStable(0, panda_tmp);
 	addStable(0, basic_tmp);
-	toggleFlags(0, panda_tmp.effect);
 	assert(player[0].stable.size == 2);
 	assert(player[0].flags == pandamonium);
 
@@ -72,7 +70,6 @@ int pandamonium_rainbow_mane_check() {
 
 	addStable(0, panda_tmp);
 	addStable(0, rainbow_tmp);
-	toggleFlags(0, panda_tmp.effect);
 	player[0].hand.cards[player[0].hand.num_cards++] = basic_tmp;
 
 	assert(player[0].stable.size == 2);

@@ -6,10 +6,6 @@
 // Full card description list -
 // http://unstablegameswiki.com/index.php?title=Unstable_Unicorns_-_1st_%26_2nd_Edition_Comparisons
 //
-// *** TODO: do not actually shuffle the discard pile into the deck if the
-// deck is empty. that's actually game-over, and the person with the most
-// unicorns in their stable at that time wins. tiebreakers are decided through
-// counting the number of letters in every unicorn
 // *** TODO: (low priority) balance the game for 2 players as described in the
 // rules -> https://www.unstablegames.com/pages/unstable-unicorns-rules
 // https://12ax7web.s3.amazonaws.com/accounts/1/homepage/2-Player-rules.pdf

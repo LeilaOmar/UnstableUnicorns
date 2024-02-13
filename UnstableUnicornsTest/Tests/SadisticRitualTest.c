@@ -115,13 +115,12 @@ int sadistic_pandamonium_check() {
 	addStable(0, majestic_tmp);
 	addStable(0, sadistic_tmp);
 	addStable(0, panda_tmp);
-	toggleFlags(0, panda_tmp.effect);
 
 	int tmp_size = deck.size;
 	assert(discardpile.size == 0);
 	assert(player[0].stable.size == 3);
 	assert(player[0].hand.num_cards == 0);
-	assert(player[0].flags == pandamonium);
+	assert((player[0].flags & pandamonium) == pandamonium);
 	beginningTurnEffects(0, sadistic_tmp);
 
 	if (player[0].stable.size != 3 || player[0].stable.num_unicorns != 1 ||
@@ -221,12 +220,11 @@ int sadistic_barbed_wire_check() {
 	addStable(0, basic_tmp);
 	addStable(0, barbed_tmp);
 	addStable(0, sadistic_tmp);
-	toggleFlags(0, barbed_tmp.effect);
 
 	assert(discardpile.size == 0);
 	assert(player[0].stable.size == 3);
 	assert(player[0].hand.num_cards == 5);
-	assert(player[0].flags == barbed_wire);
+	assert((player[0].flags & barbed_wire) == barbed_wire);
 	beginningTurnEffects(0, sadistic_tmp);
 
 	if (player[0].stable.size != 2 || player[0].stable.num_unicorns != 0 ||

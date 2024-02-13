@@ -14,8 +14,6 @@ int reset_button_basic_check() {
 	current_players = 3;
 	addStable(0, yay_tmp);
 	addStable(0, barbed_tmp);
-	toggleFlags(0, yay_tmp.effect);
-	toggleFlags(0, barbed_tmp.effect);
 
 	addStable(1, basic_tmp);
 
@@ -23,8 +21,6 @@ int reset_button_basic_check() {
 	addStable(2, dutch_tmp);
 	addStable(2, panda_tmp);
 	addStable(2, basic_tmp);
-	toggleFlags(2, rainaura_tmp.effect);
-	toggleFlags(2, panda_tmp.effect);
 	player[0].hand.cards[player[0].hand.num_cards++] = reset_tmp;
 
 	deck.size -= 7; // to accomodate for the added stable cards and reset button

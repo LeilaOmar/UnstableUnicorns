@@ -176,9 +176,6 @@ int clientNeigh(int clientpnum, int orig_pnum, int *orig_cindex) {
 // codes the part where players are able to use an instant card against a play
 // 0 = nobody used Neigh/Super Neigh cards, or Neigh cards cancelled out
 // 1 = card is gone
-// TODO: issues to look out for---
-//   - person A and person B sending a neigh at the same time
-//     (this can be circumvented by waiting until everyone entered something or the time limit passed though)
 int serverNeigh(int orig_pnum, int *orig_cindex) {
 
   for (int i = 0; i < current_players - 1; i++) {
