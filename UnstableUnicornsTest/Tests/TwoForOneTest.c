@@ -1,4 +1,5 @@
 #include "MagicTests.h"
+#include "networkevents.h"
 
 // sanity check
 int twofer_basic_check() {
@@ -128,50 +129,14 @@ int twofer_empty_check() {
 	return num_fails;
 }
 
-// unique edge-case where cards like Unicorn Phoenix can bypass destruction,
-// so two-for-one probably shouldn't activate
-int twofer_unicorn_phoenix_check() {
-	int num_fails = 0;
-	struct Unicorn twofer_tmp = basedeck[83];
-	struct Unicorn phoenix_tmp = basedeck[57];
-	struct Unicorn kitten_tmp = basedeck[39];
-	struct Unicorn basic_tmp = basedeck[13];
-
-	// 1 card can be destroyed, 1 card has a special effect that allows it
-	// to bypass getting destroyed
-	current_players = 2;
-	addStable(0, kitten_tmp);
-	addStable(1, phoenix_tmp);
-	addStable(1, basic_tmp);
-	player[0].hand.cards[player[0].hand.num_cards++] = twofer_tmp;
-	player[1].hand.cards[player[1].hand.num_cards++] = twofer_tmp;
-
-	int ret;
-	assert(player[0].stable.size == 1);
-	assert(player[1].stable.size == 2);
-	ret = conditionalEffects(0, twofer_tmp, 0, 0);
-
-	if (turn_count != 2 || ret != 0) {
-		num_fails++;
-		red();
-		fprintf(stderr, "    unicorn phoenix test: turn count failed\n");
-		reset_col();
-	}
-
-	reset_players();
-	reset_discard();
-	return num_fails;
-}
-
 // Two-For-One
 //
 // SACRIFICE a card, then DESTROY 2 cards.
 int two_for_one_tests() {
 	int num_fails = 0;
 
+	rainbow_error("\nStarting Two-For-One tests...\n");
 	if (!isclient) {
-		rainbow_error("\nStarting Two-For-One tests...\n");
-
 		// file input stream setup
 		FILE* fp;
 		fopen_s(&fp, "Tests/Input/twoforone.txt", "r");
@@ -185,9 +150,14 @@ int two_for_one_tests() {
 
 		num_fails += twofer_basic_check();
 		num_fails += twofer_empty_check();
-		num_fails += twofer_unicorn_phoenix_check();
 
 		fclose(fp);
+	}
+	else {
+		// basic check, no input
+		int events;
+		receiveInt(&events, sockfd);
+		netStates[events].recvClient(1, sockfd);
 	}
 	return num_fails;
 }

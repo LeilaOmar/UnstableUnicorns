@@ -1,4 +1,5 @@
 #include "MagicUnicornTests.h"
+#include "networkevents.h"
 
 // sanity check
 int black_knight_basic_check() {
@@ -7,27 +8,27 @@ int black_knight_basic_check() {
 	struct Unicorn knight_tmp = basedeck[59];
 
 	current_players = 2;
-	addStable(0, knight_tmp);
-	addStable(0, basic_tmp);
+	addStable(1, knight_tmp);
+	addStable(1, basic_tmp);
 
 	assert(discardpile.size == 0);
-	assert(player[0].stable.num_unicorns == 2);
-	enterStableEffects(0, knight_tmp.effect);
+	assert(player[1].stable.num_unicorns == 2);
+	assert(player[1].flags == black_knight_unicorn);
 
-	destroy(1, ANY, FALSE);
+	destroy(0, ANY, FALSE);
 
-	// this test assumes that the 2nd player initially tries to destroy
+	// this test assumes that the 1st player initially tries to destroy
 	// the basic unicorn; this is reflected in the input file
 	if (discardpile.size != 1 ||
 			strcmp(discardpile.cards[0].name, knight_tmp.name) != 0 ||
-			strcmp(player[0].stable.unicorns[0].name, basic_tmp.name) != 0) {
+			strcmp(player[1].stable.unicorns[0].name, basic_tmp.name) != 0) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    sanity test: sacrifice failed\n");
 		reset_col();
 	}
 
-	if ((player[0].flags & black_knight_unicorn) != 0) {
+	if ((player[1].flags & black_knight_unicorn) != 0) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    sanity test: toggle flags failed\n");
@@ -50,9 +51,9 @@ int black_knight_empty_check() {
 	addStable(0, yay_tmp);
 
 	assert(discardpile.size == 0);
-	enterStableEffects(0, knight_tmp.effect);
+	assert(player[0].flags == black_knight_unicorn);
 
-	destroy(1, ANY, FALSE);
+	sacrificeDestroyEffects(0, 1, knight_tmp.effect);
 
 	// this test assumes that there's no stdout prompting the self-sacrifice
 	if (discardpile.size != 1 ||
@@ -78,13 +79,14 @@ int black_knight_pandamonium_check() {
 	current_players = 2;
 	addStable(0, basic_tmp);
 	addStable(0, panda_tmp);
+	addStable(0, knight_tmp);
 	toggleFlags(0, panda_tmp.effect);
 
 	assert(discardpile.size == 0);
-	assert(player[0].flags == pandamonium);
-	addStable(0, knight_tmp);
+	assert((player[0].flags & pandamonium) == pandamonium);
+	assert((player[0].flags & black_knight_unicorn) == black_knight_unicorn);
 
-	destroy(1, ANY, FALSE);
+	sacrificeDestroyEffects(0, 0, knight_tmp.effect);
 
 	// this test assumes that there's no stdout prompting the self-sacrifice
 	if (discardpile.size != 1 ||
@@ -100,7 +102,7 @@ int black_knight_pandamonium_check() {
 	return num_fails;
 }
 
-// no other unicorns in the stable to sacrifice for
+// blinding light disables the black knight check
 int black_knight_blinding_light_check() {
 	int num_fails = 0;
 	struct Unicorn blinding_tmp = basedeck[112];
@@ -110,17 +112,17 @@ int black_knight_blinding_light_check() {
 	current_players = 2;
 	addStable(0, basic_tmp);
 	addStable(0, blinding_tmp);
+	addStable(0, knight_tmp);
 	toggleFlags(0, blinding_tmp.effect);
 
 	assert(discardpile.size == 0);
-	assert(player[0].flags == blinding_light);
-	addStable(0, knight_tmp);
+	assert((player[0].flags & blinding_light) == blinding_light);
 
-	destroy(1, ANY, FALSE);
+	sacrificeDestroyEffects(0, 0, knight_tmp.effect);
 
 	// this test assumes that there's no stdout prompting the self-sacrifice
 	if (discardpile.size != 1 ||
-		strcmp(discardpile.cards[0].name, basic_tmp.name) != 0) {
+			strcmp(discardpile.cards[0].name, basic_tmp.name) != 0) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    pandamonium test: destroy failed\n");
@@ -138,11 +140,11 @@ int black_knight_blinding_light_check() {
 int black_knight_unicorn_tests() {
 	int num_fails = 0;
 
-	if (!isclient) {
-		rainbow_error("\nStarting Black Knight Unicorn tests...\n");
+	rainbow_error("\nStarting Black Knight Unicorn tests...\n");
+	FILE* fp;
 
+	if (!isclient) {
 		// file input stream setup
-		FILE* fp;
 		fopen_s(&fp, "Tests/Input/blackknightunicorn.txt", "r");
 		if (fp == NULL) {
 			magenta();
@@ -158,7 +160,24 @@ int black_knight_unicorn_tests() {
 		num_fails += black_knight_pandamonium_check();
 		num_fails += black_knight_blinding_light_check();
 
-		fclose(fp);
 	}
+	else {
+		// file input stream setup
+		fopen_s(&fp, "Tests/Input/line_y_1.txt", "r"); // technically only the y part is necessary
+		if (fp == NULL) {
+			magenta();
+			fprintf(stderr, "    file input failed :(");
+			reset_col();
+			return 1;
+		}
+		fpinput = fp;
+
+		// basic check
+		int events;
+		receiveInt(&events, sockfd);
+		netStates[events].recvClient(1, sockfd);
+	}
+
+	fclose(fp);
 	return num_fails;
 }

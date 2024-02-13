@@ -18,6 +18,7 @@ void init_network_states() {
   netStates[neigh_event]        = (NetworkStateManager){ clientStateNeigh,       serverStateNeigh };
   netStates[discard_event]      = (NetworkStateManager){ clientStateDiscard,     serverStateDiscard };
   netStates[sacrifice_event]    = (NetworkStateManager){ clientStateSacrifice,   serverStateSacrifice };
+  netStates[destroy_event]      = (NetworkStateManager){ clientStateDestroy,     serverStateDestroy };
   netStates[enter_stable_event] = (NetworkStateManager){ clientStateEnterStable, serverStateEnterStable };
 }
 
@@ -84,21 +85,39 @@ int clientStateSacrifice(int clientpnum, int fd) {
   return 0;
 }
 
+// this is specifically for clients who's cards are getting destroyed
+// so they can enter any necessary info in the sacrificeDestroyEffects function
+int clientStateDestroy(int clientpnum, int fd) {
+  int orig_pnum;
+  int cindex;
+
+  receiveCardEffectPacket(&orig_pnum, &cindex, fd);
+
+  printf("\n\033[1;31m%s\033[0m wants to destroy your card \033[1;31m'%s'\033[0m.\n",
+    player[orig_pnum].username, player[clientpnum].stable.unicorns[cindex].name);
+
+  sacrificeDestroyEffects(clientpnum, cindex, player[clientpnum].stable.unicorns[cindex].effect);
+  sendInt(quit_loop, fd);
+  sendGamePacket(fd);
+
+  return 0;
+}
+
 int clientStateEnterStable(int clientpnum, int fd) {
   struct Unicorn corn;
   int orig_pnum;
 
-  receiveEnterStablePacket(&corn, &orig_pnum, sockfd);
+  receiveEnterStablePacket(&corn, &orig_pnum, fd);
 
   printf("\n\033[1;31m%s\033[0m sent you the card \033[1;31m'%s'\033[0m.\n", player[orig_pnum].username, corn.name);
   addStable(clientpnum, corn);
 
   if (!checkWin(clientpnum)) {
-    sendInt(quit_loop, sockfd);
-    sendGamePacket(sockfd);
+    sendInt(quit_loop, fd);
+    sendGamePacket(fd);
   }
   else {
-    clientSendEndGame(clientpnum, sockfd);
+    clientSendEndGame(clientpnum, fd);
     return 1;
   }
 
@@ -187,6 +206,32 @@ int serverStateSacrifice(int orig_pnum, int fd) {
 
   receiveCardEffectPacket(&target_player, &desired_type, fd);
   serverSacrifice(orig_pnum, target_player, desired_type);
+
+  return 0;
+}
+
+// this is specifically for when the host's cards are getting destroyed
+// so they can enter any necessary info in the sacrificeDestroyEffects function
+int serverStateDestroy(int orig_pnum, int fd) {
+  int target_player;
+  int cindex;
+
+  receiveCardEffectPacket(&target_player, &cindex, fd);
+
+  if (target_player != 0) {
+    sendInt(destroy_event, clientsockfd[target_player - 1]);
+    sendCardEffectPacket(target_player, cindex, clientsockfd[target_player - 1]);
+    serverDestroyEffect(orig_pnum, target_player, cindex);
+  }
+  else {
+    printf("\n\033[1;31m%s\033[0m wants to destroy your card \033[1;31m'%s'\033[0m.\n",
+      player[orig_pnum].username, player[0].stable.unicorns[cindex].name);
+
+    sacrificeDestroyEffects(0, cindex, player[0].stable.unicorns[cindex].effect);
+
+    sendInt(quit_loop, fd);
+    sendGamePacket(fd);
+  }
 
   return 0;
 }

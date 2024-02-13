@@ -1,4 +1,5 @@
 #include "MagicTests.h"
+#include "networkevents.h"
 
 // sanity check
 int poison_basic_check() {
@@ -138,11 +139,11 @@ int poison_empty_check() {
 int unicorn_poison_tests() {
 	int num_fails = 0;
 
-	if (!isclient) {
-		rainbow_error("\nStarting Unicorn Poison tests...\n");
+	FILE* fp;
+	rainbow_error("\nStarting Unicorn Poison tests...\n");
 
+	if (!isclient) {
 		// file input stream setup
-		FILE* fp;
 		fopen_s(&fp, "Tests/Input/unicornpoison.txt", "r");
 		if (fp == NULL) {
 			magenta();
@@ -155,8 +156,32 @@ int unicorn_poison_tests() {
 		num_fails += poison_basic_check();
 		num_fails += poison_special_check();
 		num_fails += poison_empty_check();
-
-		fclose(fp);
 	}
+	else {
+		// file input stream setup
+		fopen_s(&fp, "Tests/Input/unicornpoisonclient.txt", "r");
+		if (fp == NULL) {
+			magenta();
+			fprintf(stderr, "    file input failed :(");
+			reset_col();
+			return 1;
+		}
+		fpinput = fp;
+
+		// basic check, no input
+		int events;
+		receiveInt(&events, sockfd);
+		netStates[events].recvClient(1, sockfd);
+
+		// stabby the unicorn; input = y 1 1
+		receiveInt(&events, sockfd);
+		netStates[events].recvClient(1, sockfd);
+
+		// ginormous unicorn, no input
+		receiveInt(&events, sockfd);
+		netStates[events].recvClient(1, sockfd);
+	}
+
+	fclose(fp);
 	return num_fails;
 }

@@ -1,4 +1,5 @@
 #include "MagicUnicornTests.h"
+#include "networkevents.h"
 
 int rhinocorn_basic_check() {
 	int num_fails = 0;
@@ -39,9 +40,8 @@ int rhinocorn_basic_check() {
 int rhinocorn_tests() {
 	int num_fails = 0;
 
+	rainbow_error("\nStarting Rhinocorn tests...\n");
 	if (!isclient) {
-		rainbow_error("\nStarting Rhinocorn tests...\n");
-
 		// file input stream setup
 		FILE* fp;
 		fopen_s(&fp, "Tests/Input/rhinocorn.txt", "r");
@@ -56,6 +56,12 @@ int rhinocorn_tests() {
 		num_fails += rhinocorn_basic_check();
 
 		fclose(fp);
+	}
+	else {
+		// basic check, no input
+		int events;
+		receiveInt(&events, sockfd);
+		netStates[events].recvClient(1, sockfd);
 	}
 	return num_fails;
 }

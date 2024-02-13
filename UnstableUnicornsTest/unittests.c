@@ -681,42 +681,52 @@ void destroy_tests() {
 	addStable(0, ginormous_tmp);
 	enterStableEffects(0, ginormous_tmp.effect);
 
-	FILE* fp;
-	fopen_s(&fp, "Tests/Input/line_1_1.txt", "r");
-	if (fp == NULL) {
-		num_fails++;
-		magenta();
-		fprintf(stderr, "    file input failed :(\n");
-		reset_col();
-		return;
-	}
-	fpinput = fp;
+	// the client is the destroyer, and the server receives the request and takes action
+	if (isclient) {
+		FILE* fp;
+		fopen_s(&fp, "Tests/Input/line_1_1.txt", "r");
+		if (fp == NULL) {
+			num_fails++;
+			magenta();
+			fprintf(stderr, "    file input failed :(\n");
+			reset_col();
+			return;
+		}
+		fpinput = fp;
 
-	assert(discardpile.size == 0);
-	assert(player[0].stable.size == 1);
-	assert(player[0].flags == ginormous_unicorn);
-	destroy(1, ANY, FALSE);
+		assert(discardpile.size == 0);
+		assert(player[0].stable.size == 1);
+		assert(player[0].flags == ginormous_unicorn);
+		destroy(1, ANY, FALSE);
 
-	if (player[0].stable.size != 0) {
-		num_fails++;
-		red();
-		fprintf(stderr, "    sanity test: stable size failed\n");
-		reset_col();
-	}
+		if (player[0].stable.size != 0) {
+			num_fails++;
+			red();
+			fprintf(stderr, "    sanity test: stable size failed\n");
+			reset_col();
+		}
 
-	if (discardpile.size != 1 ||
+		if (discardpile.size != 1 ||
 			strcmp(discardpile.cards[0].name, ginormous_tmp.name) != 0) {
-		num_fails++;
-		red();
-		fprintf(stderr, "    sanity test: discard verification failed\n");
-		reset_col();
-	}
+			num_fails++;
+			red();
+			fprintf(stderr, "    sanity test: discard verification failed\n");
+			reset_col();
+		}
 
-	if (player[0].flags == ginormous_unicorn) {
-		num_fails++;
-		red();
-		fprintf(stderr, "    sanity test: toggle flags failed\n");
-		reset_col();
+		if (player[0].flags == ginormous_unicorn) {
+			num_fails++;
+			red();
+			fprintf(stderr, "    sanity test: toggle flags failed\n");
+			reset_col();
+		}
+		fclose(fp);
+	}
+	else {
+		// basic check, no input
+		int events;
+		receiveInt(&events, clientsockfd[0]);
+		netStates[events].recvServer(1, clientsockfd[0]);
 	}
 
 	reset_players();
@@ -907,6 +917,9 @@ int main(int argc, char* argv[]) {
 		sacrifice_tests();
 		destroy_tests();
 		steal_tests();
+	}
+	else {
+		destroy_tests();
 	}
 
 	// specific card functionality tests
