@@ -6,7 +6,7 @@ int back_kick_basic_check() {
 	int num_fails = 0;
 	struct Unicorn back_kick_tmp = basedeck[70];
 	struct Unicorn rainbow_tmp = basedeck[42];
-	struct Unicorn barbed_tmp = basedeck[106];
+	struct Unicorn yay_tmp = basedeck[100];
 	struct Unicorn basic_tmp = basedeck[13];
 	struct Unicorn basic_tmp2 = basedeck[17];
 	struct Unicorn basic_tmp3 = basedeck[20];
@@ -14,7 +14,7 @@ int back_kick_basic_check() {
 	current_players = 2;
 	addStable(1, rainbow_tmp);
 	addStable(1, basic_tmp);
-	addStable(1, barbed_tmp);
+	addStable(1, yay_tmp);
 	player[0].hand.cards[player[0].hand.num_cards++] = back_kick_tmp;
 	player[0].hand.cards[player[0].hand.num_cards++] = basic_tmp3;
 	player[1].hand.cards[player[1].hand.num_cards++] = basic_tmp2;
@@ -42,7 +42,7 @@ int back_kick_basic_check() {
 	}
 
 	if (player[1].stable.size != 2 || player[1].stable.num_unicorns != 1 ||
-			strcmp(player[1].stable.unicorns[1].name, barbed_tmp.name) != 0) {
+			strcmp(player[1].stable.unicorns[1].name, yay_tmp.name) != 0) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    sanity test: stable verification failed\n");
@@ -73,7 +73,6 @@ int back_kick_special_check() {
 	current_players = 2;
 	player[0].hand.cards[player[0].hand.num_cards++] = back_kick_tmp;
 	addStable(1, yay_tmp);
-	toggleFlags(1, yay_effect);
 
 	assert(discardpile.size == 0);
 	assert(player[0].hand.num_cards == 1);

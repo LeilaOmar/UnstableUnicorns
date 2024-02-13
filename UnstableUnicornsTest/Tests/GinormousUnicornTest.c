@@ -14,8 +14,6 @@ int ginormous_basic_check() {
 	addStable(0, basic_tmp);
 	addStable(0, basic_tmp);
 
-	enterStableEffects(0, player[0].stable.unicorns[0].effect);
-
 	int ret = endOfTurn(0);
 
 	assert(WIN_CONDITION == 7);

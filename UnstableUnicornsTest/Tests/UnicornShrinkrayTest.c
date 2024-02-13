@@ -5,8 +5,8 @@ int shrinkray_basic_check() {
 	int num_fails = 0;
 	struct Unicorn shrinkray_tmp = basedeck[85];
 	struct Unicorn basic_tmp = basedeck[13]; // [emojis]
-	struct Unicorn yay_tmp = basedeck[100]; // non-unicorn card
-	struct Unicorn ginormous_tmp = basedeck[48]; // speccial effect 1
+	struct Unicorn tail_tmp = basedeck[95];  // non-unicorn card
+	struct Unicorn ginormous_tmp = basedeck[48]; // special effect 1
 	struct Unicorn queen_tmp = basedeck[51]; // special effect 2
 
 	// no cards to sacrifice
@@ -14,7 +14,7 @@ int shrinkray_basic_check() {
 	addStable(1, basic_tmp);
 	addStable(1, basic_tmp);
 	addStable(1, ginormous_tmp);
-	addStable(1, yay_tmp);
+	addStable(1, tail_tmp);
 	addStable(1, queen_tmp);
 	enterStableEffects(1, ginormous_tmp.effect);
 	enterStableEffects(1, queen_tmp.effect);
@@ -31,7 +31,7 @@ int shrinkray_basic_check() {
 	assert(player[2].stable.size == 0);
 
 	assert(player[0].flags == queen_bee_unicorn);
-	assert(player[1].flags == ginormous_unicorn);
+	assert((player[1].flags & ginormous_unicorn) == ginormous_unicorn);
 	assert(player[2].flags == queen_bee_unicorn);
 	ret = conditionalEffects(0, shrinkray_tmp, 0, 0);
 	if (ret) magicEffects(0, shrinkray_tmp.effect);
@@ -45,7 +45,7 @@ int shrinkray_basic_check() {
 
 	if (player[1].stable.size != 5 || player[1].stable.num_unicorns != 4 ||
 			player[1].stable.unicorns[0].cType != BABYUNICORN ||
-			strcmp(player[1].stable.unicorns[3].name, yay_tmp.name) != 0) {
+			strcmp(player[1].stable.unicorns[3].name, tail_tmp.name) != 0) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    sanity test: stable verification failed\n");
@@ -196,15 +196,15 @@ int shrinkray_barbed_wire_check() {
 	addStable(1, basic_tmp);
 	addStable(1, basic_tmp);
 	addStable(1, basic_tmp);
+	addStable(1, barbed_tmp);
 
 	draw(1, 6);
 	player[1].hand.cards[player[1].hand.num_cards++] = yay_tmp;
 	player[0].hand.cards[player[0].hand.num_cards++] = shrinkray_tmp;
-	toggleFlags(1, barbed_tmp.effect);
 
 	assert(discardpile.size == 0);
 	assert(player[0].hand.num_cards == 1);
-	assert(player[1].stable.size == 6);
+	assert(player[1].stable.size == 7);
 	assert(player[1].stable.num_unicorns == 6);
 	assert(player[1].hand.num_cards == 7);
 	magicEffects(0, shrinkray_tmp.effect);
@@ -286,7 +286,6 @@ int shrinkray_pandamonium_check() {
 	addStable(1, basic_tmp);
 	addStable(1, basic_tmp);
 	addStable(1, basic_tmp);
-	toggleFlags(1, panda_tmp.effect);
 
 	int tmp_size = nursery.size;
 	player[0].hand.cards[player[0].hand.num_cards++] = shrinkray_tmp;

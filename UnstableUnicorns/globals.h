@@ -60,20 +60,17 @@ struct Stable {
   int size;
 };
 
-// TODO: other decks apparently have different masquerade cards, so pandamonium
-// should be moved from the general flags to a masquerade flag/enum
 struct Player {
   struct CardsInHand hand;
   struct Stable stable;
   char username[NAME_SIZE];
   enum BabySelection icon;
-  short flags; // enum baseflag
+  short flags;  // enum baseflag
   short filler; // padding for prev variable
 };
 
 SOCKET clientsockfd[MAX_PLAYERS - 1];
 SOCKET sockfd;
-SOCKET udpfd;
 extern int isclient; // 0 = server, 1 = client
 extern int network_events;
 

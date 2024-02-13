@@ -15,14 +15,13 @@ int twofer_basic_check() {
 	addStable(0, yay_tmp);
 	addStable(1, panda_tmp);
 	addStable(1, basic_tmp3);
-	toggleFlags(0, yay_effect);
 	player[0].hand.cards[player[0].hand.num_cards++] = twofer_tmp;
 
 	assert(discardpile.size == 0);
 	assert(player[0].hand.num_cards == 1);
 	assert(player[0].stable.size == 2);
 	assert(player[1].stable.size == 2);
-	assert(player[0].flags == yay);
+	assert((player[0].flags & yay) == yay);
 	playCard(0);
 
 	if (turn_count != 1) {

@@ -221,7 +221,7 @@ int serverStateDestroy(int orig_pnum, int fd) {
   if (target_player != 0) {
     sendInt(destroy_event, clientsockfd[target_player - 1]);
     sendCardEffectPacket(target_player, cindex, clientsockfd[target_player - 1]);
-    serverDestroyEffect(orig_pnum, target_player, cindex);
+    serverDestroyEffect(orig_pnum, target_player);
   }
   else {
     printf("\n\033[1;31m%s\033[0m wants to destroy your card \033[1;31m'%s'\033[0m.\n",

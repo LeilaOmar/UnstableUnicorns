@@ -8,7 +8,6 @@ int barbed_enter_check() {
 	struct Unicorn ginormous_tmp = basedeck[48];
 
 	addStable(0, barbed_tmp);
-	toggleFlags(0, barbed_tmp.effect);
 	player[0].hand.cards[player[0].hand.num_cards++] = basic_tmp;
 
 	assert(discardpile.size == 0);
@@ -46,7 +45,6 @@ int barbed_enter_check() {
 
 	// make sure it doesn't break if there are no cards to discard (a bit redundant given discard tests)
 	addStable(0, barbed_tmp);
-	toggleFlags(0, barbed_tmp.effect);
 
 	assert(discardpile.size == 0);
 	assert(player[0].hand.num_cards == 0);
@@ -92,7 +90,6 @@ int barbed_exit_check() {
 
 	addStable(0, barbed_tmp);
 	addStable(0, ginormous_tmp);
-	toggleFlags(0, barbed_tmp.effect);
 	player[0].hand.cards[player[0].hand.num_cards++] = basic_tmp;
 
 	assert(discardpile.size == 0);
@@ -131,7 +128,6 @@ int barbed_exit_check() {
 	// make sure it doesn't break if there are no cards to discard (a bit redundant given discard tests)
 	addStable(0, barbed_tmp);
 	addStable(0, ginormous_tmp);
-	toggleFlags(0, barbed_tmp.effect);
 
 	assert(discardpile.size == 0);
 	assert(player[0].hand.num_cards == 0);
@@ -181,8 +177,6 @@ int barbed_pandamonium_check() {
 	// entering the stable
 	addStable(0, barbed_tmp);
 	addStable(0, panda_tmp);
-	toggleFlags(0, barbed_tmp.effect);
-	toggleFlags(0, panda_tmp.effect);
 	player[0].hand.cards[player[0].hand.num_cards++] = basic_tmp;
 
 	assert(discardpile.size == 0);
@@ -224,8 +218,6 @@ int barbed_pandamonium_check() {
 	addStable(0, barbed_tmp);
 	addStable(0, panda_tmp);
 	addStable(0, ginormous_tmp);
-	toggleFlags(0, barbed_tmp.effect);
-	toggleFlags(0, panda_tmp.effect);
 
 	assert(discardpile.size == 0);
 	assert(player[0].hand.num_cards == 0);

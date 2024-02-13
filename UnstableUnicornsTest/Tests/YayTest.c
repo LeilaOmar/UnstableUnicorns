@@ -7,7 +7,6 @@ int yay_basic_check() {
 
 	addStable(0, yay_tmp);
 
-	toggleFlags(0, yay_tmp.effect);
 	assert(player[0].flags == yay);
 
 	if (canBeNeighed(0)) {
