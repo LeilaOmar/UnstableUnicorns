@@ -6,7 +6,6 @@ int slowdown_basic_check() {
 	struct Unicorn slowdown_tmp = basedeck[109];
 
 	addStable(0, slowdown_tmp);
-	toggleFlags(0, slowdown_tmp.effect);
 	assert(player[0].flags == slowdown);
 
 	if (canNeighOthers(0)) {

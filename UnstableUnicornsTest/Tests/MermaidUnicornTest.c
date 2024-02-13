@@ -9,7 +9,6 @@ int mermaid_basic_check() {
 	current_players = 2;
 	addStable(1, mermaid_tmp);
 	addStable(0, yay_tmp);
-	toggleFlags(0, yay_tmp.effect);
 
 	assert(player[0].stable.size == 1);
 	assert(player[0].hand.num_cards == 0);

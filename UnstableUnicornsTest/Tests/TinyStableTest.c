@@ -15,7 +15,6 @@ int tiny_stable_basic_check() {
 	addStable(0, basic_tmp);
 	addStable(0, basic_tmp);
 	addStable(0, tiny_tmp);
-	toggleFlags(0, tiny_tmp.effect);
 
 	assert(discardpile.size == 0);
 	assert(player[0].stable.size == 6);
@@ -48,7 +47,6 @@ int tiny_stable_basic_check() {
 	addStable(0, basic_tmp);
 	addStable(0, basic_tmp);
 	addStable(0, tiny_tmp);
-	toggleFlags(0, tiny_tmp.effect);
 
 	assert(discardpile.size == 0);
 	assert(player[0].stable.size == 6);
@@ -92,7 +90,6 @@ int tiny_stable_puppicorn_check() {
 	addStable(0, basic_tmp);
 	addStable(0, basic_tmp);
 	addStable(0, tiny_tmp);
-	toggleFlags(0, tiny_tmp.effect);
 
 	assert(discardpile.size == 0);
 	assert(player[0].stable.size == 6);
@@ -137,8 +134,6 @@ int tiny_stable_pandamonium_check() {
 	addStable(0, basic_tmp);
 	addStable(0, basic_tmp);
 	addStable(0, basic_tmp);
-	toggleFlags(0, tiny_tmp.effect);
-	toggleFlags(0, panda_tmp.effect);
 
 	assert(discardpile.size == 0);
 	assert(player[0].stable.size == 7);

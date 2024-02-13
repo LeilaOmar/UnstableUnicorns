@@ -79,7 +79,6 @@ int glitter_tornado_special_check() {
 	current_players = 2;
 	addStable(0, yay_tmp);
 	addStable(1, ginormous_tmp);
-	toggleFlags(0, yay_tmp.effect);
 	player[0].hand.cards[player[0].hand.num_cards++] = tornado_tmp;
 
 	assert((player[0].flags & yay) == yay);

@@ -101,7 +101,6 @@ int destructive_pandamonium_check() {
 	current_players = 2;
 	addStable(0, panda_tmp);
 	addStable(1, basic_tmp);
-	toggleFlags(0, panda_tmp.effect);
 
 	assert(player[0].stable.size == 1);
 	assert(player[1].stable.size == 1);

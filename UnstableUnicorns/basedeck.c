@@ -1052,42 +1052,12 @@ void enterStableEffects(int pnum, int effect) {
   int isvalid = 0, isvalid2 = 0;
 
   // Blinding Light makes it so that all unicorn cards have no effects
-  // 
-  // TODO: should probably just move these three to the toggle flags function, and
-  // then always put toggle flags after enter stable effects/add stable
-  if ((player[pnum].flags & blinding_light) != 0 &&
-      effect != queen_bee_unicorn_effect &&
-      effect != ginormous_unicorn_effect &&
-      effect != black_knight_unicorn_effect)
+  if ((player[pnum].flags & blinding_light) != 0)
     return;
 
   switch (effect) {
   case NOTHING:
     break;
-  case black_knight_unicorn_effect:
-  {
-    // Playing Black Knight Unicorn
-    // if a unicorn card in your stable would be destroyed, you may
-    // SACRIFICE this card instead
-    player[pnum].flags |= 1024;
-    break;
-  }
-  case ginormous_unicorn_effect:
-  {
-    // Playing Ginormous Unicorn:
-    // this card counts for 2 unicorns. you cannot play any instant cards
-    player[pnum].flags |= 64;
-    break;
-  }
-  case queen_bee_unicorn_effect:
-  {
-    // Playing Queen Bee Unicorn:
-    // basic unicorn cards cannot enter any player's stable except yours
-    for (int i = 0; i < current_players; i++) {
-      if (i != pnum) player[i].flags |= 32;
-    }
-    break;
-  }
   case alluring_narwhal:
   {
     // Playing Alluring Narwhal:
@@ -1257,8 +1227,6 @@ void enterStableEffects(int pnum, int effect) {
     // Playing Extremely Destructive Unicorn:
     // each player must SACRIFICE 1 unicorn card
 
-    // TODO: if there end up being too many isclient vs server checks, then maybe
-    // it's worth using vtables and sending their respective lookup table references?
     if (isclient) {
       sendInt(sacrifice_event, sockfd);
       // (target_pnum = ANY) represents all players
@@ -1688,10 +1656,10 @@ void magicEffects(int pnum, int effect) {
     } while (index3 < 0 || index3 >= current_players || index3 == index || end != (buf + strlen(buf)));
 
     // add the card to the new stable, alongside any potential toggle switch
-    addStable(index3, player[index].stable.unicorns[index2]);
-    toggleFlags(index3, player[index3].stable.unicorns[player[index3].stable.size - 1].effect);
+    struct Unicorn corn = player[index].stable.unicorns[index2];
 
     rearrangeStable(index, index2);
+    addStable(index3, corn);
     break;
   }
   case reset_button:
@@ -2263,14 +2231,6 @@ void beginningTurnEffects(int pnum, struct Unicorn corn) {
     // Playing Unicorn Lasso:
     // you may steal a unicorn card, and then return the unicorn card
     // at the end of your turn
-
-    // TODO: technically speaking, if the stealing player has pandamonium,
-    // then they do not have to return the unicorn because it's now a "panda"
-    // instead
-    //
-    // but then you could also argue that the second conditional is impossible,
-    // so you can't play unicorn lasso. most people seem to think stealing
-    // under a masquerade effect is fair game though
 
     // check if there are unicorn cards to steal
     for (int i = 0; i < current_players; i++) {

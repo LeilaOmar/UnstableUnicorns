@@ -196,7 +196,6 @@ int unicorn_swap_masquerade_check() {
 	addStable(0, basic_tmp);
 	addStable(1, basic_tmp2);
 	addStable(0, panda_tmp);
-	toggleFlags(0, panda_tmp.effect);
 	player[0].hand.cards[player[0].hand.num_cards++] = swap_tmp;
 
 	int ret;
@@ -219,7 +218,6 @@ int unicorn_swap_masquerade_check() {
 	addStable(0, basic_tmp);
 	addStable(1, basic_tmp2);
 	addStable(1, panda_tmp);
-	toggleFlags(1, panda_tmp.effect);
 	player[0].hand.cards[player[0].hand.num_cards++] = swap_tmp;
 
 	assert(discardpile.size == 0);

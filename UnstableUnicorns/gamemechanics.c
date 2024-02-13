@@ -322,7 +322,6 @@ void addNursery(struct Unicorn corn) {
   if (nursery.size == NURSERY_SIZE) {
     // the nursery is already full, so some cards must've been duplicated for this to happen?
     // the cardid check already takes place before this function
-    // TODO: should maybe return an integer upon failure in the rare instance that it happens...
     return;
   }
   nursery.cards[nursery.size] = corn;
@@ -353,10 +352,11 @@ void addStable(int pnum, struct Unicorn corn) {
     }
   }
 
-  // enter stable effects if applicable; notably not the same as toggleflags
+  // trigger the enter stable effects and apply any flag changes
   // this goes before the tiny stable trigger just to allow for unique card synergies
   // (e.g. tiny stable + flying unicorn cards that return to your hand
   enterStableEffects(pnum, corn.effect);
+  toggleFlags(pnum, corn.effect);
 
   // sacrifice unicorns if there are more than 5 with Tiny Stable
   if ((player[pnum].flags & tiny_stable) != 0 && (player[pnum].flags & pandamonium) == 0) {
@@ -623,7 +623,7 @@ int sacrifice(int pnum, int cType) {
 // treat ANYUNICORN as all unicorns when checking cType for Unicorn cards
 void destroy(int pnum, int cType, int isMagicCard) {
   int pindex, cindex, isvalid = 0;
-  char ans, * end, buf[LINE_MAX], buf2[LINE_MAX];
+  char *end, buf[LINE_MAX];
 
   printPlayers();
   do {
@@ -800,7 +800,6 @@ void playCard(int pnum) {
   case DOWNGRADE:
   {
     // assign card to the chosen stable (target_pindex)
-    toggleFlags(target_pindex, corn.effect);
     addStable(target_pindex, corn);
     break;
   }

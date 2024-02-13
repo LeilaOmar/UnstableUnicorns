@@ -38,8 +38,6 @@ void rearrangePile(struct Deck* d, int index);
 void rearrangeHand(int pnum, int index);
 
 // shuffles the indexed card out of the stable's range
-// OPTIMIZE: put toggleFlags here instead of writing it out a few times like
-// when cards are stolen or returned to someone's hand?
 void rearrangeStable(int pnum, int index);
 
 // searching through the deck or discard pile for a specific card

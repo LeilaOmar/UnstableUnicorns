@@ -12,7 +12,6 @@ int blinding_beginning_turn_check() {
 	int tmp_size = nursery.size;
 	addStable(0, blinding_tmp);
 	addStable(0, fertile_tmp);
-	toggleFlags(0, blinding_tmp.effect);
 
 	assert(discardpile.size == 0);
 	assert(player[0].hand.num_cards == 1);
@@ -56,7 +55,6 @@ int blinding_beginning_turn_check() {
 	// test w/ non-unicorn card
 	addStable(0, dutch_tmp);
 	addStable(0, blinding_tmp);
-	toggleFlags(0, blinding_tmp.effect);
 	assert(player[0].flags == blinding_light);
 
 	beginningTurnEffects(0, dutch_tmp);
@@ -76,20 +74,20 @@ int blinding_beginning_turn_check() {
 int blinding_enter_stable_check() {
 	int num_fails = 0;
 	struct Unicorn blinding_tmp = basedeck[112];
-	struct Unicorn llama_tmp = basedeck[46];
+	struct Unicorn classy_tmp = basedeck[65];
 	struct Unicorn tail_tmp = basedeck[95];
 
 	// test w/ unicorn card
 	draw(0, 1);
 	addStable(0, blinding_tmp);
-	toggleFlags(0, blinding_tmp.effect);
 
+	int tmp_size = deck.size;
 	assert(discardpile.size == 0);
 	assert(player[0].hand.num_cards == 1);
 	assert(player[0].flags == blinding_light);
 
-	// can't discard cards
-	enterStableEffects(0, llama_tmp.effect);
+	// can't pick an upgrade card from the deck
+	enterStableEffects(0, classy_tmp.effect);
 
 	if (player[0].hand.num_cards != 1) {
 		num_fails++;
@@ -98,10 +96,10 @@ int blinding_enter_stable_check() {
 		reset_col();
 	}
 
-	if (discardpile.size != 0) {
+	if (deck.size != tmp_size) {
 		num_fails++;
 		red();
-		fprintf(stderr, "    enter stable (unicorn) test: discard size failed\n");
+		fprintf(stderr, "    enter stable (unicorn) test: deck size failed\n");
 		reset_col();
 	}
 
@@ -111,7 +109,6 @@ int blinding_enter_stable_check() {
 
 	// test w/ non-unicorn card; tail still can't enter
 	addStable(0, blinding_tmp);
-	toggleFlags(0, blinding_tmp.effect);
 	player[0].hand.cards[player[0].hand.num_cards++] = tail_tmp;
 
 	int ret;
@@ -138,7 +135,6 @@ int blinding_sacrifice_destroy_check() {
 
 	addStable(0, majestic_tmp);
 	addStable(0, blinding_tmp);
-	toggleFlags(0, blinding_tmp.effect);
 
 	assert(discardpile.size == 0);
 	assert(player[0].hand.num_cards == 0);
@@ -182,8 +178,6 @@ int blinding_pandamonium_check() {
 
 	addStable(0, blinding_tmp);
 	addStable(0, panda_tmp);
-	toggleFlags(0, blinding_tmp.effect);
-	toggleFlags(0, panda_tmp.effect);
 
 	draw(0, 1);
 	int tmp_size_deck = deck.size;
@@ -222,8 +216,6 @@ int blinding_pandamonium_check() {
 	addStable(0, blinding_tmp);
 	addStable(0, fertile_tmp);
 	addStable(0, panda_tmp);
-	toggleFlags(0, blinding_tmp.effect);
-	toggleFlags(0, panda_tmp.effect);
 
 	assert(discardpile.size == 0);
 	assert(player[0].hand.num_cards == 1);
@@ -272,8 +264,6 @@ int blinding_pandamonium_check() {
 	addStable(0, majestic_tmp);
 	addStable(0, blinding_tmp);
 	addStable(0, panda_tmp);
-	toggleFlags(0, blinding_tmp.effect);
-	toggleFlags(0, panda_tmp.effect);
 
 	assert(discardpile.size == 0);
 	assert(player[0].hand.num_cards == 0);
@@ -323,12 +313,10 @@ int blinding_ginormous_check() {
 	addStable(0, basic_tmp);
 	addStable(0, basic_tmp);
 	addStable(0, basic_tmp);
-	toggleFlags(0, blinding_tmp.effect);
 
 	assert((player[0].flags & blinding_light) == blinding_light);
 
 	addStable(0, ginormous_tmp);
-	enterStableEffects(0, ginormous_tmp.effect);
 
 	assert(discardpile.size == 0);
 	assert(player[0].stable.num_unicorns == 6);

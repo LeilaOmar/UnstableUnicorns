@@ -9,9 +9,9 @@ struct Deck deck;
 struct Deck nursery;
 struct Deck discardpile;
 struct Player player[MAX_PLAYERS];
-int current_players = 0; // TODO: change to unsigned someday.. there are too many comparisons to type cast
-int turn_count = 0;      // number of moves during the action phase
-int WIN_CONDITION = 7; // usually 7, but can be 6 with 6-8 players
+int current_players = 0;
+int turn_count = 0;     // number of moves during the action phase
+int WIN_CONDITION = 7;  // usually 7, but can be 6 with 6-8 players
 
 unsigned char deck_flag = 0;    // toggles whether deck is printed out or not
 unsigned char discard_flag = 0;

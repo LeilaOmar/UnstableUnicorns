@@ -6,7 +6,6 @@ int nanny_cam_basic_check() {
 	struct Unicorn nanny_tmp = basedeck[110];
 
 	addStable(0, nanny_tmp);
-	toggleFlags(0, nanny_tmp.effect);
 
 	// a proper test would have to check against stdout during the beginning of turn phase
 	// this just checks if the flag works LOL

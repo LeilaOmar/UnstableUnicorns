@@ -12,7 +12,6 @@ int rainbow_aura_basic_check() {
 	player[1].hand.cards[player[1].hand.num_cards++] = poison_tmp;
 	addStable(0, rainaura_tmp);
 	addStable(0, basic_tmp);
-	toggleFlags(0, rainaura_tmp.effect);
 
 	// try destroying it with unicorn poison
 	int ret;
@@ -44,16 +43,15 @@ int rainbow_aura_basic_check() {
 int rainbow_aura_non_unicorn_check() {
 	int num_fails = 0;
 	struct Unicorn rainaura_tmp = basedeck[103];
-	struct Unicorn panda_tmp = basedeck[107];
+	struct Unicorn yay_tmp = basedeck[100];
 	struct Unicorn bomb_tmp = basedeck[98];
 
 	current_players = 2;
 	addStable(0, rainaura_tmp);
-	addStable(0, panda_tmp);
+	addStable(0, yay_tmp);
 	addStable(1, bomb_tmp);
-	toggleFlags(0, rainaura_tmp.effect);
 	assert(player[0].stable.size == 2);
-	assert(player[0].flags == rainbow_aura);
+	assert((player[0].flags & rainbow_aura) == rainbow_aura);
 
 	// first just check canBeDestroyed; card referenced is player[0][1]
 	if (!canBeDestroyed(0, 1, ANY, FALSE)) {
@@ -78,7 +76,7 @@ int rainbow_aura_non_unicorn_check() {
 
 	if (discardpile.size != 2 ||
 			strcmp(discardpile.cards[0].name, bomb_tmp.name) != 0 ||
-			strcmp(discardpile.cards[1].name, panda_tmp.name) != 0) {
+			strcmp(discardpile.cards[1].name, yay_tmp.name) != 0) {
 		num_fails++;
 		red();
 		fprintf(stderr, "    non-unicorn test: discard pile verification failed\n");
@@ -102,8 +100,6 @@ int rainbow_aura_pandamonium_check() {
 	addStable(1, panda_tmp);
 	addStable(1, basic_tmp);
 	addStable(0, bomb_tmp);
-	toggleFlags(1, rainaura_tmp.effect);
-	toggleFlags(1, panda_tmp.effect);
 	assert(player[1].stable.size == 3);
 	assert((player[1].flags & rainbow_aura) == rainbow_aura);
 	assert((player[1].flags & pandamonium) == pandamonium);

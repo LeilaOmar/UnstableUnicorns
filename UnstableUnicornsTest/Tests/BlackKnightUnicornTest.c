@@ -51,7 +51,7 @@ int black_knight_empty_check() {
 	addStable(0, yay_tmp);
 
 	assert(discardpile.size == 0);
-	assert(player[0].flags == black_knight_unicorn);
+	assert((player[0].flags & black_knight_unicorn) == black_knight_unicorn);
 
 	sacrificeDestroyEffects(0, 1, knight_tmp.effect);
 
@@ -80,7 +80,6 @@ int black_knight_pandamonium_check() {
 	addStable(0, basic_tmp);
 	addStable(0, panda_tmp);
 	addStable(0, knight_tmp);
-	toggleFlags(0, panda_tmp.effect);
 
 	assert(discardpile.size == 0);
 	assert((player[0].flags & pandamonium) == pandamonium);
@@ -113,7 +112,6 @@ int black_knight_blinding_light_check() {
 	addStable(0, basic_tmp);
 	addStable(0, blinding_tmp);
 	addStable(0, knight_tmp);
-	toggleFlags(0, blinding_tmp.effect);
 
 	assert(discardpile.size == 0);
 	assert((player[0].flags & blinding_light) == blinding_light);
