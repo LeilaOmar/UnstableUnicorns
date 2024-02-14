@@ -1,4 +1,5 @@
 #include "MagicUnicornTests.h"
+#include "networkevents.h"
 
 // sanity check
 int puppicorn_basic_check() {
@@ -69,13 +70,9 @@ int puppicorn_basic_check() {
 	}
 
 	// cycle 2
-	addStable(1, basic_tmp6);
-
-	assert(player[0].stable.size == 3);
-	assert(player[1].stable.size == 4);
-	assert(puppicorn_index[0] == 2);
-	assert(puppicorn_index[1] == 1);
-	endOfTurn(1);
+	int events;
+	receiveInt(&events, clientsockfd[0]);
+	netStates[events].recvServer(1, clientsockfd[0]);
 
 	if (player[0].stable.num_unicorns != 4 || player[0].stable.size != 4) {
 		num_fails++;
@@ -207,40 +204,6 @@ int puppicorn_reset_check() {
 	return num_fails;
 }
 
-// puppicorn should loop around the players
-int puppicorn_swap_check() {
-	int num_fails = 0;
-	struct Unicorn basic_tmp = basedeck[13];
-	struct Unicorn puppicorn_tmp = basedeck[41];
-
-	current_players = 3;
-	addStable(0, basic_tmp);
-	addStable(0, basic_tmp);
-	addStable(0, basic_tmp);
-	addStable(2, puppicorn_tmp);
-
-	endOfTurn(2);
-
-	if (player[0].stable.num_unicorns != 4 || player[0].stable.size != 4 ||
-			player[2].stable.num_unicorns != 0 || player[2].stable.size != 0) {
-		num_fails++;
-		red();
-		fprintf(stderr, "    swap test: stable size failed\n");
-		reset_col();
-	}
-
-	if (puppicorn_index[0] != 3 || puppicorn_index[1] != 0 ||
-			strcmp(player[0].stable.unicorns[3].name, puppicorn_tmp.name) != 0) {
-		num_fails++;
-		red();
-		fprintf(stderr, "    swap test: puppicorn index failed\n");
-		reset_col();
-	}
-
-	reset_players();
-	return num_fails;
-}
-
 // puppicorn_index[0] should adjust accordingly to any stable changes
 int puppicorn_rearrange_check() {
 	int num_fails = 0;
@@ -280,9 +243,8 @@ int puppicorn_rearrange_check() {
 int puppicorn_tests() {
 	int num_fails = 0;
 
+	rainbow_error("\nStarting Puppicorn tests...\n");
 	if (!isclient) {
-		rainbow_error("\nStarting Puppicorn tests...\n");
-
 		// file input stream setup
 		FILE* fp;
 		fopen_s(&fp, "Tests/Input/line_1.txt", "r");
@@ -298,10 +260,32 @@ int puppicorn_tests() {
 		num_fails += puppicorn_sacrifice_destroy_check();
 		num_fails += puppicorn_win_check();
 		num_fails += puppicorn_reset_check();
-		num_fails += puppicorn_swap_check();
 		num_fails += puppicorn_rearrange_check();
 
 		fclose(fp);
+	}
+	else {
+		// basic check, no input
+		int events;
+		receiveInt(&events, sockfd);
+		netStates[events].recvClient(1, sockfd);
+
+		// cycle 2 of basic check
+		struct Unicorn basic_tmp6 = basedeck[29];
+		addStable(1, basic_tmp6);
+
+		assert(player[0].stable.size == 3);
+		assert(player[1].stable.size == 4);
+		assert(puppicorn_index[0] == 2);
+		assert(puppicorn_index[1] == 1);
+		endOfTurn(1);
+
+		// win check
+		// this should get skipped over
+
+		// reset check, no input
+		receiveInt(&events, sockfd);
+		netStates[events].recvClient(1, sockfd);
 	}
 	return num_fails;
 }

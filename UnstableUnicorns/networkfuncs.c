@@ -66,7 +66,7 @@ int sendInt(int num, int fd) {
 
   do {
     rc = send(fd, data, count, 0);
-    if (rc >= 0) {
+    if (rc > 0) {
       data += rc;
       count -= rc;
     }
@@ -128,7 +128,7 @@ int sendPlayers(int fd) {
   offset = 0;
   do {
     rc = send(fd, data + offset, count, 0);
-    if (rc >= 0) {
+    if (rc > 0) {
       offset += rc;
       count -= rc;
     }
@@ -160,7 +160,7 @@ int receivePlayers(int fd) {
   receiveInt(&count, fd);
   while (count > 0) {
     rc = recv(fd, data + offset, count, 0);
-    if (rc >= 0) {
+    if (rc > 0) {
       offset += rc;
       count -= rc;
     }
@@ -207,7 +207,7 @@ int sendUnicorns(struct Unicorn* corns, int size, int fd) {
   offset = 0;
   do {
     rc = send(fd, data + offset, count, 0);
-    if (rc >= 0) {
+    if (rc > 0) {
       offset += rc;
       count -= rc;
     }
@@ -223,7 +223,7 @@ int receiveUnicorns(struct Unicorn* corns, int size, int fd) {
 
   while (count > 0) {
     rc = recv(fd, data + offset, count, 0);
-    if (rc >= 0) {
+    if (rc > 0) {
       offset += rc;
       count -= rc;
     }
@@ -330,7 +330,7 @@ int sendMsg(char* str, int count, int fd) {
   sendInt(count, fd);
   do {
     rc = send(fd, str, count, 0);
-    if (rc >= 0) {
+    if (rc > 0) {
       str += rc;
       count -= rc;
     }
@@ -348,7 +348,7 @@ int receiveMsg(char* str, int fd) {
 
   while (count > 0) {
     rc = recv(fd, str + offset, count, 0);
-    if (rc >= 0) {
+    if (rc > 0) {
       offset += rc;
       count -= rc;
     }
