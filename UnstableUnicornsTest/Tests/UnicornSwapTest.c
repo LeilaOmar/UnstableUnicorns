@@ -479,12 +479,6 @@ int unicorn_swap_tests() {
 		// puppicorn check
 		receiveInt(&events, sockfd);
 		netStates[events].recvClient(1, sockfd);
-
-		// TODO: unicorn swap & some destroy event like extremely destructive unicorn
-		// TODO: unicorn swap & checking endGame triggers [would have to use mock functions so that the exe doesn't shut down early]
-		//	 -   1) after the other player adds the swapped unicorn to their stable (before the original person steals it)
-		//	 - 1.5) after some enter stable event that increases their unicorn count (e.g. chainsaw unicorn sacrificing pandamonium)
-		//	 -   2) puppicorn schenanigans (swap it to the person that comes before you so that you start with 7 unicorns at the start of the next turn
 	}
 
 	fclose(fp);

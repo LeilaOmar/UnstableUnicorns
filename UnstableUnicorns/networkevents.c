@@ -870,9 +870,6 @@ void clientEnterLeaveStable(int clientpnum) {
 
 // idle function that handles nested network events;
 // this works for both enter stable effects and unicorn sacrificeDestroy effects
-// 
-// TODO: check if the target player wins the game inadvertently through
-// an enter stable effect sacrificing masquerade cards
 void serverEnterLeaveStable(int orig_pnum, int target_pnum) {
   // can always assume that target_pnum is a separate player from the host (or else this function wouldn't be called);
   // orig_pnum can either be the host or a player that's different from target_pnum
