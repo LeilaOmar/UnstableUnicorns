@@ -290,7 +290,6 @@ int serverMain(void) {
   puts("Waiting for other players to pick their Baby Unicorn...");
   reset_col();
 
-  // TODO: watch out for EWOULDBLOCK; this works on my local machine, but what about online?
   for (int i = 1; i < current_players; i++) {
     sendInt(current_players, clientsockfd[i - 1]);
     sendPlayers(clientsockfd[i - 1]);

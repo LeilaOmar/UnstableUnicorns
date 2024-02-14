@@ -1,4 +1,5 @@
 #include "DowngradeTests.h"
+#include "networkevents.h"
 
 // sanity test
 int tiny_stable_basic_check() {
@@ -168,9 +169,8 @@ int tiny_stable_pandamonium_check() {
 int tiny_stable_tests() {
 	int num_fails = 0;
 
+	rainbow_error("\nStarting Tiny Stable tests...\n");
 	if (!isclient) {
-		rainbow_error("\nStarting Tiny Stable tests...\n");
-
 		// file input stream setup
 		FILE* fp;
 		fopen_s(&fp, "Tests/Input/line_1_1.txt", "r");
@@ -187,6 +187,12 @@ int tiny_stable_tests() {
 		num_fails += tiny_stable_pandamonium_check();
 
 		fclose(fp);
+	}
+	else {
+		// puppicorn check, no input
+		int events;
+		receiveInt(&events, sockfd);
+		netStates[events].recvClient(1, sockfd);
 	}
 	return num_fails;
 }

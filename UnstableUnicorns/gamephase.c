@@ -86,26 +86,7 @@ int endOfTurn(int pnum) {
   printHand(pnum);
   printStable(pnum);
 
-  // cycle between players; count after checking number of unicorns
-  // maybe just check if the number is >= 7 every time a card enters your
-  // stable; ginormous unicorn counts for 2 unless blinding light is in effect
-  // pandamonium means you have 7+ pandas, not unicorns
-  // TODO: player won with this stable??? only 6 unicorns; tested it in a different
-  // game and rainbow mane bringing in cards did not make the game end prematurely
-  // so maybe there is some kind of issue with accidentally using the wrong effect
-  // that would trigger the ginormous unicorn flag?
-  //  1. Baby Unicorn(Rainbow) [ID:10]
-  //  2. Basic Unicorn(Green) [ID:23]
-  //  3. Basic Unicorn(Purple) [ID:32]
-  //  4. Rainbow Mane [ID:94]
-  //  5. Basic Unicorn(Blue) [ID:26]
-  //  6. Alluring Narwhal [ID:63]
-  //  7. Black Knight Unicorn [ID:59]
-  // future me: this could have been triggered from a multitude of things LOL, but
-  // maybe shark with a horn triggered it because it never decreased the number of unicorns
-  // in the stable...
-  // another possibility is that blinding light skipped the ginormous unicorn toggle, and
-  // when the unicorn got removed, it mistakenly toggled the flag true instead of false
+  // check if the player has enough unicorns (notably not pandas) to win the game
   if (checkWin(pnum))
     return 1;
 
@@ -140,19 +121,37 @@ int endOfTurn(int pnum) {
   }
 
   // puppicorn swap; pnum isn't always equal to the current puppicorn_index[1]
-  int tmp_cindex = puppicorn_index[0]; // this gets changed in addStable
-  int tmp_pindex = puppicorn_index[1];
-  if (tmp_cindex != -1) {
-    
-    if (tmp_pindex == current_players - 1) {
-      addStable(0, player[tmp_pindex].stable.unicorns[tmp_cindex]);
+  if (puppicorn_index[0] != -1) {
+    int old_cindex = puppicorn_index[0]; // this gets changed in addStable
+    int old_pindex = puppicorn_index[1];
+    int next_pnum;
+    struct Unicorn corn = player[old_pindex].stable.unicorns[old_cindex];
+    rearrangeStable(old_pindex, old_cindex);
+
+    if (old_pindex == current_players - 1) {
+      next_pnum = 0;
     }
     else {
-      // puppicorn should be removed first before adding it to the stable
-      addStable(tmp_pindex + 1, player[tmp_pindex].stable.unicorns[tmp_cindex]);
+      next_pnum = old_pindex + 1;
     }
-    
-    rearrangeStable(tmp_pindex, tmp_cindex);
+
+    // send a notice to add a card to the person's stable outside of their normal turn;
+    // just doing addStable for them ignores effects like "Tiny Stable" or "Barbed Wire" where
+    // they have to perform some action
+    if (isclient) {
+      sendInt(enter_stable_event, sockfd);
+      sendEnterStablePacket(corn, next_pnum, sockfd); // index = target player index
+
+      // need to look out for nested network events
+      clientEnterLeaveStable(pnum);
+    }
+    else {
+      sendInt(enter_stable_event, clientsockfd[next_pnum - 1]);
+      sendEnterStablePacket(corn, pnum, clientsockfd[next_pnum - 1]); // pnum = original player index
+
+      // need to look out for nested network events
+      serverEnterLeaveStable(pnum, next_pnum);
+    }
   }
 
   return 0;
