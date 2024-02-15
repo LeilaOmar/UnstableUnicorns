@@ -30,6 +30,10 @@ int receivePlayers(int fd);
 int sendUnicorns(struct Unicorn* corns, int size, int fd);
 int receiveUnicorns(struct Unicorn* corns, int size, int fd);
 
+// sends the lobby code, baby unicorn toggles, and player usernames
+int sendLobbyPacket(int num_players, int clientpnum, int fd);
+int receiveLobbyPacket(int* num_players, int* clientpnum, int fd);
+
 // sends deck, nursery, discard pile, and player info
 int sendGamePacket(int fd);
 int receiveGamePacket(int fd);

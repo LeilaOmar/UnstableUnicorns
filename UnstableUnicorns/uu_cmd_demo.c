@@ -241,15 +241,6 @@ int WINAPI WinMain(
     return 1;
   }
 
-  // if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == INVALID_SOCKET) {
-  //   MessageBoxA(NULL,
-  //     _T("Could not create socket : %d", WSAGetLastError()),
-  //     _T("Server Set-up"),
-  //     NULL);
-  //   WSACleanup();
-  //   return 1;
-  // }
-
   // Main message loop:
   MSG msg;
   POINT pnt;
@@ -289,12 +280,7 @@ int WINAPI WinMain(
   return (int)msg.wParam;
 }
 
-int mainlet(int argc, char* argv[]) {
-  for (int i = 0; i < argc; i++) {
-    if (strcmp(argv[i], "deck") == 0) deck_flag = 1;
-    if (strcmp(argv[i], "discard") == 0) discard_flag = 1;
-    if (strcmp(argv[i], "nursery") == 0) nursery_flag = 1;
-  }
+int mainlet(void) {
 
   // register the termination function
   atexit(cleanup);

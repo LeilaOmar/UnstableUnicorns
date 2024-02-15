@@ -22,6 +22,7 @@ extern enum GameState menustate;
 extern char partymems[PARTYSTRSIZE];
 extern HWND webhwnd;
 extern BOOL babytoggle[13];
+extern int babymap[MAX_PLAYERS];
 extern RECT pselect[MAX_PLAYERS];
 extern unsigned char networktoggle; // 00000000 nothing
 																		// 00000001 closesocket
