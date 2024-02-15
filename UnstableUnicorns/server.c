@@ -2,12 +2,13 @@
 #include "gamemechanics.h"
 #include "gamephase.h"
 #include "windowsapp.h"
-#include <conio.h>
-#include <windows.h>
+
+#define ERRORBUF 256
 
 int newConnection(SOCKET *cfd) {
   struct sockaddr_in client_addr;
   socklen_t client_addr_size = sizeof(client_addr);
+  char errormsg[ERRORBUF];
 
   if ((cfd[current_players - 1] = accept(sockfd, (struct sockaddr*)&client_addr, &client_addr_size)) == INVALID_SOCKET) {
     sprintf_s(errormsg, ERRORBUF, "Accept failed with error code : %d", WSAGetLastError());
@@ -19,6 +20,10 @@ int newConnection(SOCKET *cfd) {
   }
 
   return 0;
+}
+
+void initGame(void) {
+  return;
 }
 
 int serverMain(void) {
@@ -473,7 +478,7 @@ int serverInit(short portno) {
   // ******************** Poll Set-up ********************
   // *****************************************************
 
-  SOCKET clientsockfd[MAX_PLAYERS - 1];
+  // SOCKET clientsockfd[MAX_PLAYERS - 1];
 
   // server should be in non-blocking mode
   unsigned long on = 1;
@@ -496,7 +501,7 @@ int serverInit(short portno) {
 
   for (;;) {
     // timeout after 150 seconds
-    ret = WSAPoll(pfd, MAX_PLAYERS, -1);
+    ret = WSAPoll(pfd, MAX_PLAYERS + 1, -1);
     if (ret == SOCKET_ERROR) {
       sprintf_s(errormsg, ERRORBUF, "ERROR: poll() failed. Error code : %d", WSAGetLastError());
       MessageBoxA(NULL,
@@ -601,7 +606,7 @@ int serverInit(short portno) {
         // on whether or not the specific unicorn was selected, so it shouldn't be shifted over and once
         // this player leaves, it should go back to 0
         closesocket(clientsockfd[i]);
-        babytoggle[player[i + 1].stable.unicorns[0]] = 0;
+        babytoggle[babymap[i + 1]] = 0;
         current_players--;
 
         // shift all data from client[i] (i.e. player[i + 1]) onwards down a step to replace the disconnected client

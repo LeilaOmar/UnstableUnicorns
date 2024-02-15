@@ -3,6 +3,12 @@
 #include "gamemechanics.h"
 #include "windowsapp.h"
 
+#define BUF_HTTP 256
+
+// ********************************************************************************
+// ****************************** Lobby Code Hashing ******************************
+// ********************************************************************************
+
 // hash functions for scrambling IP addresses
 // https://stackoverflow.com/questions/664014/what-integer-hash-function-are-good-that-accepts-an-integer-hash-key
 unsigned int hash(unsigned int x) {
@@ -26,7 +32,7 @@ void getIPreq(char* ip_address) {
   struct addrinfo hints;
   struct addrinfo* result = NULL;
   int sd, err;
-  char buffer[BUFSIZE] = { 0 };
+  char buffer[BUF_HTTP] = { 0 };
 
   // api.ipify.org is only for IPv4; api64.ipify.org is both v4 and v6 w/ priority for v6
   // **don't forget to change it in getaddrinfo too if ever**
@@ -70,7 +76,7 @@ void getIPreq(char* ip_address) {
   }
 
   send(sd, httpreq, strlen(httpreq), 0);
-  recv(sd, buffer, BUFSIZE, 0);
+  recv(sd, buffer, BUF_HTTP, 0);
 
   freeaddrinfo(result);
   closesocket(sd);
@@ -79,7 +85,7 @@ void getIPreq(char* ip_address) {
   // this only works because the text is the only output from the site
   // therefore it's the last line and does not have a newline after it
   int index = 0;
-  for (int i = BUFSIZE - 1; i >= 0; i--) {
+  for (int i = BUF_HTTP - 1; i >= 0; i--) {
     if (buffer[i] == '\n') {
       index = i + 1;
       break;
@@ -144,41 +150,9 @@ void HexCodetoIP(char* code, char* dest) {
   sprintf_s(dest, 16, "%d.%d.%d.%d", (tmp & 0xFF000000) >> 24, (tmp & 0x00FF0000) >> 16, (tmp & 0x0000FF00) >> 8, tmp & 0x000000FF);
 }
 
-int sendInt(int num, int fd) {
-  int32_t tmp = htonl(num);
-  int count = sizeof(tmp);
-  char* data = (char*)&tmp;
-  int rc;
-
-  do {
-    rc = send(fd, data, count, 0);
-    if (rc >= 0) {
-      data += rc;
-      count -= rc;
-    }
-  } while (count > 0);
-
-  return 0;
-}
-
-int receiveInt(int* num, int fd) {
-  int32_t ret;
-  int count = sizeof(ret);
-  char* data = (char*)&ret;
-  int rc;
-
-  do {
-    rc = recv(fd, data, count, 0);
-    if (rc > 0) {
-      data += rc;
-      count -= rc;
-    }
-  } while (count > 0);
-
-  *num = ntohl(ret);
-
-  return 0;
-}
+// ********************************************************************************
+// ****************************** Serialize Functions *****************************
+// ********************************************************************************
 
 void serialize_int(unsigned char* buffer, int num) {
   buffer[0] = num >> 24;
@@ -235,6 +209,10 @@ short deserialize_short(unsigned char* buffer) {
 //   num |= buffer[7];
 //   return num;
 // }
+
+// ********************************************************************************
+// *************************** Send/Recv Data Functions ***************************
+// ********************************************************************************
 
 int sendInt(int num, int fd) {
   int32_t tmp = htonl(num);
@@ -426,6 +404,10 @@ int receiveUnicorns(struct Unicorn* corns, int size, int fd) {
   return 0;
 }
 
+// ********************************************************************************
+// ******************************* Packet Functions *******************************
+// ********************************************************************************
+
 // sends the following info, * denotes global variables:
 // 1. number of current players
 // 2. client player number (unique to csockfd)
@@ -470,7 +452,7 @@ int sendLobbyPacket(int num_players, int clientpnum, int fd) {
 // 2. client player number (unique to csockfd)
 // 3. *partymems (i.e. the player username list)
 // 4. *pselect (notes the corner of every player's selected unicorn; 0 means nothing selected)
-int receiveLobbyPacket(int *num_players, int *clientpnum, int fd) {
+int receiveLobbyPacket(int* num_players, int* clientpnum, int fd) {
   int count, rc, offset = 0;
   static char data[512];
   receiveInt(&count, fd);
@@ -502,14 +484,6 @@ int receiveLobbyPacket(int *num_players, int *clientpnum, int fd) {
     (int)pselect[i].top = deserialize_int(data + offset);
     offset += 4;
   }
-
-  return 0;
-}
-
-int sendNurseryInfo(struct nurseryPacket info, int fd) {
-  int32_t tmp_index = htonl(info.index);
-  int32_t tmp_size = htonl(info.size);
-  int count = sizeof(tmp_index) + sizeof(tmp_size) + sizeof(info.ref);
 
   return 0;
 }
@@ -589,6 +563,11 @@ int receiveEnterStablePacket(struct Unicorn* corn, int* pnum, int fd) {
 
   return 0;
 }
+
+
+// ********************************************************************************
+// **************************** Message/Input Functions ***************************
+// ********************************************************************************
 
 int sendMsg(char* str, int count, int fd) {
   int rc;

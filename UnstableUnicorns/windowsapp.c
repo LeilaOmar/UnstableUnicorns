@@ -582,18 +582,18 @@ void DisplayCardWindow(HDC* hdcMem, HDC* hdcSprite) {
     // grouping the unicorns w/ upgrade/downgrade cards in a stable wouldn't fully solve the problem
     int count = 0;
     for (int k = 0; count < player[pnumindex].stable.size && k < (pagenum - 1) * 7; count++) {
-      if (checkClass(ANYUNICORN, deck[player[pnumindex].stable.unicorns[count]].class))
+      if (checkType(ANYUNICORN, player[pnumindex].stable.unicorns[count].cType))
         k++;
     }
     index_start = count;
 
     for (int i = index_start; i < player[pnumindex].stable.size && skip < 7; i++) {
-      if (checkClass(ANYUNICORN, deck[player[pnumindex].stable.unicorns[i]].class)) {
+      if (checkType(ANYUNICORN, player[pnumindex].stable.unicorns[i].cType)) {
         // save the source into cardslots
-        cardslots[skip].source = &deck[player[pnumindex].stable.unicorns[i]];
+        cardslots[skip].source = &player[pnumindex].stable.unicorns[i];
 
         // draw the sprite
-        oldSprite = SelectObject(*hdcSprite, deck[player[pnumindex].stable.unicorns[i]].bitmap);
+        oldSprite = SelectObject(*hdcSprite, player[pnumindex].stable.unicorns[i].bitmap);
         BitBlt(*hdcMem, start.x + (distance * skip), start.y, bm.bmWidth, bm.bmHeight, *hdcSprite, 0, 0, SRCCOPY);
         SelectObject(*hdcSprite, oldSprite);
         skip++;
@@ -614,18 +614,18 @@ void DisplayCardWindow(HDC* hdcMem, HDC* hdcSprite) {
 
     int j = 0;
     for (int count = 0; j < player[pnumindex].stable.size && count < (pagenum - 1) * 7; j++) {
-      if (!checkClass(ANYUNICORN, deck[player[pnumindex].stable.unicorns[j]].class))
+      if (!checkType(ANYUNICORN, player[pnumindex].stable.unicorns[j].cType))
         count++;
     }
     index_start = j;
 
     for (int i = index_start; i < player[pnumindex].stable.size && skip < 7; i++) {
-      if (deck[player[pnumindex].stable.unicorns[i]].class == UPGRADE || deck[player[pnumindex].stable.unicorns[i]].class == DOWNGRADE) {
+      if (player[pnumindex].stable.unicorns[i].cType == UPGRADE || player[pnumindex].stable.unicorns[i].cType == DOWNGRADE) {
         // save the source into cardslots
-        cardslots[skip].source = &deck[player[pnumindex].stable.unicorns[i]];
+        cardslots[skip].source = &player[pnumindex].stable.unicorns[i];
 
         // draw the sprite
-        oldSprite = SelectObject(*hdcSprite, deck[player[pnumindex].stable.unicorns[i]].bitmap);
+        oldSprite = SelectObject(*hdcSprite, player[pnumindex].stable.unicorns[i].bitmap);
         BitBlt(*hdcMem, start.x + (distance * skip), start.y, bm.bmWidth, bm.bmHeight, *hdcSprite, 0, 0, SRCCOPY);
         SelectObject(*hdcSprite, oldSprite);
         skip++;
@@ -645,9 +645,9 @@ void DisplayCardWindow(HDC* hdcMem, HDC* hdcSprite) {
 
     for (int i = index_start; i < player[pnumindex].hand.num_cards && i < index_start + 7; i++) {
       // save the source into cardslots
-      cardslots[skip++].source = &deck[player[pnumindex].hand.cards[i]];
+      cardslots[skip++].source = &player[pnumindex].hand.cards[i];
 
-      oldSprite = SelectObject(*hdcSprite, deck[player[pnumindex].hand.cards[i]].bitmap);
+      oldSprite = SelectObject(*hdcSprite, player[pnumindex].hand.cards[i].bitmap);
       BitBlt(*hdcMem, start.x + (distance * (i % 7)), start.y, bm.bmWidth, bm.bmHeight, *hdcSprite, 0, 0, SRCCOPY);
       SelectObject(*hdcSprite, oldSprite);
     }
@@ -655,14 +655,14 @@ void DisplayCardWindow(HDC* hdcMem, HDC* hdcSprite) {
   }
   case NURSERY_TAB:
   {
-    tabsize = NURSERY_SIZE - nursery_index;
+    tabsize = nursery.size;
     strcpy_s(windowtxt, sizeof windowtxt, "Nursery");
 
-    for (int i = nursery_index + index_start; i < NURSERY_SIZE && i < index_start + 7; i++) {
+    for (int i = index_start; i < NURSERY_SIZE && i < index_start + 7; i++) {
       // save the source into cardslots
-      cardslots[skip++].source = &deck[nursery_ref[i]];
+      cardslots[skip++].source = &nursery.cards[i];
 
-      oldSprite = SelectObject(*hdcSprite, deck[nursery_ref[i]].bitmap);
+      oldSprite = SelectObject(*hdcSprite, nursery.cards[i].bitmap);
       BitBlt(*hdcMem, start.x + (distance * (i % 7)), start.y, bm.bmWidth, bm.bmHeight, *hdcSprite, 0, 0, SRCCOPY);
       SelectObject(*hdcSprite, oldSprite);
     }
@@ -676,15 +676,15 @@ void DisplayCardWindow(HDC* hdcMem, HDC* hdcSprite) {
     }
 
     // TODO: include a check for card effects that allow deck viewing, and then include a check for specific cards
-    tabsize = DECK_SIZE - deck_index;
+    tabsize = deck.size;
     strcpy_s(windowtxt, sizeof windowtxt, "Deck");
 
-    for (int i = deck_index + index_start; i < DECK_SIZE && i < index_start + 7; i++) {
+    for (int i = index_start; i < DECK_SIZE && i < index_start + 7; i++) {
       // save the source into cardslots
-      cardslots[skip++].source = &deck[deck_ref[i]];
+      cardslots[skip++].source = &deck.cards[i];
 
       // oldSprite = SelectObject(*hdcSprite, hBitmapCard[cardmap[deck_ref[i]]]);
-      oldSprite = SelectObject(*hdcSprite, deck[deck_ref[i]].bitmap);
+      oldSprite = SelectObject(*hdcSprite, deck.cards[i].bitmap);
       BitBlt(*hdcMem, start.x + (distance * (i % 7)), start.y, bm.bmWidth, bm.bmHeight, *hdcSprite, 0, 0, SRCCOPY);
       SelectObject(*hdcSprite, oldSprite);
     }
@@ -693,14 +693,14 @@ void DisplayCardWindow(HDC* hdcMem, HDC* hdcSprite) {
   case DISCARD_TAB:
   {
     // TODO: (maybe) include a check for specific cards
-    tabsize = discard_index;
+    tabsize = discardpile.size;
     strcpy_s(windowtxt, sizeof windowtxt, "Discard Pile");
 
-    for (int i = index_start; i < discard_index && i < index_start + 7; i++) {
+    for (int i = index_start; i < discardpile.size && i < index_start + 7; i++) {
       // save the source into cardslots
-      cardslots[skip++].source = &deck[discard_ref[i]];
+      cardslots[skip++].source = &discardpile.cards[i];
 
-      oldSprite = SelectObject(*hdcSprite, deck[discard_ref[i]].bitmap);
+      oldSprite = SelectObject(*hdcSprite, discardpile.cards[i].bitmap);
       BitBlt(*hdcMem, start.x + (distance * (i % 7)), start.y, bm.bmWidth, bm.bmHeight, *hdcSprite, 0, 0, SRCCOPY);
       SelectObject(*hdcSprite, oldSprite);
     }
@@ -754,14 +754,14 @@ struct ToolTip ReturnCardHoverTip(struct Button self) {
   tippy.width   = width;
   tippy.height  = height;
   tippy.ishover = TRUE;
-  tippy.bgcolor = cardColors[corn.class];
+  tippy.bgcolor = cardColors[corn.cType];
 
   // update edge
   if (tippy.x + tippy.width > BWIDTH) {
     tippy.x = BWIDTH - tippy.width - (padding * 2);
   }
 
-  switch (corn.class) {
+  switch (corn.cType) {
   case BABYUNICORN:
     strcpy_s(tippy.subtitle, sizeof tippy.subtitle, "Baby Unicorn card");
     break;
@@ -1036,13 +1036,13 @@ void LoadCards(HWND hWnd) {
   fileHandle = FindFirstFile("Assets\\Cards\\*.bmp", &ffd);
   
   char tmp[128];
-  int decksize = sizeof deck / sizeof deck[0];
+  int decksize = sizeof basedeck / sizeof basedeck[0];
   int index = 0;
 
   snprintf(tmp, sizeof tmp,  "Assets\\Cards\\%s", ffd.cFileName);
-  deck[index].bitmap = (HBITMAP)LoadImage(NULL, tmp,
+  basedeck[index].bitmap = (HBITMAP)LoadImage(NULL, tmp,
     IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-  if (deck[index].bitmap == NULL) {
+  if (basedeck[index].bitmap == NULL) {
     issuccess = FALSE;
     strcat_s(errors, sizeof errors, ffd.cFileName);
     strcat_s(errors, sizeof errors, ", ");
@@ -1052,15 +1052,15 @@ void LoadCards(HWND hWnd) {
 
   do {
     // assuming the deck is already sorted
-    while (index < decksize && strcmp(deck[index].name, deck[index - 1].name) == 0) {
-      deck[index].bitmap = deck[index - 1].bitmap;
+    while (index < decksize && strcmp(basedeck[index].name, basedeck[index - 1].name) == 0) {
+      basedeck[index].bitmap = basedeck[index - 1].bitmap;
       index++;
     }
 
     snprintf(tmp, sizeof tmp, "Assets\\Cards\\%s", ffd.cFileName);
-    deck[index].bitmap = (HBITMAP)LoadImage(NULL, tmp,
+    basedeck[index].bitmap = (HBITMAP)LoadImage(NULL, tmp,
       IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-    if (deck[index].bitmap == NULL) {
+    if (basedeck[index].bitmap == NULL) {
       issuccess = FALSE;
       strcat_s(errors, sizeof errors, ffd.cFileName);
       strcat_s(errors, sizeof errors, ", ");
@@ -1070,7 +1070,7 @@ void LoadCards(HWND hWnd) {
 
   // in case there are missing files, in which i should have just named the cards after their names in the deck
   while (index < decksize) {
-    deck[index++].bitmap = hBitmapBack;
+    basedeck[index++].bitmap = hBitmapBack;
   }
 
   if (issuccess == FALSE) {
@@ -1176,7 +1176,7 @@ void InitDebugMode() {
   // // this test specifically for the deck later on
   // for (int i = 0; i < 80; i++) {
   //   player[0].stable.unicorns[i] = (i % 10) ? 128 : 30;
-  //   if (checkClass(ANYUNICORN, deck[player[0].stable.unicorns[i]].class))
+  //   if (checkType(ANYUNICORN, deck[player[0].stable.unicorns[i]].cType))
   //     player[0].stable.num_unicorns++;
   //   player[0].stable.size++;
   // }
@@ -1188,7 +1188,7 @@ void InitDebugMode() {
   // player[0].icon = BABYNARWHAL;
   // for (int i = 0; i < 15; i++) {
   //   player[0].stable.unicorns[i] = (i & 1) ? 128 : 30;
-  //   if (checkClass(ANYUNICORN, deck[player[0].stable.unicorns[i]].class))
+  //   if (checkType(ANYUNICORN, deck[player[0].stable.unicorns[i]].cType))
   //     player[0].stable.num_unicorns++;
   //   player[0].stable.size++;
   // }
@@ -1203,21 +1203,21 @@ void InitDebugMode() {
   for (int i = 0; i < 10; i++) {
     BOOL isvalid = FALSE;
     do {
-      player[0].stable.unicorns[i] = NURSERY_SIZE + rand() % 116;
-      if (checkClass(ANYUNICORN, deck[player[0].stable.unicorns[i]].class) ||
-        checkClass(UPGRADE, deck[player[0].stable.unicorns[i]].class) ||
-        checkClass(DOWNGRADE, deck[player[0].stable.unicorns[i]].class)) {
+      player[0].stable.unicorns[i] = basedeck[NURSERY_SIZE + rand() % 116];
+      if (checkType(ANYUNICORN, player[0].stable.unicorns[i].cType) ||
+          checkType(UPGRADE, player[0].stable.unicorns[i].cType) ||
+          checkType(DOWNGRADE, player[0].stable.unicorns[i].cType)) {
         isvalid = TRUE;
       }
     } while (!isvalid);
 
-    if (checkClass(ANYUNICORN, deck[player[0].stable.unicorns[i]].class))
+    if (checkType(ANYUNICORN, player[0].stable.unicorns[i].cType))
       player[0].stable.num_unicorns++;
     player[0].stable.size++;
   }
   for (int i = 0; i < 5; i++) {
     // player[0].hand.cards[i] = 60; // #60 is shark with a horn
-    player[0].hand.cards[i] = NURSERY_SIZE + rand() % 116;
+    player[0].hand.cards[i] = basedeck[NURSERY_SIZE + rand() % 116];
     player[0].hand.num_cards++;
   }
 
@@ -1226,13 +1226,13 @@ void InitDebugMode() {
   player[1].icon = rand() % 12;
   int handsize = 1 + rand() % 7;
   for (int i = 0; i < 5; i++) {
-    player[1].stable.unicorns[i] = (i & 1) ? 50 : 40;
-    if (checkClass(ANYUNICORN, deck[player[1].stable.unicorns[i]].class))
+    player[1].stable.unicorns[i] = basedeck[(i & 1) ? 50 : 40];
+    if (checkType(ANYUNICORN, player[1].stable.unicorns[i].cType))
       player[1].stable.num_unicorns++;
     player[1].stable.size++;
   }
   for (int i = 0; i < handsize; i++) {
-    player[1].hand.cards[i] = 42 + i;
+    player[1].hand.cards[i] = basedeck[42 + i];
     player[1].hand.num_cards++;
   }
 
@@ -1258,6 +1258,8 @@ void ResetDebugMode() {
 // ********************* general game logic helper functions **********************
 // ********************************************************************************
 
+int babymap[MAX_PLAYERS] = { 0 };
+
 int SelectBabyUnicorn(int pnum, POINT pnt) {
   for (int i = 0; i < 13; i++) {
     if (pnt.y >= babies[i].top && pnt.y <= babies[i].bottom &&
@@ -1270,9 +1272,10 @@ int SelectBabyUnicorn(int pnum, POINT pnt) {
       if (pselect[pnum].left != 0) {
         // resets babytoggle at old position (since baby toggle goes from 0-12 just like the
         // baby unicorn card numbers, player[num].stable.unicorns[0] can be used as an index)
-        babytoggle[player[pnum].stable.unicorns[0]] = FALSE;
+        babytoggle[babymap[pnum]] = FALSE;
       }
-      player[pnum].stable.unicorns[0] = i;
+      player[pnum].stable.unicorns[0] = basedeck[i];
+      babymap[pnum] = i;
       pselect[pnum].left = babies[i].left - 7; // the actual border should be offset by 7 pixels
       pselect[pnum].top = babies[i].top;
       return 1;
@@ -1563,14 +1566,14 @@ void PaintDebug(HDC hdc, HDC *hdcMem) {
   }
 
   // display the nursery and discard pile if they are not empty
-  if (nursery_index < NURSERY_SIZE) {
-    oldSprite = SelectObject(hdcSprite, deck[nursery_ref[nursery_index]].bitmap);
+  if (nursery.size > 0) {
+    oldSprite = SelectObject(hdcSprite, nursery.cards[0].bitmap);
     BitBlt(*hdcMem, debugButtons[NURSERY_TAB].x, debugButtons[NURSERY_TAB].y, debugButtons[NURSERY_TAB].width, debugButtons[NURSERY_TAB].height, hdcSprite, 0, 0, SRCCOPY);
     SelectObject(hdcSprite, oldSprite);
   }
 
-  if (discard_index > 0) {
-    oldSprite = SelectObject(hdcSprite, deck[discard_ref[discard_index]].bitmap);
+  if (discardpile.size > 0) {
+    oldSprite = SelectObject(hdcSprite, discardpile.cards[discardpile.size - 1].bitmap);
     BitBlt(*hdcMem, debugButtons[DISCARD_TAB].x, debugButtons[DISCARD_TAB].y, debugButtons[DISCARD_TAB].width, debugButtons[DISCARD_TAB].height, hdcSprite, 0, 0, SRCCOPY);
     SelectObject(hdcSprite, oldSprite);
 
@@ -1695,6 +1698,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     InitFonts(hWnd);
     InitButtonManager(hWnd);
     InitStateMachine();
+
+    // initialize the deck here for now
+    init_deck(&nursery, &deck, &discardpile);
+
+    // initialize the network states too
+    init_network_states();
+
     windowOpen[0] = TRUE;
     webhwnd = hWnd; // for server and client to access in the wsapoll lobby loop
     break;
@@ -1797,8 +1807,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     // for (int i = 0; i < sizeof hBitmapCard / sizeof hBitmapCard[0]; i++) {
     //   DeleteObject(hBitmapCard[i]);
     // }
-    for (int i = 0; i < sizeof deck / sizeof deck[0]; i++) {
-      DeleteObject(deck[i].bitmap);
+    for (int i = 0; i < sizeof basedeck / sizeof basedeck[0]; i++) {
+      DeleteObject(basedeck[i].bitmap);
     }
     DeleteObject(hBitmapBack);
     DestroyFonts();

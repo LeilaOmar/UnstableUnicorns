@@ -2,8 +2,8 @@
 #include "gamemechanics.h"
 #include "gamephase.h"
 #include "windowsapp.h"
-#include <conio.h>
-#include <windows.h>
+
+#define ERRORBUF 256
 
 int clientMain(void) {
   int isvalid = 0, clientpnum, index;
@@ -334,7 +334,7 @@ int clientJoin(short portno) {
     // oopsie
     return 1;
   }
-  
+
   server.sin_family = AF_INET;
   server.sin_port = htons(portno);
 
@@ -457,7 +457,8 @@ int clientJoin(short portno) {
       networktoggle ^= 1;
       memset(pselect, 0, sizeof pselect);
       return 1;
-    } else if (networktoggle & 2) {
+    }
+    else if (networktoggle & 2) {
       // client clicked somewhere and must send the point info to the server
       // to check whether or not they clicked a valid baby unicorn
       // TODO: (low priority) only send point when it's on a baby unicorn square; could make

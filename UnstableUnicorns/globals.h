@@ -39,8 +39,8 @@ struct Unicorn {
                           // 10 = Other or N/A [for now...]
   char name[NAME_SIZE];
   char description[DESC_SIZE];
-  HBITMAP bitmap;
   short effect;
+  HBITMAP bitmap;
   int id;
 };
 
@@ -65,11 +65,14 @@ struct Player {
   struct Stable stable;
   char username[NAME_SIZE];
   short flags;  // enum baseflag
+  enum BabySelection icon;
   short filler; // padding for prev variable
 };
 
 SOCKET clientsockfd[MAX_PLAYERS - 1];
 SOCKET sockfd;
+SOCKET udpfd;
+HANDLE mutex;
 extern int isclient; // 0 = server, 1 = client
 extern int network_events;
 

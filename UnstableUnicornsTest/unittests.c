@@ -29,6 +29,10 @@
 
 int num_fails = 0;
 
+// just to avoid including windowsapp.c and client/server for now
+char partymems[296] = { 0 };
+RECT pselect[MAX_PLAYERS];
+
 // ********************************************************************************
 // **************************** Utility Function Tests ****************************
 // ********************************************************************************
