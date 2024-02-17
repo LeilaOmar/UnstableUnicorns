@@ -4,6 +4,7 @@
 #include "gamemechanics.h"
 
 #pragma comment(lib,"msimg32.lib") // Transparent blt
+#pragma comment(lib,"Winmm.lib") // play sound
 
 // ********************************************************************************
 // ************************** super global variables TM ***************************
@@ -1278,6 +1279,7 @@ int SelectBabyUnicorn(int pnum, POINT pnt) {
       babymap[pnum] = i;
       pselect[pnum].left = babies[i].left - 7; // the actual border should be offset by 7 pixels
       pselect[pnum].top = babies[i].top;
+      PlaySound(TEXT("Assets\\Audio\\lobby-select.wav"), NULL, SND_FILENAME | SND_ASYNC);
       return 1;
     }
   }
@@ -1352,6 +1354,7 @@ void ClickTitle(POINT pnt) {
       pnt.y >= titleButtons[i].y && pnt.y < titleButtons[i].y + titleButtons[i].height) {
       // left click action
       if (windowOpen[1] == FALSE) {
+        PlaySound(TEXT("Assets\\Audio\\button-click.wav"), NULL, SND_FILENAME | SND_ASYNC);
         titleButtons[i].onClick(titleButtons[i].source);
         hornbutton.source = FALSE;
         return;
@@ -1365,6 +1368,7 @@ void ClickRules(POINT pnt) {
     if (pnt.x >= ruleButtons[i].x && pnt.x < ruleButtons[i].x + ruleButtons[i].width &&
       pnt.y >= ruleButtons[i].y && pnt.y < ruleButtons[i].y + ruleButtons[i].height) {
       // left click action
+      PlaySound(TEXT("Assets\\Audio\\button-click.wav"), NULL, SND_FILENAME | SND_ASYNC);
       ruleButtons[i].onClick(ruleButtons[i].source);
       return;
     }
@@ -1430,6 +1434,7 @@ void ClickLobby(POINT pnt) {
     if (pnt.x >= lobbyButtons[i].x && pnt.x < lobbyButtons[i].x + lobbyButtons[i].width &&
       pnt.y >= lobbyButtons[i].y && pnt.y < lobbyButtons[i].y + lobbyButtons[i].height) {
       // left click action
+      PlaySound(TEXT("Assets\\Audio\\button-click.wav"), NULL, SND_FILENAME | SND_ASYNC);
       lobbyButtons[i].onClick(lobbyButtons[i].source);
       return;
     }
@@ -1477,7 +1482,7 @@ void ClickDebug(POINT pnt) {
   // apply their card effect on; could also potentially just make another window for those cases, but that sounds lame :/
   for (int i = 0; i < current_players; i++) {
     if (pnt.x >= player_nums[i].x && pnt.x < player_nums[i].x + player_nums[i].width &&
-      pnt.y >= player_nums[i].y && pnt.y < player_nums[i].y + player_nums[i].height) {
+        pnt.y >= player_nums[i].y && pnt.y < player_nums[i].y + player_nums[i].height) {
       pnumindex = i;
       pagenum = 1;
 
@@ -1485,6 +1490,8 @@ void ClickDebug(POINT pnt) {
       if (tabnum == NURSERY_TAB || tabnum == DECK_TAB || tabnum == DISCARD_TAB) {
         tabnum = UNICORN_TAB;
       }
+
+      PlaySound(TEXT("Assets\\Audio\\button-click.wav"), NULL, SND_FILENAME | SND_ASYNC);
       return;
     }
   }
@@ -1649,14 +1656,17 @@ void StartGame() {
 void SwitchTab(int num) {
   tabnum = num;
   pagenum = 1;
+  PlaySound(TEXT("Assets\\Audio\\button-click.wav"), NULL, SND_FILENAME | SND_ASYNC);
 }
 
 void TurnPage(int page) {
   if (page == PAGE_RIGHT && tabsize > pagenum * 7) {
     pagenum++;
+    PlaySound(TEXT("Assets\\Audio\\page-turn.wav"), NULL, SND_FILENAME | SND_ASYNC);
   }
   else if (page == PAGE_LEFT && pagenum > 1) {
     pagenum--;
+    PlaySound(TEXT("Assets\\Audio\\page-turn.wav"), NULL, SND_FILENAME | SND_ASYNC);
   }
 }
 

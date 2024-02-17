@@ -586,6 +586,8 @@ int serverInit(short portno) {
             sendLobbyPacket(current_players, j + 1, clientsockfd[j]);
           }
           memset(buf, 0, BUF_SIZE); // reset buf
+
+          PlaySound(TEXT("Assets\\Audio\\player-join.wav"), NULL, SND_FILENAME | SND_ASYNC);
         }
         else {
           // TODO: (maybe) combine POINT into one recv/send instead of sending two halves
