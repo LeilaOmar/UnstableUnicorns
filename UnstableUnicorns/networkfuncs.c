@@ -360,35 +360,27 @@ int receiveMsg(char* str, int fd) {
 // handles stdin events and filters everything but keydown presses
 // https://stackoverflow.com/questions/19955617/win32-read-from-stdin-with-timeout
 void processStdin(char* stdinbuf, int* bufindex) {
-  INPUT_RECORD record[8];
+  INPUT_RECORD record;
   DWORD numRead;
 
-  // TODO: (bug) try and analyze this another day
-  // stack corruption occurs if record is only a singular static struct;
-  // this is related to the wVirtualKeyCode issue :/
-  if (!ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), record, 1, &numRead)) {
+  // (bug fix \o/ ) stack corruption bug where the struct members were shifted by 2 bytes;
+  // fix => change struct member alignment from 1 byte (what??) to default (i.e. usually 2 or 4)
+  if (!ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &record, 1, &numRead)) {
     return;
   }
 
-  if (record->EventType != KEY_EVENT) {
+  if (record.EventType != KEY_EVENT) {
     // don't care about mouse move
     return;
   }
 
-  if (!record->Event.KeyEvent.bKeyDown) {
+  if (!record.Event.KeyEvent.bKeyDown) {
     // only care about key down
     return;
   }
-  
-  if (record->Event.KeyEvent.wVirtualKeyCode == VK_LBUTTON) {
-    // for whatever reason, record's struct members get displaced/shifted by 1
-    // and this ONLY happens in the main program, not the test one
-    record->Event.KeyEvent.wVirtualKeyCode = record->Event.KeyEvent.wVirtualScanCode;
-    record[0].Event.KeyEvent.uChar.AsciiChar = (char)record[0].Event.KeyEvent.dwControlKeyState;
-  }
 
   // use printf \b when backspacing
-  if (record->Event.KeyEvent.wVirtualKeyCode == VK_BACK) {
+  if (record.Event.KeyEvent.wVirtualKeyCode == VK_BACK) {
     if (*bufindex > 0) {
       printf("\b \b");
       stdinbuf[*bufindex] = '\0';
@@ -398,8 +390,8 @@ void processStdin(char* stdinbuf, int* bufindex) {
   }
 
   // ascii input
-  if (record->Event.KeyEvent.uChar.AsciiChar) {
-    stdinbuf[*bufindex] = record[0].Event.KeyEvent.uChar.AsciiChar;
+  if (record.Event.KeyEvent.uChar.AsciiChar) {
+    stdinbuf[*bufindex] = record.Event.KeyEvent.uChar.AsciiChar;
 
     if (stdinbuf[*bufindex] == '\r' || stdinbuf[*bufindex] == '\n') {
       printf("\n");
