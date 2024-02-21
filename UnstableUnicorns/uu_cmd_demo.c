@@ -180,7 +180,7 @@ int WINAPI WinMain(
     MessageBox(NULL,
       _T("Call to RegisterClassEx failed!"),
       _T("Windows Desktop Guided Tour"),
-      NULL);
+      MB_ICONERROR | MB_OK);
 
     return 1;
   }
@@ -215,12 +215,12 @@ int WINAPI WinMain(
     MessageBox(NULL,
       _T("Call to CreateWindow failed!"),
       _T("Windows Desktop Guided Tour"),
-      NULL);
+      MB_ICONERROR | MB_OK);
 
     return 1;
   }
 
-  hInstanceGlob = hInstance;
+  g_hInstance = hInstance;
 
   // disable window resizing
   SetWindowLong(hWnd, GWL_STYLE, GetWindowLong(hWnd, GWL_STYLE) & ~WS_SIZEBOX);
@@ -233,17 +233,18 @@ int WINAPI WinMain(
 
   // set up winsock with TDP communication (SOCK_STREAM) on IPv4 (AF_INET)
   WSADATA wsa;
+  char errmsg[64] = { 0 };
+  sprintf_s(errmsg, sizeof errmsg, "WSAStartup Failed. Error Code : %d", WSAGetLastError());
   if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) {
     MessageBoxA(NULL,
-      _T("WSAStartup Failed. Error Code : %d", WSAGetLastError()),
+      _T(errmsg),
       _T("Server Set-up"),
-      NULL);
+      MB_ICONERROR | MB_OK);
     return 1;
   }
 
   // Main message loop:
   MSG msg;
-  POINT pnt;
   SetTimer(hWnd, 999, 33, NULL);
   while (GetMessage(&msg, NULL, 0, 0)) {
     TranslateMessage(&msg);
@@ -283,13 +284,13 @@ int WINAPI WinMain(
 int mainlet(void) {
 
   // register the termination function
-  atexit(cleanup);
+  atexit(Cleanup);
 
   // initialize the deck here for now
-  init_deck(&nursery, &deck, &discardpile);
+  InitDeck(&nursery, &deck, &discardpile);
 
   // initialize the network states too
-  init_network_states();
+  InitNetworkStates();
 
   // file stream pointer to use as a placeholder for stdin or the test input files
   fpinput = stdin;
@@ -333,7 +334,7 @@ int mainlet(void) {
 
   // website to convert text to ascii art
   // https://patorjk.com/software/taag/#p=display&f=Standard&t=Unstable%20Unicorns
-  rainbow(
+  Rainbow(
     "  _   _           _        _     _        _   _       _                          \n"
     " | | | |_ __  ___| |_ __ _| |__ | | ___  | | | |_ __ (_) ___ ___  _ __ _ __  ___ \n"
     " | | | | '_ \\/ __| __/ _` | '_ \\| |/ _ \\ | | | | '_ \\| |/ __/ _ \\| '__| '_ \\/ __|\n"
@@ -344,7 +345,7 @@ int mainlet(void) {
   
   // website to convert images to ascii art
   // https://manytools.org/hacker-tools/convert-images-to-ascii-art/
-  rainbow(
+  Rainbow(
     "                                 (#                                              \n"
     "                 /            %##*###%                                           \n"
     "                ***  %,   ( %%%%####%%                                           \n"
@@ -380,7 +381,7 @@ int mainlet(void) {
     "                                   *#/                                           \n"
   );
 
-  rainbow("\nWelcome to Unstable Unicorns for the command line!\n");
+  Rainbow("\nWelcome to Unstable Unicorns for the command line!\n");
 
   do {
     printf("\nEnter \"host\" or \"1\" if you would like to host your own game, or\n"
@@ -392,11 +393,11 @@ int mainlet(void) {
            strncmp(buf, "1", 1) != 0 && strncmp(buf, "2", 1) != 0);
 
   if (strncmp(buf, "host", 4) == 0 || strncmp(buf, "1", 1) == 0) {
-    if ((result = serverMain()) != 0) {
+    if ((result = ServerMain()) != 0) {
       exit(result);
     }
   } else {
-    if ((result = clientMain()) != 0) {
+    if ((result = ClientMain()) != 0) {
       exit(result);
     }
   }

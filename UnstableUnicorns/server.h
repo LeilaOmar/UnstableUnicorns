@@ -1,7 +1,15 @@
 #pragma once
+
 #include "networkevents.h"
 
-int newConnection(SOCKET *cfd);
-void initGame(void);
-int serverMain(void);
-int serverInit(short portno);
+/**
+ * @brief The main server/host loop for Console applications
+ */
+int ServerMain(void);
+
+/**
+ * @brief The main server/host loop for Windows applications
+ * @param p Pointer rep of the port number
+ * @note This executes in a separate thread from the UI code
+ */
+int ServerHost(LPVOID p);

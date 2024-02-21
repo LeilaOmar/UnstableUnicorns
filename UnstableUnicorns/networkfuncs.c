@@ -9,25 +9,33 @@
 // ****************************** Lobby Code Hashing ******************************
 // ********************************************************************************
 
-// hash functions for scrambling IP addresses
-// https://stackoverflow.com/questions/664014/what-integer-hash-function-are-good-that-accepts-an-integer-hash-key
-unsigned int hash(unsigned int x) {
+/**
+ * @brief Encodes IPv4 addresses into hexadecimal numbers
+ *
+ * https://stackoverflow.com/questions/664014/what-integer-hash-function-are-good-that-accepts-an-integer-hash-key
+ * @return <unsigned int> Obfuscated hex code of the given IP address 
+ */
+static unsigned int Hash(unsigned int x) {
   x = ((x >> 16) ^ x) * 0x45d9f3b;
   x = ((x >> 16) ^ x) * 0x45d9f3b;
   x = (x >> 16) ^ x;
   return x;
 }
-unsigned int unhash(unsigned int x) {
+
+/**
+ * @brief Decodes hashed IPv4 addresses
+ *
+ * https://stackoverflow.com/questions/664014/what-integer-hash-function-are-good-that-accepts-an-integer-hash-key
+ * @return <unsigned int> Hexadecimal representation of the actual IP address
+ */
+static unsigned int Unhash(unsigned int x) {
   x = ((x >> 16) ^ x) * 0x119de1f3;
   x = ((x >> 16) ^ x) * 0x119de1f3;
   x = (x >> 16) ^ x;
   return x;
 }
 
-// IP stuff
-// https://stackoverflow.com/questions/39566240/how-to-get-the-external-ip-address-in-c
-// unfortunately the internetopen way didn't work :(
-void getIPreq(char* ip_address) {
+void GetIPreq(char *ip) {
   //WSADATA wsaData;
   struct addrinfo hints;
   struct addrinfo* result = NULL;
@@ -36,7 +44,7 @@ void getIPreq(char* ip_address) {
 
   // api.ipify.org is only for IPv4; api64.ipify.org is both v4 and v6 w/ priority for v6
   // **don't forget to change it in getaddrinfo too if ever**
-  char* httpreq = "GET / HTTP/1.1\r\nHost: api.ipify.org\r\nConnection: close\r\n\r\n";
+  char *httpreq = "GET / HTTP/1.1\r\nHost: api.ipify.org\r\nConnection: close\r\n\r\n";
 
   //if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
   //  // error handling
@@ -94,11 +102,10 @@ void getIPreq(char* ip_address) {
 
   // using sizeof(ip) for MaxCount may not be appropriate since the length is variable
   // it still works though since everything afterwards is \0 *shrugs in laziness*
-  strncpy_s(ip_address, 16, buffer + index, 16);
+  strncpy_s(ip, 16, buffer + index, 16);
 }
 
-// https://stackoverflow.com/questions/19817425/how-to-get-ip-addresses-from-sockaddr
-int getLocalIP(char* ip_address)
+int GetLocalIP(char *ip)
 {
   char szBuffer[64];
 
@@ -107,8 +114,8 @@ int getLocalIP(char* ip_address)
     return 1;
   }
 
-  int sd, err;
-  struct addrinfo hints, * addrs;
+  int err;
+  struct addrinfo hints, *addrs;
   memset(&hints, 0, sizeof(hints));
   hints.ai_family = AF_INET;
   // hints.ai_socktype = SOCK_DGRAM;
@@ -128,25 +135,24 @@ int getLocalIP(char* ip_address)
 
   // only returns the first result, which should suffice anyways; think default 1st is ethernet
   // then 2nd is wlan0 and any vpn stuff, but could just be dependent on the computer/network
-  inet_ntop(AF_INET, &((struct sockaddr_in*)addrs->ai_addr)->sin_addr, ip_address, INET_ADDRSTRLEN);
+  inet_ntop(AF_INET, &((struct sockaddr_in*)addrs->ai_addr)->sin_addr, ip, INET_ADDRSTRLEN);
 
   freeaddrinfo(addrs);
 
   return 0;
 }
 
-// uses hash function to get code for ip (and vice versa); only for IPv4
-unsigned int IPtoHexCode(char* ip) {
+unsigned int IPtoHexCode(char *ip) {
   struct in_addr addr;
   inet_pton(AF_INET, ip, &addr);
   unsigned int num = ntohl(addr.s_addr); // convert network byte to machine byte order
 
-  return hash(num);
+  return Hash(num);
 }
 
-void HexCodetoIP(char* code, char* dest) {
+void HexCodeToIP(char *code, char *dest) {
   memset(dest, 0, 16); // reset ip in case it was entered before somehow
-  unsigned int tmp = unhash(strtoul(code, NULL, 16)); // 16 represents base
+  unsigned int tmp = Unhash(strtoul(code, NULL, 16)); // 16 represents base
   sprintf_s(dest, 16, "%d.%d.%d.%d", (tmp & 0xFF000000) >> 24, (tmp & 0x00FF0000) >> 16, (tmp & 0x0000FF00) >> 8, tmp & 0x000000FF);
 }
 
@@ -154,14 +160,26 @@ void HexCodetoIP(char* code, char* dest) {
 // ****************************** Serialize Functions *****************************
 // ********************************************************************************
 
-void serialize_int(unsigned char* buffer, int num) {
+/**
+ * @brief Enforces Big Endian byte order by right shifting the integer value of num into 4 individual bytes and saving it into buffer
+ * @param[out] buffer Unsigned char byte stream to send across a TCP socket
+ * @param[in] num The number that's getting serialized
+ * @note This assumes integers are stored as 4 bytes
+ */
+static void SerializeInt(unsigned char *buffer, int num) {
   buffer[0] = num >> 24;
   buffer[1] = num >> 16;
   buffer[2] = num >> 8;
   buffer[3] = num;
 }
 
-int deserialize_int(unsigned char* buffer) {
+/**
+ * @brief Left shifts the Big Endian-stored value of buffer into 4 individual bytes and stores it as an integer
+ * @param[in] buffer Unsigned char byte stream that's getting processed and deserialized
+ * @return num Value of the deserialized integer
+ * @note This assumes integers are stored as 4 bytes
+ */
+static int DeserializeInt(unsigned char *buffer) {
   int num = 0;
 
   num |= buffer[0] << 24;
@@ -171,12 +189,22 @@ int deserialize_int(unsigned char* buffer) {
   return num;
 }
 
-void serialize_short(unsigned char* buffer, int num) {
+/**
+ * @brief Enforces Big Endian byte order by shifting the short value of num into 2 individual bytes and saving it into buffer
+ * @param[out] buffer Unsigned char byte stream to send across a TCP socket
+ * @param[in] num The number that's getting serialized
+ */
+static void SerializeShort(unsigned char *buffer, int num) {
   buffer[0] = num >> 8;
   buffer[1] = num;
 }
 
-short deserialize_short(unsigned char* buffer) {
+/**
+ * @brief Left shifts the Big Endian-stored value of buffer into 2 individual bytes and stores it as a short
+ * @param[in] buffer Unsigned char byte stream that's getting processed and deserialized
+ * @return num Value of the deserialized short
+ */
+static short DeserializeShort(unsigned char *buffer) {
   int num = 0;
 
   num |= buffer[0] << 8;
@@ -184,40 +212,14 @@ short deserialize_short(unsigned char* buffer) {
   return num;
 }
 
-// unsigned char* serialize_long(unsigned char* buffer, int num) {
-//   buffer[0] = num >> 56;
-//   buffer[1] = num >> 48;
-//   buffer[2] = num >> 40;
-//   buffer[3] = num >> 32;
-//   buffer[4] = num >> 24;
-//   buffer[5] = num >> 16;
-//   buffer[6] = num >> 8;
-//   buffer[7] = num;
-//   return buffer + 8;
-// }
-// 
-// long deserialize_long(unsigned char* buffer) {
-//   long num = 0;
-// 
-//   num |= buffer[0] << 56;
-//   num |= buffer[1] << 48;
-//   num |= buffer[2] << 40;
-//   num |= buffer[3] << 32;
-//   num |= buffer[4] << 24;
-//   num |= buffer[5] << 16;
-//   num |= buffer[6] << 8;
-//   num |= buffer[7];
-//   return num;
-// }
-
 // ********************************************************************************
 // *************************** Send/Recv Data Functions ***************************
 // ********************************************************************************
 
-int sendInt(int num, int fd) {
+int SendInt(int num, int fd) {
   int32_t tmp = htonl(num);
   int count = sizeof(tmp);
-  char* data = (char*)&tmp;
+  char *data = (char*)&tmp;
   int rc;
 
   do {
@@ -231,10 +233,10 @@ int sendInt(int num, int fd) {
   return 0;
 }
 
-int receiveInt(int* num, int fd) {
+int ReceiveInt(int *num, int fd) {
   int32_t ret;
   int count = sizeof(ret);
-  char* data = (char*)&ret;
+  char *data = (char*)&ret;
   int rc;
 
   do {
@@ -250,24 +252,24 @@ int receiveInt(int* num, int fd) {
   return 0;
 }
 
-int sendPlayers(int fd) {
-  int count = sizeof(struct Player) * current_players;
+int SendPlayers(int fd) {
+  int count = sizeof(struct Player) * currentPlayers;
   int rc;
 
   static char data[sizeof(struct Player) * MAX_PLAYERS];
   int offset = 0;
 
-  sendInt(current_players, fd);
+  SendInt(currentPlayers, fd);
 
-  for (int i = 0; i < current_players; i++) {
+  for (int i = 0; i < currentPlayers; i++) {
     // cards in hand
-    sendInt(player[i].hand.num_cards, fd);
-    sendUnicorns(player[i].hand.cards, player[i].hand.num_cards, fd);
+    SendInt(player[i].hand.numCards, fd);
+    SendUnicorns(player[i].hand.cards, player[i].hand.numCards, fd);
 
     // stable
-    sendInt(player[i].stable.size, fd);
-    sendInt(player[i].stable.num_unicorns, fd);
-    sendUnicorns(player[i].stable.unicorns, player[i].stable.size, fd);
+    SendInt(player[i].stable.size, fd);
+    SendInt(player[i].stable.numUnicorns, fd);
+    SendUnicorns(player[i].stable.unicorns, player[i].stable.size, fd);
 
     // username
     for (int j = 0; j < sizeof player[i].username; j++) {
@@ -275,12 +277,12 @@ int sendPlayers(int fd) {
     }
 
     // flags
-    serialize_short(data + offset, player[i].flags);
+    SerializeShort(data + offset, player[i].flags);
     offset += 2;
   }
 
   count = offset;
-  sendInt(count, fd);
+  SendInt(count, fd);
   offset = 0;
   do {
     rc = send(fd, data + offset, count, 0);
@@ -293,27 +295,27 @@ int sendPlayers(int fd) {
   return 0;
 }
 
-int receivePlayers(int fd) {
+int ReceivePlayers(int fd) {
   int count;
   int rc;
 
   static char data[sizeof(struct Player) * MAX_PLAYERS];
   int offset = 0;
 
-  receiveInt(&current_players, fd);
+  ReceiveInt(&currentPlayers, fd);
 
-  for (int i = 0; i < current_players; i++) {
+  for (int i = 0; i < currentPlayers; i++) {
     // cards in hand
-    receiveInt(&player[i].hand.num_cards, fd);
-    receiveUnicorns(player[i].hand.cards, player[i].hand.num_cards, fd);
+    ReceiveInt(&player[i].hand.numCards, fd);
+    ReceiveUnicorns(player[i].hand.cards, player[i].hand.numCards, fd);
 
     // stable
-    receiveInt(&player[i].stable.size, fd);
-    receiveInt(&player[i].stable.num_unicorns, fd);
-    receiveUnicorns(player[i].stable.unicorns, player[i].stable.size, fd);
+    ReceiveInt(&player[i].stable.size, fd);
+    ReceiveInt(&player[i].stable.numUnicorns, fd);
+    ReceiveUnicorns(player[i].stable.unicorns, player[i].stable.size, fd);
   }
 
-  receiveInt(&count, fd);
+  ReceiveInt(&count, fd);
   while (count > 0) {
     rc = recv(fd, data + offset, count, 0);
     if (rc > 0) {
@@ -324,18 +326,18 @@ int receivePlayers(int fd) {
 
   offset = 0;
 
-  for (int i = 0; i < current_players; i++) {
+  for (int i = 0; i < currentPlayers; i++) {
     for (int j = 0; j < sizeof player[i].username; j++) {
       player[i].username[j] = data[offset++];
     }
-    player[i].flags = deserialize_short(data + offset);
+    player[i].flags = DeserializeShort(data + offset);
     offset += 2;
   }
 
   return 0;
 }
 
-int sendUnicorns(struct Unicorn* corns, int size, int fd) {
+int SendUnicorns(struct Unicorn *corns, int size, int fd) {
   int count = sizeof(struct Unicorn) * size;
   int rc;
 
@@ -351,14 +353,14 @@ int sendUnicorns(struct Unicorn* corns, int size, int fd) {
     for (int j = 0; j < sizeof corns[i].description; j++) {
       data[offset++] = corns[i].description[j];
     }
-    serialize_short(data + offset, corns[i].effect);
+    SerializeShort(data + offset, corns[i].effect);
     offset += 2;
-    serialize_int(data + offset, corns[i].id);
+    SerializeInt(data + offset, corns[i].id);
     offset += 4;
   }
 
   // send the size of the array before sending the data
-  sendInt(count, fd);
+  SendInt(count, fd);
 
   offset = 0;
   do {
@@ -372,10 +374,10 @@ int sendUnicorns(struct Unicorn* corns, int size, int fd) {
   return 0;
 }
 
-int receiveUnicorns(struct Unicorn* corns, int size, int fd) {
+int ReceiveUnicorns(struct Unicorn *corns, int size, int fd) {
   int count, rc, offset = 0;
   static char data[sizeof(struct Unicorn) * (DECK_SIZE + NURSERY_SIZE)];
-  receiveInt(&count, fd);
+  ReceiveInt(&count, fd);
 
   while (count > 0) {
     rc = recv(fd, data + offset, count, 0);
@@ -395,9 +397,9 @@ int receiveUnicorns(struct Unicorn* corns, int size, int fd) {
     for (int j = 0; j < sizeof corns[i].description; j++) {
       corns[i].description[j] = data[offset++];
     }
-    corns[i].effect = deserialize_short(data + offset);
+    corns[i].effect = DeserializeShort(data + offset);
     offset += 2;
-    corns[i].id = deserialize_int(data + offset);
+    corns[i].id = DeserializeInt(data + offset);
     offset += 4;
   }
 
@@ -408,32 +410,26 @@ int receiveUnicorns(struct Unicorn* corns, int size, int fd) {
 // ******************************* Packet Functions *******************************
 // ********************************************************************************
 
-// sends the following info, * denotes global variables:
-// 1. number of current players
-// 2. client player number (unique to csockfd)
-// 3. *partymems (i.e. the player username list)
-// 4. *pselect (notes the corner of every player's selected unicorn; 0 means nothing selected)
-int sendLobbyPacket(int num_players, int clientpnum, int fd) {
-  int count = sizeof(int) + sizeof(int) + strlen(partymems) + (2 * sizeof(long) * MAX_PLAYERS);
+int SendLobbyPacket(int numPlayers, int clientpnum, int fd) {
+  int count = sizeof(int) + sizeof(int) + strlen(partyMems) + (2 * sizeof(long) * MAX_PLAYERS);
   int rc;
   static char data[512];
   int offset = 8;
-  serialize_int(data, num_players);
-  serialize_int(data + 4, clientpnum);
-  for (int i = 0; i < strlen(partymems); i++) {
-    //serialize_char(data + offset, partymems[i]);
-    data[offset] = partymems[i];
+  SerializeInt(data, numPlayers);
+  SerializeInt(data + 4, clientpnum);
+  for (int i = 0; i < (int)strlen(partyMems); i++) {
+    data[offset] = partyMems[i];
     offset++;
   }
   for (int i = 0; i < MAX_PLAYERS; i++) {
-    serialize_int(data + offset, (int)pselect[i].left);
+    SerializeInt(data + offset, (int)pselect[i].left);
     offset += 4;
-    serialize_int(data + offset, (int)pselect[i].top);
+    SerializeInt(data + offset, (int)pselect[i].top);
     offset += 4;
   }
 
   // send data count size before sending data packet
-  sendInt(count, fd);
+  SendInt(count, fd);
 
   offset = 0;
   do {
@@ -447,15 +443,10 @@ int sendLobbyPacket(int num_players, int clientpnum, int fd) {
   return 0;
 }
 
-// receives the following info, * denotes global variables:
-// 1. number of current players
-// 2. client player number (unique to csockfd)
-// 3. *partymems (i.e. the player username list)
-// 4. *pselect (notes the corner of every player's selected unicorn; 0 means nothing selected)
-int receiveLobbyPacket(int* num_players, int* clientpnum, int fd) {
+int ReceiveLobbyPacket(int *numPlayers, int *clientpnum, int fd) {
   int count, rc, offset = 0;
   static char data[512];
-  receiveInt(&count, fd);
+  ReceiveInt(&count, fd);
 
   while (count > 0) {
     rc = recv(fd, data + offset, count, 0);
@@ -467,112 +458,111 @@ int receiveLobbyPacket(int* num_players, int* clientpnum, int fd) {
 
   count = offset;
   offset = 8;
-  *num_players = deserialize_int(data);
-  *clientpnum = deserialize_int(data + 4);
+  *numPlayers = DeserializeInt(data);
+  *clientpnum = DeserializeInt(data + 4);
   int strcount = count - (2 * sizeof(int)) - (2 * sizeof(long) * MAX_PLAYERS);
 
   // TODO: take care of these buffer overrun warnings before more out of range errors occur <_<
   for (int i = 0; i < strcount; i++) {
-    partymems[i] = data[offset];
+    partyMems[i] = data[offset];
     offset++;
   }
-  partymems[strcount] = '\0';
+  partyMems[strcount] = '\0';
 
   for (int i = 0; i < MAX_PLAYERS; i++) {
-    (int)pselect[i].left = deserialize_int(data + offset);
+    (int)pselect[i].left = DeserializeInt(data + offset);
     offset += 4;
-    (int)pselect[i].top = deserialize_int(data + offset);
+    (int)pselect[i].top = DeserializeInt(data + offset);
     offset += 4;
   }
 
   return 0;
 }
 
-int sendGamePacket(int fd) {
-  sendInt(deck.size, fd);
-  sendUnicorns(deck.cards, deck.size, fd);
+int SendGamePacket(int fd) {
+  SendInt(deck.size, fd);
+  SendUnicorns(deck.cards, deck.size, fd);
 
-  sendInt(nursery.size, fd);
-  sendUnicorns(nursery.cards, nursery.size, fd);
+  SendInt(nursery.size, fd);
+  SendUnicorns(nursery.cards, nursery.size, fd);
 
-  sendInt(discardpile.size, fd);
-  sendUnicorns(discardpile.cards, discardpile.size, fd);
+  SendInt(discardpile.size, fd);
+  SendUnicorns(discardpile.cards, discardpile.size, fd);
 
-  sendInt(uni_lasso_flag[0], fd);
-  sendInt(uni_lasso_flag[1], fd);
-  sendInt(uni_lasso_flag[2], fd);
+  SendInt(uniLassoIndex[0], fd);
+  SendInt(uniLassoIndex[1], fd);
+  SendInt(uniLassoIndex[2], fd);
 
-  sendInt(puppicorn_index[0], fd);
-  sendInt(puppicorn_index[1], fd);
+  SendInt(puppicornIndex[0], fd);
+  SendInt(puppicornIndex[1], fd);
 
-  sendPlayers(fd);
-
-  return 0;
-}
-
-int receiveGamePacket(int fd) {
-  receiveInt(&deck.size, fd);
-  receiveUnicorns(deck.cards, deck.size, fd);
-
-  receiveInt(&nursery.size, fd);
-  receiveUnicorns(nursery.cards, nursery.size, fd);
-
-  receiveInt(&discardpile.size, fd);
-  receiveUnicorns(discardpile.cards, discardpile.size, fd);
-
-  receiveInt(&uni_lasso_flag[0], fd);
-  receiveInt(&uni_lasso_flag[1], fd);
-  receiveInt(&uni_lasso_flag[2], fd);
-
-  receiveInt(&puppicorn_index[0], fd);
-  receiveInt(&puppicorn_index[1], fd);
-
-  receivePlayers(fd);
+  SendPlayers(fd);
 
   return 0;
 }
 
-int sendCardEffectPacket(int target_pnum, int desired_type, int fd) {
-  sendInt(target_pnum, fd);
-  sendInt(desired_type, fd);
-  sendGamePacket(fd);
+int ReceiveGamePacket(int fd) {
+  ReceiveInt(&deck.size, fd);
+  ReceiveUnicorns(deck.cards, deck.size, fd);
+
+  ReceiveInt(&nursery.size, fd);
+  ReceiveUnicorns(nursery.cards, nursery.size, fd);
+
+  ReceiveInt(&discardpile.size, fd);
+  ReceiveUnicorns(discardpile.cards, discardpile.size, fd);
+
+  ReceiveInt(&uniLassoIndex[0], fd);
+  ReceiveInt(&uniLassoIndex[1], fd);
+  ReceiveInt(&uniLassoIndex[2], fd);
+
+  ReceiveInt(&puppicornIndex[0], fd);
+  ReceiveInt(&puppicornIndex[1], fd);
+
+  ReceivePlayers(fd);
 
   return 0;
 }
 
-int receiveCardEffectPacket(int* target_pnum, int* desired_type, int fd) {
-  receiveInt(target_pnum, fd);
-  receiveInt(desired_type, fd);
-  receiveGamePacket(fd);
+int SendCardEffectPacket(int targetPnum, int desiredType, int fd) {
+  SendInt(targetPnum, fd);
+  SendInt(desiredType, fd);
+  SendGamePacket(fd);
 
   return 0;
 }
 
-int sendEnterStablePacket(struct Unicorn corn, int pnum, int fd) {
-  sendInt(pnum, fd);
-  sendUnicorns(&corn, 1, fd);
-  sendGamePacket(fd);
+int ReceiveCardEffectPacket(int *targetPnum, int *desiredType, int fd) {
+  ReceiveInt(targetPnum, fd);
+  ReceiveInt(desiredType, fd);
+  ReceiveGamePacket(fd);
 
   return 0;
 }
 
-int receiveEnterStablePacket(struct Unicorn* corn, int* pnum, int fd) {
-  receiveInt(pnum, fd);
-  receiveUnicorns(corn, 1, fd);
-  receiveGamePacket(fd);
+int SendEnterStablePacket(struct Unicorn corn, int pnum, int fd) {
+  SendInt(pnum, fd);
+  SendUnicorns(&corn, 1, fd);
+  SendGamePacket(fd);
 
   return 0;
 }
 
+int ReceiveEnterStablePacket(struct Unicorn* corn, int *pnum, int fd) {
+  ReceiveInt(pnum, fd);
+  ReceiveUnicorns(corn, 1, fd);
+  ReceiveGamePacket(fd);
+
+  return 0;
+}
 
 // ********************************************************************************
 // **************************** Message/Input Functions ***************************
 // ********************************************************************************
 
-int sendMsg(char* str, int count, int fd) {
+int SendMsg(char *str, int count, int fd) {
   int rc;
 
-  sendInt(count, fd);
+  SendInt(count, fd);
   do {
     rc = send(fd, str, count, 0);
     if (rc > 0) {
@@ -584,12 +574,12 @@ int sendMsg(char* str, int count, int fd) {
   return 0;
 }
 
-int receiveMsg(char* str, int fd) {
+int ReceiveMsg(char *str, int fd) {
   int count;
   int offset = 0;
   int rc;
 
-  receiveInt(&count, fd);
+  ReceiveInt(&count, fd);
 
   while (count > 0) {
     rc = recv(fd, str + offset, count, 0);
@@ -602,9 +592,7 @@ int receiveMsg(char* str, int fd) {
   return 0;
 }
 
-// handles stdin events and filters everything but keydown presses
-// https://stackoverflow.com/questions/19955617/win32-read-from-stdin-with-timeout
-void processStdin(char* stdinbuf, int* bufindex) {
+void ProcessStdin(char *stdinBuf, int *bufIndex) {
   INPUT_RECORD record;
   DWORD numRead;
 
@@ -626,24 +614,24 @@ void processStdin(char* stdinbuf, int* bufindex) {
 
   // use printf \b when backspacing
   if (record.Event.KeyEvent.wVirtualKeyCode == VK_BACK) {
-    if (*bufindex > 0) {
+    if (*bufIndex > 0) {
       printf("\b \b");
-      stdinbuf[*bufindex] = '\0';
-      (*bufindex)--;
+      stdinBuf[*bufIndex] = '\0';
+      (*bufIndex)--;
     }
     return;
   }
 
   // ascii input
   if (record.Event.KeyEvent.uChar.AsciiChar) {
-    stdinbuf[*bufindex] = record.Event.KeyEvent.uChar.AsciiChar;
+    stdinBuf[*bufIndex] = record.Event.KeyEvent.uChar.AsciiChar;
 
-    if (stdinbuf[*bufindex] == '\r' || stdinbuf[*bufindex] == '\n') {
+    if (stdinBuf[*bufIndex] == '\r' || stdinBuf[*bufIndex] == '\n') {
       printf("\n");
     }
     else {
-      printf("%c", stdinbuf[*bufindex]);
+      printf("%c", stdinBuf[*bufIndex]);
     }
-    (*bufindex)++;
+    (*bufIndex)++;
   }
 }

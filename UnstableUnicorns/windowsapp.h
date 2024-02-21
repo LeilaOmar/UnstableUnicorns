@@ -1,5 +1,5 @@
 #pragma once
-#include <windowsx.h>
+
 #include <tchar.h>
 #include "globals.h"
 
@@ -7,110 +7,67 @@
 #define BHEIGHT 720
 #define PARTYSTRSIZE 296
 
-enum GameState { TITLEBLANK, RULESONE, RULESTWO, LOBBY, GAMESTART, DEBUGMODE, NUMSTATES } ;
+enum GameState {
+  TITLEBLANK, //!< Title screen
+  RULESONE,   //!< Rules Page 1
+  RULESTWO,   //!< Rules Page 2
+  LOBBY,      //!< Lobby selection
+  GAMESTART,  //!< Game loop
+  DEBUGMODE,  //!< Debug testing ground
+  NUMSTATES   //!< Total size
+};
 
 typedef struct {
-	enum GameState state;
-	void (*statePaint)(HDC, HDC*);
-	void (*stateHover)(POINT);
-	void (*stateClick)(POINT);
+  enum GameState state;
+  void (*StatePaint)(HDC *hdcMem);
+  void (*StateHover)(POINT pnt);
+  void (*StateClick)(POINT pnt);
 } StateManager;
 
-extern HINSTANCE hInstanceGlob;
-extern char ip[16], hexcode[43];
-extern enum GameState menustate;
-extern char partymems[PARTYSTRSIZE];
-extern HWND webhwnd;
-extern BOOL babytoggle[13];
-extern int babymap[MAX_PLAYERS];
+extern HINSTANCE g_hInstance;
+extern enum GameState menuState;
+
+extern char ip[16];
+extern char hexcode[43];
+extern char partyMems[PARTYSTRSIZE];
+
 extern RECT pselect[MAX_PLAYERS];
-extern unsigned char networktoggle; // 00000000 nothing
-																		// 00000001 closesocket
-																		// 00000010 selectbabyunicorn
+extern BOOL babyToggle[NURSERY_SIZE];
+extern int babyMap[MAX_PLAYERS];
+
+extern unsigned char networkToggle;
 POINT clientPnt;
 
 struct Button {
-	int x;									// left coordinate
-	int y;									// top coordinate
-	int width;							// length
-	int height;							// height
-	char	filename[64];			// filename of bitmap source
-	HBITMAP bitmap;					// bitmap for button asset
-	void* source;						// void variable to use as a reference for functions
-	void (*onClick)(void*);	// function that triggers on left mouse click
+  int x;                  //!< x-coordinate at the top-left corner
+  int y;                  //!< y-coordinate at the top-left corner
+  int width;              //!< width in pixels
+  int height;             //!< height in pixels
+  char filename[64];      //!< Filename of bitmap source
+  HBITMAP bitmap;         //!< Bitmap for button asset
+  void *source;           //!< Void variable to use as a reference for functions
+  void (*OnClick)(void*); //!< Function that triggers on left mouse click
 };
 
 struct ToolTip {
-	char title[64];
-	char subtitle[64];
-	char msg[512];
-	int x;
-	int y;
-	int width;
-	int height;
-	BOOL ishover;
-	int fonttxt;
-	int fonttitle;
-	COLORREF bgcolor;
+  char title[64];     //!< Unicorn card name or Player username
+  char subtitle[64];  //!< Unicorn card type; no equivalent subtitle for Player
+  char msg[512];      //!< Unicorn card description or # of cards in Player's stable/hand
+  int x;              //!< x-coordinate at the top-left corner
+  int y;              //!< y-coordinate at the top-left corner
+  int width;          //!< width in pixels
+  int height;         //!< height in pixels
+  BOOL isHover;       //!< TRUE/FALSE depending on whether or not the cursor is on top of a Hoverable button
+  int fonttxt;        //!< Index of the font array to select a font for msg text
+  int fonttitle;      //!< Index of the font array to select a font for the title text
+  COLORREF bgcolor;   //!< Background color of the ToolTip box; color coded based off of the Card type (player bg's are Magenta)
 };
 
-// callback functions
-
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
-LRESULT CALLBACK WndProcHost(HWND, UINT, WPARAM, LPARAM);
-LRESULT CALLBACK WndProcJoin(HWND, UINT, WPARAM, LPARAM);
 
-// window/UI creation
-
-void CreateHostWindow(HWND);
-void CreateJoinWindow(HWND);
-void DisplayCardWindow(HDC*, HDC*);
-void CreateCustomToolTip(HDC*);
-struct ToolTip ReturnCardHoverTip(struct Button);
-struct ToolTip ReturnPlayerHoverTip(int, int, int);
-
-// button management
-
-void HornPosition(struct Button);
-void InitTitleButtons(struct Button*, HWND, int);
-void InitRuleButtons(struct Button*, int);
-void InitLobbyButtons(struct Button*);
-void InitCardWindowButtons(struct Button*);
-void InitCardButtons(struct Button*, int);
-void InitDeckButtons(struct Button*);
-void InitButtonManager(HWND);
-
-// initializing/deinitializing data
-void LoadImages(HWND);
-void LoadCards(HWND);
-void InitFonts(HDC);
-void DestroyFonts();
-void InitDebugMode();
-void ResetDebugMode();
-
-// state window message functions
-
-void HoverTitle(POINT);
-void HoverDebug(POINT);
-
-void ClickTitle(POINT);
-void ClickRules(POINT);
-void ClickLobby(POINT);
-void ClickDebug(POINT);
-
-void PaintTitle(HDC, HDC*);
-void PaintLobby(HDC, HDC*);
-void PaintDebug(HDC, HDC*);
-
-// button function pointers
-
-void SwitchState(int);
-void HostGeneration(HWND);
-void JoinGeneration(HWND);
-void StartGame();
-void LeaveLobby();
-void SwitchTab(int);
-void TurnPage(int);
-
-// game logic helper functions
-int SelectBabyUnicorn(int, POINT);
+/**
+ * @brief Lobby helper function for checking pnt against Baby Unicorn RECTs and selecting the corresponding Baby Unicorn
+ * @return 0 Nothing was successfully selected
+ * @return 1 A Baby Unicorn was picked by player[pnum]
+ */
+int SelectBabyUnicorn(int pnum, POINT pnt);

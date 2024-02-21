@@ -3,121 +3,121 @@
 
 // was unable to properly link this with an external file ;~;
 #ifdef TEST_RUN
-#define endGame endGame_mock
+#define EndGame EndGame_mock
 
-void endGame_mock(int winningpnum) {
+void EndGame_mock(int winningPnum) {
   // blank function to avoid ending the tests prematurely
   return;
 }
 #endif
 
-void init_network_states() {
-  netStates[end_turn]           = (NetworkStateManager){ clientStateEndTurn,     serverStateEndTurn };
-  netStates[end_game]           = (NetworkStateManager){ clientStateEndGame,     serverStateEndGame };
-  netStates[quit_loop]          = (NetworkStateManager){ clientStateEndTurn,     serverStateQuitLoop };
-  netStates[neigh_event]        = (NetworkStateManager){ clientStateNeigh,       serverStateNeigh };
-  netStates[discard_event]      = (NetworkStateManager){ clientStateDiscard,     serverStateDiscard };
-  netStates[sacrifice_event]    = (NetworkStateManager){ clientStateSacrifice,   serverStateSacrifice };
-  netStates[destroy_event]      = (NetworkStateManager){ clientStateDestroy,     serverStateDestroy };
-  netStates[enter_stable_event] = (NetworkStateManager){ clientStateEnterStable, serverStateEnterStable };
+void InitNetworkStates(void) {
+  netStates[END_TURN]           = (NetworkStateManager){ ClientStateEndTurn,     ServerStateEndTurn };
+  netStates[END_GAME]           = (NetworkStateManager){ ClientStateEndGame,     ServerStateEndGame };
+  netStates[QUIT_LOOP]          = (NetworkStateManager){ ClientStateEndTurn,     ServerStateQuitLoop };
+  netStates[NEIGH_EVENT]        = (NetworkStateManager){ ClientStateNeigh,       ServerStateNeigh };
+  netStates[DISCARD_EVENT]      = (NetworkStateManager){ ClientStateDiscard,     ServerStateDiscard };
+  netStates[SACRIFICE_EVENT]    = (NetworkStateManager){ ClientStateSacrifice,   ServerStateSacrifice };
+  netStates[DESTROY_EVENT]      = (NetworkStateManager){ ClientStateDestroy,     ServerStateDestroy };
+  netStates[ENTER_STABLE_EVENT] = (NetworkStateManager){ ClientStateEnterStable, ServerStateEnterStable };
 }
 
 // ********************************************************************************
 // ********************************* Client States ********************************
 // ********************************************************************************
 
-void clientSendEndGame(int winningpnum, int fd) {
-  if (winningpnum == -1) {
-    winningpnum = tiebreaker();
+void ClientSendEndGame(int winningPnum, int fd) {
+  if (winningPnum == -1) {
+    winningPnum = Tiebreaker();
   }
 
-  sendInt(end_game, fd);
-  sendInt(winningpnum, fd);
-  sendGamePacket(fd);
+  SendInt(END_GAME, fd);
+  SendInt(winningPnum, fd);
+  SendGamePacket(fd);
 
-  endGame(winningpnum);
+  EndGame(winningPnum);
 }
 
-int clientStateEndTurn(int orig_pnum, int fd) {
-  receiveGamePacket(fd);
+int ClientStateEndTurn(int origPnum, int fd) {
+  ReceiveGamePacket(fd);
 
   return 1;
 }
 
-int clientStateEndGame(int orig_pnum, int fd) {
-  int winningpnum;
+int ClientStateEndGame(int origPnum, int fd) {
+  int winningPnum;
 
-  receiveInt(&winningpnum, fd);
-  receiveGamePacket(fd);
-  endGame(winningpnum);
+  ReceiveInt(&winningPnum, fd);
+  ReceiveGamePacket(fd);
+  EndGame(winningPnum);
 
-  return winningpnum;
+  return winningPnum;
 }
 
-int clientStateNeigh(int clientpnum, int fd) {
-  int orig_pnum;
-  int orig_cindex;
+int ClientStateNeigh(int clientpnum, int fd) {
+  int origPnum;
+  int origCindex;
 
-  receiveInt(&orig_pnum, fd);
-  receiveInt(&orig_cindex, fd);
-  clientNeigh(clientpnum, orig_pnum, &orig_cindex);
+  ReceiveInt(&origPnum, fd);
+  ReceiveInt(&origCindex, fd);
+  ClientNeigh(clientpnum, origPnum, &origCindex);
 
   return 0;
 }
 
-int clientStateDiscard(int clientpnum, int fd) {
+int ClientStateDiscard(int clientpnum, int fd) {
   int target_player;
-  int desired_type;
+  int desiredType;
 
-  receiveCardEffectPacket(&target_player, &desired_type, fd);
-  clientDiscard(clientpnum, target_player, desired_type);
+  ReceiveCardEffectPacket(&target_player, &desiredType, fd);
+  ClientDiscard(clientpnum, target_player, desiredType);
 
   return 0;
 }
 
-int clientStateSacrifice(int clientpnum, int fd) {
+int ClientStateSacrifice(int clientpnum, int fd) {
   int target_player;
-  int desired_type;
+  int desiredType;
 
-  receiveCardEffectPacket(&target_player, &desired_type, fd);
-  clientSacrifice(clientpnum, target_player, desired_type);
+  ReceiveCardEffectPacket(&target_player, &desiredType, fd);
+  ClientSacrifice(clientpnum, target_player, desiredType);
 
   return 0;
 }
 
 // this is specifically for clients who's cards are getting destroyed
 // so they can enter any necessary info in the sacrificeDestroyEffects function
-int clientStateDestroy(int clientpnum, int fd) {
-  int orig_pnum;
+int ClientStateDestroy(int clientpnum, int fd) {
+  int origPnum;
   int cindex;
 
-  receiveCardEffectPacket(&orig_pnum, &cindex, fd);
+  ReceiveCardEffectPacket(&origPnum, &cindex, fd);
 
   printf("\n\033[1;31m%s\033[0m wants to destroy your card \033[1;31m'%s'\033[0m.\n",
-    player[orig_pnum].username, player[clientpnum].stable.unicorns[cindex].name);
+    player[origPnum].username, player[clientpnum].stable.unicorns[cindex].name);
 
-  sacrificeDestroyEffects(clientpnum, cindex, player[clientpnum].stable.unicorns[cindex].effect);
-  sendInt(quit_loop, fd);
-  sendGamePacket(fd);
+  Base_SacrificeDestroyEffects(clientpnum, cindex, player[clientpnum].stable.unicorns[cindex].effect);
+  SendInt(QUIT_LOOP, fd);
+  SendGamePacket(fd);
 
   return 0;
 }
 
-int clientStateEnterStable(int clientpnum, int fd) {
+int ClientStateEnterStable(int clientpnum, int fd) {
   struct Unicorn corn;
-  int orig_pnum;
+  int origPnum;
 
-  receiveEnterStablePacket(&corn, &orig_pnum, fd);
+  ReceiveEnterStablePacket(&corn, &origPnum, fd);
 
-  printf("\n\033[1;31m%s\033[0m sent you the card \033[1;31m'%s'\033[0m.\n", player[orig_pnum].username, corn.name);
-  addStable(clientpnum, corn);
+  printf("\n\033[1;31m%s\033[0m sent you the card \033[1;31m'%s'\033[0m.\n", player[origPnum].username, corn.name);
+  AddStable(clientpnum, corn);
 
-  if (!checkWin(clientpnum)) {
-    sendInt(quit_loop, fd);
-    sendGamePacket(fd);
+  if (!CheckWin(clientpnum)) {
+    SendInt(QUIT_LOOP, fd);
+    SendGamePacket(fd);
   }
   else {
-    clientSendEndGame(clientpnum, fd);
+    ClientSendEndGame(clientpnum, fd);
     return 1;
   }
 
@@ -128,136 +128,136 @@ int clientStateEnterStable(int clientpnum, int fd) {
 // ********************************* Server States ********************************
 // ********************************************************************************
 
-void serverSendEndGame(int winningpnum) {
-  // check if winningpnum = -1 or not
-  if (winningpnum == -1) {
-    winningpnum = tiebreaker();
+void ServerSendEndGame(int winningPnum) {
+  // check if winningPnum = -1 or not
+  if (winningPnum == -1) {
+    winningPnum = Tiebreaker();
   }
 
-  for (int i = 0; i < current_players - 1; i++) {
-    sendInt(end_game, clientsockfd[i]);
-    sendInt(winningpnum, clientsockfd[i]);
-    sendGamePacket(clientsockfd[i]);
+  for (int i = 0; i < currentPlayers - 1; i++) {
+    SendInt(END_GAME, clientsockfd[i]);
+    SendInt(winningPnum, clientsockfd[i]);
+    SendGamePacket(clientsockfd[i]);
   }
 
-  endGame(winningpnum);
+  EndGame(winningPnum);
 }
 
-int serverStateEndTurn(int orig_pnum, int fd) {
-  receiveGamePacket(fd);
+int ServerStateEndTurn(int origPnum, int fd) {
+  ReceiveGamePacket(fd);
 
-  for (int i = 0; i < current_players - 1; i++) {
-    if (orig_pnum == (i + 1)) continue;
+  for (int i = 0; i < currentPlayers - 1; i++) {
+    if (origPnum == (i + 1)) continue;
 
-    sendInt(end_turn, clientsockfd[i]);
-    sendGamePacket(clientsockfd[i]);
+    SendInt(END_TURN, clientsockfd[i]);
+    SendGamePacket(clientsockfd[i]);
   }
 
   return 1;
 }
 
-int serverStateEndGame(int orig_pnum, int fd) {
-  int winningpnum;
+int ServerStateEndGame(int origPnum, int fd) {
+  int winningPnum;
 
-  receiveInt(&winningpnum, fd);
-  receiveGamePacket(fd);
+  ReceiveInt(&winningPnum, fd);
+  ReceiveGamePacket(fd);
 
-  for (int i = 0; i < current_players - 1; i++) {
-    if (orig_pnum == (i + 1)) continue;
+  for (int i = 0; i < currentPlayers - 1; i++) {
+    if (origPnum == (i + 1)) continue;
 
-    sendInt(end_game, clientsockfd[i]);
-    sendInt(winningpnum, clientsockfd[i]);
-    sendGamePacket(clientsockfd[i]);
+    SendInt(END_GAME, clientsockfd[i]);
+    SendInt(winningPnum, clientsockfd[i]);
+    SendGamePacket(clientsockfd[i]);
   }
-  endGame(winningpnum);
+  EndGame(winningPnum);
 
-  return winningpnum;
+  return winningPnum;
 }
 
-int serverStateQuitLoop(int orig_pnum, int fd) {
-  receiveGamePacket(fd);
+int ServerStateQuitLoop(int origPnum, int fd) {
+  ReceiveGamePacket(fd);
 
   return 1;
 }
 
-int serverStateNeigh(int orig_pnum, int fd) {
+int ServerStateNeigh(int origPnum, int fd) {
   int cindex;
 
-  receiveInt(&cindex, fd);
-  receivePlayers(fd); // this is for updating the current player's hand after the beginning stable effects and drawing
-  serverNeigh(orig_pnum, &cindex);
+  ReceiveInt(&cindex, fd);
+  ReceivePlayers(fd); // this is for updating the current player's hand after the beginning stable effects and drawing
+  ServerNeigh(origPnum, &cindex);
 
   return 0;
 }
 
-int serverStateDiscard(int orig_pnum, int fd) {
+int ServerStateDiscard(int origPnum, int fd) {
   int target_player;
-  int desired_type;
+  int desiredType;
 
-  receiveCardEffectPacket(&target_player, &desired_type, fd);
-  serverDiscard(orig_pnum, target_player, desired_type);
+  ReceiveCardEffectPacket(&target_player, &desiredType, fd);
+  ServerDiscard(origPnum, target_player, desiredType);
 
   return 0;
 }
 
-int serverStateSacrifice(int orig_pnum, int fd) {
+int ServerStateSacrifice(int origPnum, int fd) {
   int target_player;
-  int desired_type;
+  int desiredType;
 
-  receiveCardEffectPacket(&target_player, &desired_type, fd);
-  serverSacrifice(orig_pnum, target_player, desired_type);
+  ReceiveCardEffectPacket(&target_player, &desiredType, fd);
+  ServerSacrifice(origPnum, target_player, desiredType);
 
   return 0;
 }
 
 // this is specifically for when the host's cards are getting destroyed
 // so they can enter any necessary info in the sacrificeDestroyEffects function
-int serverStateDestroy(int orig_pnum, int fd) {
+int ServerStateDestroy(int origPnum, int fd) {
   int target_player;
   int cindex;
 
-  receiveCardEffectPacket(&target_player, &cindex, fd);
+  ReceiveCardEffectPacket(&target_player, &cindex, fd);
 
   if (target_player != 0) {
-    sendInt(destroy_event, clientsockfd[target_player - 1]);
-    sendCardEffectPacket(target_player, cindex, clientsockfd[target_player - 1]);
-    serverEnterLeaveStable(orig_pnum, target_player);
+    SendInt(DESTROY_EVENT, clientsockfd[target_player - 1]);
+    SendCardEffectPacket(target_player, cindex, clientsockfd[target_player - 1]);
+    ServerEnterLeaveStable(origPnum, target_player);
   }
   else {
     printf("\n\033[1;31m%s\033[0m wants to destroy your card \033[1;31m'%s'\033[0m.\n",
-      player[orig_pnum].username, player[0].stable.unicorns[cindex].name);
+      player[origPnum].username, player[0].stable.unicorns[cindex].name);
 
-    sacrificeDestroyEffects(0, cindex, player[0].stable.unicorns[cindex].effect);
+    Base_SacrificeDestroyEffects(0, cindex, player[0].stable.unicorns[cindex].effect);
 
-    sendInt(quit_loop, fd);
-    sendGamePacket(fd);
+    SendInt(QUIT_LOOP, fd);
+    SendGamePacket(fd);
   }
 
   return 0;
 }
 
-int serverStateEnterStable(int orig_pnum, int fd) {
+int ServerStateEnterStable(int origPnum, int fd) {
   struct Unicorn corn;
   int target_player;
 
-  receiveEnterStablePacket(&corn, &target_player, fd);
+  ReceiveEnterStablePacket(&corn, &target_player, fd);
 
   if (target_player != 0) {
-    sendInt(enter_stable_event, clientsockfd[target_player - 1]);
-    sendEnterStablePacket(corn, orig_pnum, clientsockfd[target_player - 1]);
-    serverEnterLeaveStable(orig_pnum, target_player);
+    SendInt(ENTER_STABLE_EVENT, clientsockfd[target_player - 1]);
+    SendEnterStablePacket(corn, origPnum, clientsockfd[target_player - 1]);
+    ServerEnterLeaveStable(origPnum, target_player);
   }
   else {
-    printf("\n\033[1;31m%s\033[0m sent you the card \033[1;31m'%s'\033[0m.\n", player[orig_pnum].username, corn.name);
-    addStable(0, corn);
+    printf("\n\033[1;31m%s\033[0m sent you the card \033[1;31m'%s'\033[0m.\n", player[origPnum].username, corn.name);
+    AddStable(0, corn);
 
-    if (!checkWin(0)) {
-      sendInt(quit_loop, fd);
-      sendGamePacket(fd);
+    if (!CheckWin(0)) {
+      SendInt(QUIT_LOOP, fd);
+      SendGamePacket(fd);
     }
     else {
-      // winningpnum = 0 since that's the host
-      serverSendEndGame(0);
+      // winningPnum = 0 since that's the host
+      ServerSendEndGame(0);
     }
   }
 

@@ -3,22 +3,21 @@
 #include "gamephase.h"
 #include "windowsapp.h"
 
-#define ERRORBUF 256
-
-int clientMain(void) {
-  int isvalid = 0, clientpnum, index;
+/**
+ * @brief Connects to the server and verifies a valid username before fully connecting to the lobby
+ * @return clientpnum The user/client's personal player number for the game
+ */
+static int ClientConnect(void) {
+  int isvalid = 0;
+  int clientpnum;
   short portno;
   char *end, buf[BUF_SIZE];
   struct sockaddr_in server;
 
-  // *****************************************************
-  // ******************* Client Set-up *******************
-  // *****************************************************
-
   for (;;) {
     do {
       printf("Enter a valid port number to connect to (between 1024 and 65535 inclusive): ");
-      portno = numinput(buf, &end, sizeof buf);
+      portno = NumInput(buf, &end, sizeof buf);
     } while (portno < 1024 || portno > 65535 || end != (buf + strlen(buf)));
     do {
       printf("Enter a valid IPv4 Address to join: ");
@@ -45,7 +44,7 @@ int clientMain(void) {
 
     if (strlen(buf) > 0) {
       send(sockfd, buf, strlen(buf), 0);
-      receiveInt(&isvalid, sockfd);
+      ReceiveInt(&isvalid, sockfd);
 
       if (!isvalid) {
         printf("The username '%s' is already taken by another player.\n", buf);
@@ -56,8 +55,8 @@ int clientMain(void) {
     }
   } while (!isvalid);
 
-  receiveInt(&clientpnum, sockfd);
-  isclient = 1;
+  ReceiveInt(&clientpnum, sockfd);
+  isClient = 1;
 
   printf(
     "\n********************************************************************************"
@@ -65,19 +64,30 @@ int clientMain(void) {
     "\n********************************************************************************"
   );
 
-  red();
+  Red();
   printf("\n\nYou have successfully joined the lobby!"
     "\nType and enter any messages you wish to send to your party.");
-  reset_col();
+  ResetCol();
 
   printf("\033[1;31m%s\033[0m: ", buf);
+
+  return clientpnum;
+}
+
+int ClientMain(void) {
+  int isvalid = 0, index;
+  int clientpnum;
+  char *end, buf[BUF_SIZE];
+
+  clientpnum = ClientConnect();
 
   // *****************************************************
   // ******************** Game Set-up ********************
   // *****************************************************
 
-  char stdinbuf[MSGBUF] = { 0 };
-  int bufindex = 0;
+  int nEvents;
+  int bufIndex = 0;
+  char stdinBuf[MSGBUF] = { 0 };
 
   int ret;
   WSAPOLLFD pfd[2] = { -1 };  // stdin + original sockfd
@@ -98,57 +108,57 @@ int clientMain(void) {
     }
 
     if (WaitForSingleObject(GetStdHandle(STD_INPUT_HANDLE), 0) == WAIT_OBJECT_0) {
-      processStdin(stdinbuf, &bufindex);
-      if (bufindex >= (sizeof(stdinbuf) - 1) || stdinbuf[bufindex - 1] == '\r' || stdinbuf[bufindex - 1] == '\n') {
+      ProcessStdin(stdinBuf, &bufIndex);
+      if (bufIndex >= (sizeof(stdinBuf) - 1) || stdinBuf[bufIndex - 1] == '\r' || stdinBuf[bufIndex - 1] == '\n') {
 
-        sendInt(incoming_msg, sockfd);
-        sendInt(clientpnum, sockfd);
-        sendMsg(stdinbuf, sizeof stdinbuf, sockfd);
+        SendInt(INCOMING_MSG, sockfd);
+        SendInt(clientpnum, sockfd);
+        SendMsg(stdinBuf, sizeof stdinBuf, sockfd);
 
-        memset(stdinbuf, '\0', sizeof stdinbuf);
-        bufindex = 0;
+        memset(stdinBuf, '\0', sizeof stdinBuf);
+        bufIndex = 0;
 
         printf("\033[1;31m%s\033[0m: ", player[clientpnum].username);
       }
     }
 
     if (pfd[1].revents & POLLIN) {
-      receiveInt(&network_events, sockfd);
+      ReceiveInt(&nEvents, sockfd);
 
-      if (network_events == player_join) {
-        receivePlayers(sockfd);
+      if (nEvents == PLAYER_JOIN) {
+        ReceivePlayers(sockfd);
 
         // erase the player's name and incomplete message; the extra 2 comes from the colon and space
-        for (int i = 0; i < strlen(player[clientpnum].username) + bufindex + 2; i++) {
+        for (int i = 0; i < (int)strlen(player[clientpnum].username) + bufIndex + 2; i++) {
           printf("\b \b");
         }
 
         printf("\nCurrent list of players:\n");
-        for (int i = 0; i < current_players; i++) {
+        for (int i = 0; i < currentPlayers; i++) {
           printf("  %d: %s\n", i + 1, player[i].username);
         }
 
         // rewrite the typed message
-        printf("\033[1;31m%s\033[0m: %s", player[clientpnum].username, stdinbuf);
+        printf("\033[1;31m%s\033[0m: %s", player[clientpnum].username, stdinBuf);
       }
-      else if (network_events == player_disconnect) {
+      else if (nEvents == PLAYER_DISCONNECT) {
         int tmp;
-        receiveInt(&tmp, sockfd);
+        ReceiveInt(&tmp, sockfd);
 
         // erase the player's name and incomplete message; the extra 2 comes from the colon and space
-        for (int i = 0; i < strlen(player[clientpnum].username) + bufindex + 2; i++) {
+        for (int i = 0; i < (int)strlen(player[clientpnum].username) + bufIndex + 2; i++) {
           printf("\b \b");
         }
 
         printf("\nPlayer ");
-        red();
+        Red();
         printf("%s", player[tmp].username);
-        reset_col();
+        ResetCol();
         printf(" disconnected :(\n");
 
-        receivePlayers(sockfd);
+        ReceivePlayers(sockfd);
         printf("\nCurrent list of players:\n");
-        for (int i = 0; i < current_players; i++) {
+        for (int i = 0; i < currentPlayers; i++) {
           printf("  %d: %s\n", i + 1, player[i].username);
         }
 
@@ -157,31 +167,31 @@ int clientMain(void) {
           clientpnum--;
 
         // rewrite the typed message
-        printf("\033[1;31m%s\033[0m: %s", player[clientpnum].username, stdinbuf);
+        printf("\033[1;31m%s\033[0m: %s", player[clientpnum].username, stdinBuf);
       }
-      else if (network_events == incoming_msg) {
+      else if (nEvents == INCOMING_MSG) {
         int pnum;
         char recvbuf[MSGBUF] = { 0 };
 
-        receiveInt(&pnum, sockfd);
-        receiveMsg(recvbuf, sockfd);
+        ReceiveInt(&pnum, sockfd);
+        ReceiveMsg(recvbuf, sockfd);
 
         // erase the player's name and incomplete message; the extra 2 comes from the colon and space
-        for (int i = 0; i < strlen(player[clientpnum].username) + bufindex + 2; i++) {
+        for (int i = 0; i < (int)strlen(player[clientpnum].username) + bufIndex + 2; i++) {
           printf("\b \b");
         }
 
-        red();
+        Red();
         printf("%s: ", player[pnum].username);
-        reset_col();
+        ResetCol();
         printf("%s\n", recvbuf);
 
         // rewrite the typed message
-        printf("\033[1;31m%s\033[0m: %s", player[clientpnum].username, stdinbuf);
+        printf("\033[1;31m%s\033[0m: %s", player[clientpnum].username, stdinBuf);
       }
-      else if (network_events == start_game) {
+      else if (nEvents == START_GAME) {
         // erase the player's name and incomplete message; the extra 2 comes from the colon and space
-        for (int i = 0; i < strlen(player[clientpnum].username) + bufindex + 2; i++) {
+        for (int i = 0; i < (int)strlen(player[clientpnum].username) + bufIndex + 2; i++) {
           printf("\b \b");
         }
         break;
@@ -191,42 +201,42 @@ int clientMain(void) {
     Sleep(20);
   }
 
-  rainbow(
+  Rainbow(
     "\n*********************************"
     "\n*** Choose your baby unicorn! ***"
     "\n*********************************\n\n");
 
-  red();
+  Red();
   puts("Waiting for other players to pick their Baby Unicorn...");
-  reset_col();
+  ResetCol();
 
-  receiveInt(&current_players, sockfd);
-  receivePlayers(sockfd);
-  receiveInt(&nursery.size, sockfd);
-  receiveUnicorns(nursery.cards, nursery.size, sockfd);
+  ReceiveInt(&currentPlayers, sockfd);
+  ReceivePlayers(sockfd);
+  ReceiveInt(&nursery.size, sockfd);
+  ReceiveUnicorns(nursery.cards, nursery.size, sockfd);
 
   // pick your chosen baby unicorn :D
-  printPile(nursery);
+  PrintPile(nursery);
   do {
-    red();
+    Red();
     printf("%s: ", player[clientpnum].username);
-    reset_col();
+    ResetCol();
     printf("Pick the index associated with your desired Baby Unicorn: ");
-    index = numinput(buf, &end, sizeof buf) - 1;
+    index = NumInput(buf, &end, sizeof buf) - 1;
   } while (index < 0 || index >= nursery.size || end != (buf + strlen(buf)));
 
-  sendInt(index, sockfd);
+  SendInt(index, sockfd);
 
-  if (clientpnum < current_players - 1) {
-    red();
+  if (clientpnum < currentPlayers - 1) {
+    Red();
     puts("Waiting for other players to pick their Baby Unicorn...");
-    reset_col();
+    ResetCol();
   }
 
   // receive final list of players/nursery
-  receivePlayers(sockfd);
-  receiveInt(&nursery.size, sockfd);
-  receiveUnicorns(nursery.cards, nursery.size, sockfd);
+  ReceivePlayers(sockfd);
+  ReceiveInt(&nursery.size, sockfd);
+  ReceiveUnicorns(nursery.cards, nursery.size, sockfd);
 
   // *****************************************************
   // ******************** Game Start! ********************
@@ -248,30 +258,30 @@ int clientMain(void) {
   // loop until win condition occurs (7 unicorns in stable)
   do {
     printf("\n********************************************************************************\n");
-    red();
+    Red();
     printf("\nPlayer Stables\n");
-    reset_col();
-    printStableGrid();
+    ResetCol();
+    PrintStableGrid();
 
-    red();
+    Red();
     printf("\n*** %s's turn ***\n\n", player[counter].username);
-    reset_col();
+    ResetCol();
 
     if (counter == clientpnum) {
       // it's your turn! do your thing :>
-      beginningOfTurn(clientpnum);
+      BeginningOfTurn(clientpnum);
 
-      actionPhase(clientpnum);
+      ActionPhase(clientpnum);
 
-      if (endOfTurn(clientpnum)) {
-        clientSendEndGame(clientpnum, sockfd);
+      if (EndOfTurn(clientpnum)) {
+        ClientSendEndGame(clientpnum, sockfd);
         // break just to avoid looping in case the function actually returns
         break;
       }
 
       // send updates of stuff
-      sendInt(end_turn, sockfd);
-      sendGamePacket(sockfd);
+      SendInt(END_TURN, sockfd);
+      SendGamePacket(sockfd);
     }
     else {
       printf("waiting for %s to make a move...\n", player[counter].username);
@@ -289,9 +299,9 @@ int clientMain(void) {
         }
 
         if (pfd[1].revents & POLLIN) {
-          receiveInt(&network_events, sockfd);
+          ReceiveInt(&nEvents, sockfd);
 
-          eventloop = netStates[network_events].recvClient(clientpnum, sockfd);
+          eventloop = netStates[nEvents].RecvClient(clientpnum, sockfd);
         }
 
         Sleep(20);
@@ -299,36 +309,37 @@ int clientMain(void) {
     }
 
     // print state of nursery and discard piles
-    #ifdef SHOWNURSERY
-      yellow();
-      printPile(nursery);
-      reset_col();
-    #endif
+#ifdef SHOWNURSERY
+      Yellow();
+      PrintPile(nursery);
+      ResetCol();
+#endif
       
-    #ifdef SHOWDISCARD
-      magenta();
-      printPile(discardpile);
-      reset_col();
-    #endif
+#ifdef SHOWDISCARD
+      Magenta();
+      PrintPile(discardpile);
+      ResetCol();
+#endif
 
-    counter = (counter + 1) % current_players;
+    counter = (counter + 1) % currentPlayers;
   } while (42);
 
   // this shouldn't happen
-	return 1;
+  return 1;
 }
 
-int clientJoin(short portno) {
+int ClientJoin(LPVOID p) {
+  short portno = *((short*)p);
   struct sockaddr_in server;
-  int clientpnum, versioncheck;
-  char errormsg[ERRORBUF];
+  int clientpnum;
+  char errormsg[DESC_SIZE];
 
   // *****************************************************
   // ******************* Client Set-up *******************
   // *****************************************************
 
-  // TODO: isclient is kind of superfluous when i could just use the player number to check instead
-  isclient = 1;
+  // TODO: isClient is kind of superfluous when i could just use the player number to check instead
+  isClient = 1;
 
   if (inet_pton(AF_INET, ip, &server.sin_addr.s_addr) != 1) {
     // oopsie
@@ -339,22 +350,22 @@ int clientJoin(short portno) {
   server.sin_port = htons(portno);
 
   if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == INVALID_SOCKET) {
-    sprintf_s(errormsg, ERRORBUF, "Could not create socket. Error code : % d", WSAGetLastError());
+    sprintf_s(errormsg, DESC_SIZE, "Could not create socket. Error code : % d", WSAGetLastError());
     MessageBoxA(NULL,
       errormsg,
       _T("Server Set-up"),
-      NULL);
+      MB_ICONERROR | MB_OK);
     return 1;
   }
 
   if (connect(sockfd, (struct sockaddr*)&server, sizeof(server)) < 0) {
-    sprintf_s(errormsg, ERRORBUF, "Attempt to connect to the server was unsuccessful. Error code : %d", WSAGetLastError());
+    sprintf_s(errormsg, DESC_SIZE, "Attempt to connect to the server was unsuccessful. Error code : %d", WSAGetLastError());
     MessageBoxA(NULL,
       errormsg,
       _T("Client Connection Set-up"),
-      NULL);
+      MB_ICONERROR | MB_OK);
     closesocket(sockfd);
-    menustate = TITLEBLANK;
+    menuState = TITLEBLANK;
     return 1;
   }
 
@@ -364,7 +375,7 @@ int clientJoin(short portno) {
   // int nameVerify = 0;
   // do {
   //   send(sockfd, player[0].username, strlen(player[0].username), 0);
-  //   receiveInt(&nameVerify, sockfd);
+  //   ReceiveInt(&nameVerify, sockfd);
   // } while (nameVerify != 0);
 
 
@@ -373,23 +384,21 @@ int clientJoin(short portno) {
   // Unhandled exception at 0x00369628 in UnstableUnicorns.exe: RangeChecks instrumentation code detected an out of range array access.
   // 
   // reason behind it:
-  // the client was receiving the lobby packet before the hexcode due to sync issues with the networktoggle flag. if the host
+  // the client was receiving the lobby packet before the hexcode due to sync issues with the networkToggle flag. if the host
   // picked their own baby unicorn, then the server wouldn't actually untoggle the flag, and sometimes it would send the lobby
-  // packet in the "if (networktoggle & 2)" statement rather than through the IO event
+  // packet in the "if (networkToggle & 2)" statement rather than through the IO event
 
 
   // success! ^.^
   // using player[0] just for the start; will be overwritten later
   send(sockfd, player[0].username, strlen(player[0].username), 0);
   recv(sockfd, hexcode, sizeof(hexcode), 0); // this isn't part of the lobby packet because it never changes
-  receiveLobbyPacket(&current_players, &clientpnum, sockfd);
+  ReceiveLobbyPacket(&currentPlayers, &clientpnum, sockfd);
 
   // ***** test *****
-  menustate = LOBBY; // only switch to the lobby after successfully connecting
+  menuState = LOBBY; // only switch to the lobby after successfully connecting
 
   int ret, isvalid = 0;
-  char buf[BUF_SIZE];
-  POINT pnt;
 
   // client should be in non-blocking mode
   unsigned long on = 1;
@@ -399,29 +408,29 @@ int clientJoin(short portno) {
   pfd.fd = sockfd;
   pfd.events = POLLIN | POLLOUT;
 
-  // TODO: add a reset function for whenever the client disconnects; include all global variable resets and the menustate change
+  // TODO: add a reset function for whenever the client disconnects; include all global variable resets and the menuState change
   for (;;) {
     // timeout after 150 seconds
     ret = WSAPoll(&pfd, 1, -1);
     if (ret == SOCKET_ERROR) {
-      sprintf_s(errormsg, ERRORBUF, "ERROR: poll() failed. Error code : %d", WSAGetLastError());
+      sprintf_s(errormsg, DESC_SIZE, "ERROR: poll() failed. Error code : %d", WSAGetLastError());
       MessageBoxA(NULL,
         errormsg,
         _T("Client Connection"),
-        NULL);
+        MB_ICONERROR | MB_OK);
       closesocket(sockfd);
-      menustate = TITLEBLANK;
+      menuState = TITLEBLANK;
       memset(pselect, 0, sizeof pselect);
       return 2;
     }
     else if (ret == 0) {
-      sprintf_s(errormsg, ERRORBUF, "ERROR: server timed out. Error code : %d", WSAGetLastError());
+      sprintf_s(errormsg, DESC_SIZE, "ERROR: server timed out. Error code : %d", WSAGetLastError());
       MessageBoxA(NULL,
         errormsg,
         _T("Client Connection"),
-        NULL);
+        MB_ICONERROR | MB_OK);
       closesocket(sockfd);
-      menustate = TITLEBLANK;
+      menuState = TITLEBLANK;
       memset(pselect, 0, sizeof pselect);
       return 2;
     }
@@ -429,7 +438,7 @@ int clientJoin(short portno) {
     // incoming IO
     if (pfd.revents & POLLIN) {
       // character selection update or the game is about to start
-      receiveLobbyPacket(&current_players, &clientpnum, sockfd);
+      ReceiveLobbyPacket(&currentPlayers, &clientpnum, sockfd);
     }
 
     // TODO: the client gets borked whenever the host leaves, presumably due to trying to connect before the timeout is over.
@@ -439,33 +448,33 @@ int clientJoin(short portno) {
     // Connection lost [server dieded uh-oh]
     if (pfd.revents & (POLLHUP | POLLERR | POLLNVAL)) {
       MessageBoxA(NULL,
-        _T("ERROR: Client received POLLHUP or POLLERR signal (Host disconnected)"),
+        _T("Host disconnected. Press OK to go back to the title screen."),
         _T("Client Connection"),
-        NULL);
+        MB_ICONERROR | MB_OK);
       closesocket(sockfd);
-      menustate = TITLEBLANK;
+      menuState = TITLEBLANK;
       memset(pselect, 0, sizeof pselect);
       return 2;
     }
 
     // this should only activate once per action, so toggle the var again at the end
     // theoretically only one flag should be active at a time
-    if (networktoggle & 1) {
+    if (networkToggle & 1) {
       // clicked the leave button
       closesocket(sockfd);
-      menustate = TITLEBLANK;
-      networktoggle ^= 1;
+      menuState = TITLEBLANK;
+      networkToggle ^= 1;
       memset(pselect, 0, sizeof pselect);
       return 1;
     }
-    else if (networktoggle & 2) {
+    else if (networkToggle & 2) {
       // client clicked somewhere and must send the point info to the server
       // to check whether or not they clicked a valid baby unicorn
-      // TODO: (low priority) only send point when it's on a baby unicorn square; could make
-      // another helper function for SelectBabyUnicorn that returns the unicorn index
-      sendInt(clientPnt.x, sockfd);
-      sendInt(clientPnt.y, sockfd);
-      networktoggle ^= 2;
+      // TODO: (low priority) only send point when it's on a baby unicorn square;
+      // could make another helper function for SelectBabyUnicorn that returns the unicorn index
+      SendInt(clientPnt.x, sockfd);
+      SendInt(clientPnt.y, sockfd);
+      networkToggle ^= 2;
     }
 
     Sleep(20);

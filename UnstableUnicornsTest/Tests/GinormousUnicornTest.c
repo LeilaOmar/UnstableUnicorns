@@ -1,64 +1,64 @@
-#include "MagicUnicornTests.h"
+#include "MagicalUnicornTests.h"
 
 // sanity check
-int ginormous_basic_check() {
-	int num_fails = 0;
-	struct Unicorn basic_tmp = basedeck[13];
-	struct Unicorn ginormous_tmp = basedeck[48];
+int ginormous_basic_check(void) {
+  int num_fails = 0;
+  struct Unicorn basic_tmp = Base_DECK[13];
+  struct Unicorn ginormous_tmp = Base_DECK[48];
 
-	current_players = 2;
-	addStable(0, ginormous_tmp);
-	addStable(0, basic_tmp);
-	addStable(0, basic_tmp);
-	addStable(0, basic_tmp);
-	addStable(0, basic_tmp);
-	addStable(0, basic_tmp);
+  currentPlayers = 2;
+  AddStable(0, ginormous_tmp);
+  AddStable(0, basic_tmp);
+  AddStable(0, basic_tmp);
+  AddStable(0, basic_tmp);
+  AddStable(0, basic_tmp);
+  AddStable(0, basic_tmp);
 
-	int ret = endOfTurn(0);
+  int ret = EndOfTurn(0);
 
-	assert(WIN_CONDITION == 7);
-	assert(player[0].stable.num_unicorns == 6);
-	assert((player[0].flags & ginormous_unicorn) == ginormous_unicorn);
+  assert(WIN_CONDITION == 7);
+  assert(player[0].stable.numUnicorns == 6);
+  assert((player[0].flags & GINORMOUS_UNICORN) == GINORMOUS_UNICORN);
 
-	if (ret != 1) {
-		num_fails++;
-		red();
-		fprintf(stderr, "    sanity test: win condition failed\n");
-		reset_col();
-	}
+  if (ret != 1) {
+    num_fails++;
+    Red();
+    fprintf(stderr, "    sanity test: win condition failed\n");
+    ResetCol();
+  }
 
-	if (canNeighOthers(0)) {
-		num_fails++;
-		red();
-		fprintf(stderr, "    sanity test: canNeighOthers failed\n");
-		reset_col();
-	}
+  if (CanNeighOthers(0)) {
+    num_fails++;
+    Red();
+    fprintf(stderr, "    sanity test: CanNeighOthers failed\n");
+    ResetCol();
+  }
 
-	toggleFlags(0, ginormous_tmp.effect);
-	ret = endOfTurn(0);
+  Base_ToggleFlags(0, ginormous_tmp.effect);
+  ret = EndOfTurn(0);
 
-	if (ret != 0) {
-		num_fails++;
-		red();
-		fprintf(stderr, "    sanity test: toggle flag failed\n");
-		reset_col();
-	}
+  if (ret != 0) {
+    num_fails++;
+    Red();
+    fprintf(stderr, "    sanity test: toggle flag failed\n");
+    ResetCol();
+  }
 
-	reset_players();
-	reset_deck();
-	return num_fails;
+  reset_players();
+  reset_deck();
+  return num_fails;
 }
 
 // Ginormous Unicorn
 //
 // This card counts for 2 Unicorns. You cannot play any Neigh cards.
-int ginormous_unicorn_tests() {
-	int num_fails = 0;
+int ginormous_unicorn_tests(void) {
+  int num_fails = 0;
 
-	if (!isclient) {
-		rainbow_error("\nStarting Ginormous Unicorn tests...\n");
+  if (!isClient) {
+    rainbow_error("\nStarting Ginormous Unicorn tests...\n");
 
-		num_fails += ginormous_basic_check();
-	}
-	return num_fails;
+    num_fails += ginormous_basic_check();
+  }
+  return num_fails;
 }

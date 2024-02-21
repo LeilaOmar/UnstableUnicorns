@@ -3,46 +3,46 @@
 #include "gamephase.h"
 #include "windowsapp.h"
 
-#define ERRORBUF 256
-
-int newConnection(SOCKET *cfd) {
+/**
+ * @brief Establishes a new connection between the server and the client socket fd
+ * @return 0 Success
+ * @return 1 Failed to connect
+ */
+static int NewConnection(SOCKET *cfd) {
   struct sockaddr_in client_addr;
   socklen_t client_addr_size = sizeof(client_addr);
-  char errormsg[ERRORBUF];
+  char errormsg[DESC_SIZE];
 
-  if ((cfd[current_players - 1] = accept(sockfd, (struct sockaddr*)&client_addr, &client_addr_size)) == INVALID_SOCKET) {
-    sprintf_s(errormsg, ERRORBUF, "Accept failed with error code : %d", WSAGetLastError());
+  if ((cfd[currentPlayers - 1] = accept(sockfd, (struct sockaddr*)&client_addr, &client_addr_size)) == INVALID_SOCKET) {
+    sprintf_s(errormsg, DESC_SIZE, "Accept failed with error code : %d", WSAGetLastError());
     MessageBoxA(NULL,
       errormsg,
       _T("Client Connection Set-up"),
-      NULL);
+      MB_ICONERROR | MB_OK);
     return 1;
   }
 
   return 0;
 }
 
-void initGame(void) {
-  return;
-}
-
-int serverMain(void) {
+/**
+ * @brief Server socket set-up
+ * @return 0 Success
+ * @return 1 Failed to connect
+ */
+static int InitServer(void) {
   short portno;
   struct sockaddr_in addr;
-  char* end, buf[LINE_MAX];
-
-  // *****************************************************
-  // ******************* Server Set-up *******************
-  // *****************************************************
+  char *end, buf[LINE_MAX];
 
   printf("\nEnter your desired username (max 32 chars): ");
-  fgets(player[current_players].username, sizeof player[current_players].username, stdin);
-  player[current_players].username[strlen(player[current_players].username) - 1] = 0;
-  current_players++; // the host is player one :>
+  fgets(player[currentPlayers].username, sizeof player[currentPlayers].username, stdin);
+  player[currentPlayers].username[strlen(player[currentPlayers].username) - 1] = 0;
+  currentPlayers++; // the host is player one :>
 
   do {
     printf("Enter a valid port number to connect to (between 1024 and 65535 inclusive): ");
-    portno = numinput(buf, &end, sizeof buf);
+    portno = NumInput(buf, &end, sizeof buf);
   } while (portno < 1024 || portno > 65535 || end != (buf + strlen(buf)));
 
   addr.sin_family = AF_INET;
@@ -62,19 +62,28 @@ int serverMain(void) {
     "\n********************************************************************************"
   );
 
-  red();
+  Red();
   printf("\n\nOnce two or more people are in a lobby, you may type and enter 'start' to start the game!"
     "\nOther messages get sent to your entire party.\n\n");
-  reset_col();
+  ResetCol();
+  return 0;
+}
+
+int ServerMain(void) {
+  int ret = InitServer();
+
+  if (ret) return ret;
 
   // *****************************************************
   // ******************** Poll Set-up ********************
   // *****************************************************
 
-  int ret, isvalid;
-  int connected_players = 1;
-  char stdinbuf[MSGBUF] = { 0 };
-  int bufindex = 0;
+  int isvalid;
+  int connectedPlayers = 1;
+  int nEvents;
+  int bufIndex = 0;
+  char stdinBuf[MSGBUF] = { 0 };
+  char *end, buf[LINE_MAX];
 
   // server should be in non-blocking mode
   unsigned long on = 1;
@@ -101,11 +110,11 @@ int serverMain(void) {
     // incoming connection
     if (pfd[1].revents & POLLIN) {
       // create a new connection given that there aren't already 10 clients
-      if (current_players < MAX_PLAYERS - 1) {
-        newConnection(clientsockfd);
-        ioctlsocket(clientsockfd[current_players - 2], FIONBIO, &on);
-        pfd[current_players].fd = clientsockfd[current_players - 2];
-        pfd[current_players].events = POLLIN | POLLOUT;
+      if (currentPlayers < MAX_PLAYERS - 1) {
+        NewConnection(clientsockfd);
+        ioctlsocket(clientsockfd[currentPlayers - 2], FIONBIO, &on);
+        pfd[currentPlayers].fd = clientsockfd[currentPlayers - 2];
+        pfd[currentPlayers].events = POLLIN | POLLOUT;
       }
     }
 
@@ -116,37 +125,37 @@ int serverMain(void) {
 
     // incoming signal from stdin (through handle, not pipe)
     if (WaitForSingleObject(GetStdHandle(STD_INPUT_HANDLE), 0) == WAIT_OBJECT_0) {
-      processStdin(stdinbuf, &bufindex);
-      if (bufindex >= (sizeof(stdinbuf) - 1) || stdinbuf[bufindex - 1] == '\r' || stdinbuf[bufindex - 1] == '\n') {
-        if (strncmp(stdinbuf, "start", 5) == 0 && current_players >= 2 && connected_players == current_players) {
-          for (int i = 0; i < current_players - 1; i++) {
-            sendInt(start_game, clientsockfd[i]);
+      ProcessStdin(stdinBuf, &bufIndex);
+      if (bufIndex >= (sizeof(stdinBuf) - 1) || stdinBuf[bufIndex - 1] == '\r' || stdinBuf[bufIndex - 1] == '\n') {
+        if (strncmp(stdinBuf, "start", 5) == 0 && currentPlayers >= 2 && connectedPlayers == currentPlayers) {
+          for (int i = 0; i < currentPlayers - 1; i++) {
+            SendInt(START_GAME, clientsockfd[i]);
           }
 
           // erase the player's name and incomplete message; the extra 2 comes from the colon and space
-          for (int i = 0; i < strlen(player[0].username) + bufindex + 2; i++) {
+          for (int i = 0; i < (int)strlen(player[0].username) + bufIndex + 2; i++) {
             printf("\b \b");
           }
           break;
         }
 
-        for (int i = 0; i < current_players - 1; i++) {
+        for (int i = 0; i < currentPlayers - 1; i++) {
           if (player[i + 1].username[0] == '\0') continue;
 
-          sendInt(incoming_msg, clientsockfd[i]);
-          sendInt(0, clientsockfd[i]);
-          sendMsg(stdinbuf, sizeof stdinbuf, clientsockfd[i]);
+          SendInt(INCOMING_MSG, clientsockfd[i]);
+          SendInt(0, clientsockfd[i]);
+          SendMsg(stdinBuf, sizeof stdinBuf, clientsockfd[i]);
         }
 
-        memset(stdinbuf, '\0', sizeof stdinbuf);
-        bufindex = 0;
+        memset(stdinBuf, '\0', sizeof stdinBuf);
+        bufIndex = 0;
 
         printf("\033[1;31m%s\033[0m: ", player[0].username);
       }
     }
 
     // IO operation came in from a client socket (username check!)
-    for (int i = 0; i < current_players - 1; i++) {
+    for (int i = 0; i < currentPlayers - 1; i++) {
       if (pfd[i + 2].revents & POLLIN && clientsockfd[i] != -1) {
         // new player
         if (player[i + 1].username[0] == '\0') {
@@ -154,72 +163,72 @@ int serverMain(void) {
           recv(clientsockfd[i], buf, LINE_MAX, 0);
           isvalid = 1;
 
-          for (int j = 0; j < current_players; j++) {
+          for (int j = 0; j < currentPlayers; j++) {
             if (strcmp(buf, player[j].username) == 0) {
               isvalid = 0;
               break;
             }
           }
 
-          sendInt(isvalid, clientsockfd[i]);
+          SendInt(isvalid, clientsockfd[i]);
 
           if (isvalid) {
-            connected_players++;
-            sendInt(i + 1, clientsockfd[i]);
+            connectedPlayers++;
+            SendInt(i + 1, clientsockfd[i]);
 
             // erase the player's name and incomplete message; the extra 2 comes from the colon and space
-            for (int i = 0; i < strlen(player[0].username) + bufindex + 2; i++) {
+            for (int i = 0; i < (int)strlen(player[0].username) + bufIndex + 2; i++) {
               printf("\b \b");
             }
 
             strcpy_s(player[i + 1].username, sizeof player[i + 1].username, buf);
             printf("Player ");
-            red();
+            Red();
             printf("%s", player[i + 1].username);
-            reset_col();
+            ResetCol();
             puts(" has joined the game!\n");
 
             // rewrite the typed message
-            printf("\033[1;31m%s\033[0m: %s", player[0].username, stdinbuf);
+            printf("\033[1;31m%s\033[0m: %s", player[0].username, stdinBuf);
 
-            for (int j = 0; j < current_players - 1; j++) {
+            for (int j = 0; j < currentPlayers - 1; j++) {
               if (player[j + 1].username[0] == '\0') continue;
 
-              sendInt(player_join, clientsockfd[j]);
-              sendPlayers(clientsockfd[j]);
+              SendInt(PLAYER_JOIN, clientsockfd[j]);
+              SendPlayers(clientsockfd[j]);
             }
           }
         }
         else {
-          receiveInt(&network_events, clientsockfd[i]);
+          ReceiveInt(&nEvents, clientsockfd[i]);
 
-          if (network_events == incoming_msg) {
+          if (nEvents == INCOMING_MSG) {
             int pnum;
             char recvbuf[MSGBUF] = { 0 };
 
-            receiveInt(&pnum, clientsockfd[i]);
-            receiveMsg(recvbuf, clientsockfd[i]);
+            ReceiveInt(&pnum, clientsockfd[i]);
+            ReceiveMsg(recvbuf, clientsockfd[i]);
 
             // erase the player's name and incomplete message; the extra 2 comes from the colon and space
-            for (int i = 0; i < strlen(player[0].username) + bufindex + 2; i++) {
+            for (int i = 0; i < (int)strlen(player[0].username) + bufIndex + 2; i++) {
               printf("\b \b");
             }
 
-            red();
+            Red();
             printf("%s: ", player[pnum].username);
-            reset_col();
+            ResetCol();
             printf("%s\n", recvbuf);
 
             // rewrite the typed message
-            printf("\033[1;31m%s\033[0m: %s", player[0].username, stdinbuf);
+            printf("\033[1;31m%s\033[0m: %s", player[0].username, stdinBuf);
 
-            // the pnum in receiveMsg is the same as the client socket number (i.e. clientsockfd[i])
-            for (int j = 0; j < current_players - 1; j++) {
+            // the pnum in ReceiveMsg is the same as the client socket number (i.e. clientsockfd[i])
+            for (int j = 0; j < currentPlayers - 1; j++) {
               if (j == i || player[j + 1].username[0] == '\0') continue;
 
-              sendInt(network_events, clientsockfd[j]);
-              sendInt(i + 1, clientsockfd[j]);
-              sendMsg(recvbuf, sizeof recvbuf, clientsockfd[j]);
+              SendInt(nEvents, clientsockfd[j]);
+              SendInt(i + 1, clientsockfd[j]);
+              SendMsg(recvbuf, sizeof recvbuf, clientsockfd[j]);
             }
           }
         }
@@ -227,37 +236,37 @@ int serverMain(void) {
 
       if (pfd[i + 2].revents & (POLLHUP | POLLERR)) {
         // erase the player's name and incomplete message; the extra 2 comes from the colon and space
-        for (int i = 0; i < strlen(player[0].username) + bufindex + 2; i++) {
+        for (int i = 0; i < (int)strlen(player[0].username) + bufIndex + 2; i++) {
           printf("\b \b");
         }
 
         printf("Player ");
-        red();
+        Red();
         printf("%s", player[i + 1].username);
-        reset_col();
+        ResetCol();
         printf(" disconnected :(\n");
 
         // rewrite the typed message
-        printf("\033[1;31m%s\033[0m: %s", player[0].username, stdinbuf);
+        printf("\033[1;31m%s\033[0m: %s", player[0].username, stdinBuf);
 
-        current_players--;
-        connected_players--;
+        currentPlayers--;
+        connectedPlayers--;
 
-        for (int j = i; j < current_players - 1; j++) {
+        for (int j = i; j < currentPlayers - 1; j++) {
           clientsockfd[j] = clientsockfd[j + 1];
           player[j + 1] = player[j + 2];
           pfd[j + 2] = pfd[j + 3];
         }
 
-        memset(player[current_players].username, '\0', sizeof player[0].username);
-        clientsockfd[current_players - 1] = 0;
-        closesocket(clientsockfd[current_players - 1]);
+        memset(player[currentPlayers].username, '\0', sizeof player[0].username);
+        clientsockfd[currentPlayers - 1] = 0;
+        closesocket(clientsockfd[currentPlayers - 1]);
 
         // update the rest of the party
-        for (int j = 0; j < current_players - 1; j++) {
-          sendInt(player_disconnect, clientsockfd[j]);
-          sendInt(i + 1, clientsockfd[j]); // i + 1 == player that left
-          sendPlayers(clientsockfd[j]);
+        for (int j = 0; j < currentPlayers - 1; j++) {
+          SendInt(PLAYER_DISCONNECT, clientsockfd[j]);
+          SendInt(i + 1, clientsockfd[j]); // i + 1 == player that left
+          SendPlayers(clientsockfd[j]);
         }
       }
     }
@@ -271,58 +280,58 @@ int serverMain(void) {
 
   int index;
 
-  rainbow(
+  Rainbow(
     "\n*********************************"
     "\n*** Choose your baby unicorn! ***"
     "\n*********************************\n\n");
 
-  printPile(nursery);
+  PrintPile(nursery);
   do {
-    red();
+    Red();
     printf("%s: ", player[0].username);
-    reset_col();
+    ResetCol();
     printf("Pick the index associated with your desired Baby Unicorn: ");
-    index = numinput(buf, &end, sizeof buf) - 1;
+    index = NumInput(buf, &end, sizeof buf) - 1;
   } while (index < 0 || index >= nursery.size || end != (buf + strlen(buf)));
 
   player[0].stable.unicorns[0] = nursery.cards[index];
   player[0].stable.size = 1;
-  player[0].stable.num_unicorns = 1;
+  player[0].stable.numUnicorns = 1;
 
-  rearrangePile(&nursery, index);
+  RearrangePile(&nursery, index);
 
-  red();
+  Red();
   puts("Waiting for other players to pick their Baby Unicorn...");
-  reset_col();
+  ResetCol();
 
-  for (int i = 1; i < current_players; i++) {
-    sendInt(current_players, clientsockfd[i - 1]);
-    sendPlayers(clientsockfd[i - 1]);
-    sendInt(nursery.size, clientsockfd[i - 1]);
-    sendUnicorns(nursery.cards, nursery.size, clientsockfd[i - 1]);
+  for (int i = 1; i < currentPlayers; i++) {
+    SendInt(currentPlayers, clientsockfd[i - 1]);
+    SendPlayers(clientsockfd[i - 1]);
+    SendInt(nursery.size, clientsockfd[i - 1]);
+    SendUnicorns(nursery.cards, nursery.size, clientsockfd[i - 1]);
 
-    receiveInt(&index, clientsockfd[i - 1]);
+    ReceiveInt(&index, clientsockfd[i - 1]);
     player[i].stable.unicorns[0] = nursery.cards[index];
     player[i].stable.size = 1;
-    player[i].stable.num_unicorns = 1;
+    player[i].stable.numUnicorns = 1;
 
-    rearrangePile(&nursery, index);
+    RearrangePile(&nursery, index);
   }
 
   // all of the baby unicorns have been chosen, now initialize the hands/deck
-  shuffleDeck(&deck);
+  ShuffleDeck(&deck);
 
   // initialize variables, draw 5 cards and "pick" username
-  for (int i = 0; i < current_players; i++) {
-    player[i].hand.num_cards = 0;
-    draw(i, HAND_START);
+  for (int i = 0; i < currentPlayers; i++) {
+    player[i].hand.numCards = 0;
+    Draw(i, HAND_START);
   }
 
   // just have to trust that pepole don't cheat by examining the code mid-game lol
-  for (int i = 1; i < current_players; i++) {
-    sendPlayers(clientsockfd[i - 1]);
-    sendInt(nursery.size, clientsockfd[i - 1]);
-    sendUnicorns(nursery.cards, nursery.size, clientsockfd[i - 1]);
+  for (int i = 1; i < currentPlayers; i++) {
+    SendPlayers(clientsockfd[i - 1]);
+    SendInt(nursery.size, clientsockfd[i - 1]);
+    SendUnicorns(nursery.cards, nursery.size, clientsockfd[i - 1]);
   }
 
   // *****************************************************
@@ -345,31 +354,31 @@ int serverMain(void) {
   // loop until win condition occurs (7 unicorns in stable)
   do {
     printf("\n********************************************************************************\n");
-    red();
+    Red();
     printf("\nPlayer Stables\n");
-    reset_col();
-    printStableGrid();
+    ResetCol();
+    PrintStableGrid();
 
-    red();
+    Red();
     printf("\n*** %s's turn ***\n\n", player[counter].username);
-    reset_col();
+    ResetCol();
 
     if (counter == 0) {
       // it's your turn! do your thing :>
-      beginningOfTurn(counter);
+      BeginningOfTurn(counter);
 
-      actionPhase(counter);
+      ActionPhase(counter);
 
-      if (endOfTurn(counter)) {
-        serverSendEndGame(counter);
+      if (EndOfTurn(counter)) {
+        ServerSendEndGame(counter);
         // break just to avoid looping in case the function actually returns
         break;
       }
 
       // signal the next turn cycle and send the deck/player data to everyone else
-      for (int i = 0; i < current_players - 1; i++) {
-        sendInt(end_turn, clientsockfd[i]);
-        sendGamePacket(clientsockfd[i]);
+      for (int i = 0; i < currentPlayers - 1; i++) {
+        SendInt(END_TURN, clientsockfd[i]);
+        SendGamePacket(clientsockfd[i]);
       }
     }
     else {
@@ -387,14 +396,14 @@ int serverMain(void) {
           exit(2);
         }
 
-        for (int k = 0; k < current_players - 1; k++) {
+        for (int k = 0; k < currentPlayers - 1; k++) {
           if (pfd[k + 2].revents & POLLIN) {
-            receiveInt(&network_events, clientsockfd[k]);
+            ReceiveInt(&nEvents, clientsockfd[k]);
 
             // delayed input from timing issues
-            if (network_events < 0) continue;
+            if (nEvents < 0) continue;
 
-            eventloop = netStates[network_events].recvServer(k + 1, clientsockfd[k]);
+            eventloop = netStates[nEvents].RecvServer(k + 1, clientsockfd[k]);
           }
 
           Sleep(20);
@@ -404,55 +413,56 @@ int serverMain(void) {
     }
 
     // print state of nursery and discard piles
-    #ifdef SHOWNURSERY
-      yellow();
-      printPile(nursery);
-      reset_col();
-    #endif
+#ifdef SHOWNURSERY
+      Yellow();
+      PrintPile(nursery);
+      ResetCol();
+#endif
       
-    #ifdef SHOWDISCARD
-      magenta();
-      printPile(discardpile);
-      reset_col();
-    #endif
+#ifdef SHOWDISCARD
+      Magenta();
+      PrintPile(discardpile);
+      ResetCol();
+#endif
 
-    counter = (counter + 1) % current_players;
+    counter = (counter + 1) % currentPlayers;
   } while (42);
 
   // this shouldn't happen
   return 1;
 }
 
-int serverInit(short portno) {
+int ServerHost(LPVOID p) {
   // *****************************************************
   // ******************* Server Set-up *******************
   // *****************************************************
 
+  short portno = *((short*)p);
   struct sockaddr_in addr;
-  char errormsg[ERRORBUF];
+  char errormsg[DESC_SIZE];
 
-  // TODO: isclient is kind of superfluous when i could just use the player number to check instead
-  isclient = 0;
+  // TODO: isClient is kind of superfluous when i could just use the player number to check instead
+  isClient = 0;
 
   addr.sin_family = AF_INET;
   addr.sin_addr.s_addr = INADDR_ANY;
   addr.sin_port = htons(portno);
 
   if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == INVALID_SOCKET) {
-    sprintf_s(errormsg, ERRORBUF, "Could not create socket. Error code : % d", WSAGetLastError());
+    sprintf_s(errormsg, DESC_SIZE, "Could not create socket. Error code : % d", WSAGetLastError());
     MessageBoxA(NULL,
       errormsg,
       _T("Server Set-up"),
-      NULL);
+      MB_ICONERROR | MB_OK);
     return 1;
   }
 
   if (bind(sockfd, (struct sockaddr*)&addr, sizeof addr) == SOCKET_ERROR) {
-    sprintf_s(errormsg, ERRORBUF, "Bind failed with error code : %d.", WSAGetLastError());
+    sprintf_s(errormsg, DESC_SIZE, "Bind failed with error code : %d.", WSAGetLastError());
     MessageBoxA(NULL,
       errormsg,
       _T("Server Set-up"),
-      NULL);
+      MB_ICONERROR | MB_OK);
     closesocket(sockfd);
     return 1;
   }
@@ -466,11 +476,11 @@ int serverInit(short portno) {
 
   // dummy/unbound udp socket used for the purpose of interrupting WSAPoll
   if ((udpfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == INVALID_SOCKET) {
-    sprintf_s(errormsg, ERRORBUF, "Could not create udp socket. Error code : % d", WSAGetLastError());
+    sprintf_s(errormsg, DESC_SIZE, "Could not create udp socket. Error code : % d", WSAGetLastError());
     MessageBoxA(NULL,
       errormsg,
       _T("Server Set-up"),
-      NULL);
+      MB_ICONERROR | MB_OK);
     return 1;
   }
 
@@ -486,7 +496,7 @@ int serverInit(short portno) {
 
   // read data from the connection
   char buf[BUF_SIZE];
-  int count, ret, isvalid;
+  int count, ret;
   POINT pnt;
 
   // count for the number of times server has been officially updated; this is for cases where
@@ -503,87 +513,87 @@ int serverInit(short portno) {
     // timeout after 150 seconds
     ret = WSAPoll(pfd, MAX_PLAYERS + 1, -1);
     if (ret == SOCKET_ERROR) {
-      sprintf_s(errormsg, ERRORBUF, "ERROR: poll() failed. Error code : %d", WSAGetLastError());
+      sprintf_s(errormsg, DESC_SIZE, "ERROR: poll() failed. Error code : %d", WSAGetLastError());
       MessageBoxA(NULL,
         errormsg,
         _T("Server Set-up"),
-        NULL);
+        MB_ICONERROR | MB_OK);
       closesocket(udpfd);
       closesocket(sockfd);
-      menustate = TITLEBLANK;
+      menuState = TITLEBLANK;
       return 2;
     }
     else if (ret == 0) {
-      sprintf_s(errormsg, ERRORBUF, "ERROR: server timed out. Error code : %d", WSAGetLastError());
+      sprintf_s(errormsg, DESC_SIZE, "ERROR: server timed out. Error code : %d", WSAGetLastError());
       MessageBoxA(NULL,
         errormsg,
         _T("Server Set-up"),
-        NULL);
+        MB_ICONERROR | MB_OK);
       closesocket(udpfd);
       closesocket(sockfd);
-      menustate = TITLEBLANK;
+      menuState = TITLEBLANK;
       return 2;
     }
 
     // incoming connection
     if (pfd[0].revents & POLLIN) {
       // create a new connection given that there aren't already 7 clients
-      if (current_players < MAX_PLAYERS) {
-        if (newConnection(clientsockfd) != 0)
+      if (currentPlayers < MAX_PLAYERS) {
+        if (NewConnection(clientsockfd) != 0)
         {
           // shouldn't update sockfd stuff if accept() failed
           continue;
         }
-        ioctlsocket(clientsockfd[current_players - 1], FIONBIO, &on);
-        pfd[current_players + 1].fd = clientsockfd[current_players - 1];
-        pfd[current_players + 1].events = POLLIN | POLLOUT;
-        current_players++;
+        ioctlsocket(clientsockfd[currentPlayers - 1], FIONBIO, &on);
+        pfd[currentPlayers + 1].fd = clientsockfd[currentPlayers - 1];
+        pfd[currentPlayers + 1].events = POLLIN | POLLOUT;
+        currentPlayers++;
 
         // // TODO: moving this here just delayed the aforementioned client bug (that has since been hopefully fixed)
         // // the 2nd client to join was stalled until an IO event happened
         // 
-        // recv(clientsockfd[current_players - 2], player[current_players - 1].username, NAME_SIZE, 0);
-        // sprintf_s(buf, BUF_SIZE, "\n%d. %s", current_players, player[current_players - 1].username);
-        // strncat_s(partymems, PARTYSTRSIZE, buf, 36); // 36 is NAME_SIZE + 4 for the '\n%d. ' part
+        // recv(clientsockfd[currentPlayers - 2], player[currentPlayers - 1].username, LINE_MAX, 0);
+        // sprintf_s(buf, BUF_SIZE, "\n%d. %s", currentPlayers, player[currentPlayers - 1].username);
+        // strncat_s(partyMems, PARTYSTRSIZE, buf, 36); // 36 is LINE_MAX + 4 for the '\n%d. ' part
         // 
         // // send full lobby code to the player that just joined
-        // send(clientsockfd[current_players - 2], hexcode, sizeof(hexcode), 0);
+        // send(clientsockfd[currentPlayers - 2], hexcode, sizeof(hexcode), 0);
         // 
         // // send an update on party size/names/unicorns to every player
-        // for (int j = 0; j < current_players - 2; j++) {
-        //   sendLobbyPacket(current_players, j + 1, clientsockfd[j]);
+        // for (int j = 0; j < currentPlayers - 2; j++) {
+        //   SendLobbyPacket(currentPlayers, j + 1, clientsockfd[j]);
         // }
         // memset(buf, 0, BUF_SIZE); // reset buf
       }
     }
 
     if (pfd[0].revents & (POLLHUP | POLLERR)) {
-      sprintf_s(errormsg, ERRORBUF, "ERROR: Server received POLLHUP or POLLERR signal. Error code : %d", WSAGetLastError());
+      sprintf_s(errormsg, DESC_SIZE, "ERROR: Server received POLLHUP or POLLERR signal. Error code : %d", WSAGetLastError());
       MessageBoxA(NULL,
         errormsg,
         _T("Server Set-up"),
-        NULL);
+        MB_ICONERROR | MB_OK);
       closesocket(udpfd);
       closesocket(sockfd);
-      menustate = TITLEBLANK;
+      menuState = TITLEBLANK;
       return 2;
     }
 
     // IO operation came in from a client socket
-    for (int i = 0; i < current_players - 1; i++) {
+    for (int i = 0; i < currentPlayers - 1; i++) {
       if (pfd[i + 2].revents & POLLIN) {
         if (player[i + 1].username[0] == '\0') {
           // TODO: move this condition (without the if statement) to the socket POLLIN w/ new connections
-          recv(clientsockfd[i], player[i + 1].username, NAME_SIZE, 0);
+          recv(clientsockfd[i], player[i + 1].username, LINE_MAX, 0);
           sprintf_s(buf, BUF_SIZE, "\n%d. %s", i + 2, player[i + 1].username);
-          strncat_s(partymems, PARTYSTRSIZE, buf, 36); // 36 is NAME_SIZE + 4 for the '\n%d. ' part
+          strncat_s(partyMems, PARTYSTRSIZE, buf, LINE_MAX + 4); // +4 for the "\n%d. " part
 
           // send full lobby code to the player that just joined
           send(clientsockfd[i], hexcode, sizeof(hexcode), 0);
 
           // send an update on party size/names/unicorns to every player
-          for (int j = 0; j < current_players - 1; j++) {
-            sendLobbyPacket(current_players, j + 1, clientsockfd[j]);
+          for (int j = 0; j < currentPlayers - 1; j++) {
+            SendLobbyPacket(currentPlayers, j + 1, clientsockfd[j]);
           }
           memset(buf, 0, BUF_SIZE); // reset buf
 
@@ -591,12 +601,12 @@ int serverInit(short portno) {
         }
         else {
           // TODO: (maybe) combine POINT into one recv/send instead of sending two halves
-          receiveInt(&pnt.x, clientsockfd[i]);
-          receiveInt(&pnt.y, clientsockfd[i]);
+          ReceiveInt(&pnt.x, clientsockfd[i]);
+          ReceiveInt(&pnt.y, clientsockfd[i]);
           ret = SelectBabyUnicorn(i + 1, pnt);
           if (ret) {
-            for (int j = 0; j < current_players - 1; j++) {
-              sendLobbyPacket(current_players, j + 1, clientsockfd[j]);
+            for (int j = 0; j < currentPlayers - 1; j++) {
+              SendLobbyPacket(currentPlayers, j + 1, clientsockfd[j]);
             }
           }
         }
@@ -608,76 +618,76 @@ int serverInit(short portno) {
         // on whether or not the specific unicorn was selected, so it shouldn't be shifted over and once
         // this player leaves, it should go back to 0
         closesocket(clientsockfd[i]);
-        babytoggle[babymap[i + 1]] = 0;
-        current_players--;
+        babyToggle[babyMap[i + 1]] = 0;
+        currentPlayers--;
 
         // shift all data from client[i] (i.e. player[i + 1]) onwards down a step to replace the disconnected client
-        for (int j = i; j < current_players - 1; j++) {
+        for (int j = i; j < currentPlayers - 1; j++) {
           clientsockfd[j] = clientsockfd[j + 1];
           pfd[j + 2] = pfd[j + 3];
           // deselect the unicorn
           pselect[j + 1].left = pselect[j + 2].left;
           pselect[j + 1].top = pselect[j + 2].top;
           player[j + 1].stable.unicorns[0] = player[j + 2].stable.unicorns[0];
-          strcpy_s(player[j + 1].username, NAME_SIZE, player[j + 2].username);
+          strcpy_s(player[j + 1].username, LINE_MAX, player[j + 2].username);
         }
 
         // reset the previous last player index to zero since one person left;
-        // current_players has an offset of 1, so the current player count (after being decremented earlier)
+        // currentPlayers has an offset of 1, so the current player count (after being decremented earlier)
         // would be the same as the previous last valid index
         // technically the unicorn in the stable should reset too, but it doesn't matter because it would get
         // overwritten later on, and '0' would mean that it is a baby red unicorn anyways which would be wrong
-        pselect[current_players].left = 0;
-        pselect[current_players].top = 0;
-        memset(player[current_players].username, '\0', NAME_SIZE);
+        pselect[currentPlayers].left = 0;
+        pselect[currentPlayers].top = 0;
+        memset(player[currentPlayers].username, '\0', LINE_MAX);
 
         // change lobby username list too...
-        memset(partymems, 0, PARTYSTRSIZE);
+        memset(partyMems, 0, PARTYSTRSIZE);
         count = 0;
-        for (int k = 0; k < current_players; k++) {
-          count += sprintf_s(partymems + count, PARTYSTRSIZE - count, "\n%d. %s", k + 1, player[k].username);
+        for (int k = 0; k < currentPlayers; k++) {
+          count += sprintf_s(partyMems + count, PARTYSTRSIZE - count, "\n%d. %s", k + 1, player[k].username);
         }
 
         // send data to remaining clients
-        for (int j = 0; j < current_players - 1; j++) {
-          sendLobbyPacket(current_players, j + 1, clientsockfd[j]);
+        for (int j = 0; j < currentPlayers - 1; j++) {
+          SendLobbyPacket(currentPlayers, j + 1, clientsockfd[j]);
         }
       }
     }
 
     // this should only activate once per action, so toggle the var again at the end
     // theoretically, only one flag should be active at a time; both being active at the same time signifies some serious issues (like the out of range bug)
-    if (networktoggle & 1) {
+    if (networkToggle & 1) {
       // clicked the leave button; udpfd was already closed in the main thread
       closesocket(sockfd);
-      menustate = TITLEBLANK;
-      networktoggle ^= 1;
+      menuState = TITLEBLANK;
+      networkToggle ^= 1;
 
       // close all client fd's
-      for (int i = 0; i < current_players - 1; i++) {
+      for (int i = 0; i < currentPlayers - 1; i++) {
         closesocket(clientsockfd[i]);
       }
 
       // wipe all relevant lobby global variables and return to title screen
-      memset(babytoggle, 0, sizeof babytoggle);
+      memset(babyToggle, 0, sizeof babyToggle);
       memset(pselect, 0, sizeof pselect);
-      memset(partymems, '\0', sizeof partymems);
+      memset(partyMems, '\0', sizeof partyMems);
       for (int i = 0; i < MAX_PLAYERS; i++) {
         memset(player[i].username, '\0', sizeof player[i].username);
       }
-      current_players = 1;
+      currentPlayers = 1;
       return 1;
     }
-    else if (networktoggle & 2) {
+    else if (networkToggle & 2) {
       // host changed their baby unicorn and must send the updated list to every client
-      for (int i = 0; i < current_players - 1; i++) {
-        sendLobbyPacket(current_players, i + 1, clientsockfd[i]);
+      for (int i = 0; i < currentPlayers - 1; i++) {
+        SendLobbyPacket(currentPlayers, i + 1, clientsockfd[i]);
       }
-      networktoggle ^= 2;
+      networkToggle ^= 2;
     }
 
     Sleep(20);
   }
 
-  if (current_players >= 6) WIN_CONDITION = 6;
+  if (currentPlayers >= 6) WIN_CONDITION = 6;
 }
