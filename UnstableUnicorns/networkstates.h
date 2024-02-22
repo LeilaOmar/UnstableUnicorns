@@ -1,31 +1,57 @@
 #pragma once
 
-enum NetworkEvents { player_join = 1, player_disconnect, incoming_msg, start_game, end_turn, neigh_event, discard_event, sacrifice_event, destroy_event, enter_stable_event, quit_loop, end_game, num_network_events };
+enum NetworkEvents {
+  PLAYER_JOIN = 1,      //!< A new player joined the lobby
+  PLAYER_DISCONNECT,    //!< Someone left, so the player struct needs to be adjusted
+  INCOMING_MSG,         //!< Incoming player chat msg or game text
+  START_GAME,           //!< Leave the lobby and start the game
+  END_TURN,             //!< End the turn and continue to the next player
+  NEIGH_EVENT,          //!< Neigh chain loop
+  DISCARD_EVENT,        //!< Choose a card to discard
+  SACRIFICE_EVENT,      //!< Choose a card to sacrifice
+  DESTROY_EVENT,        //!< Trigger a "sacrificeDestroy" effect
+  ENTER_STABLE_EVENT,   //!< Trigger an "enter stable" effect
+  QUIT_LOOP,            //!< Quit the event loop
+  END_GAME,             //!< End the game
+  NUM_NETWORK_EVENTS    //!< Total size
+};
 
 typedef struct {
-  int (*recvClient)(int pnum, int fd);
-  int (*recvServer)(int pnum, int fd);
+  /**
+   * @brief Runs the Game State logic of an event to do [State] action outside of the client's normal turn
+   * @param pnum Situationally acts as either the target player number or the original player number
+   */
+  int (*RecvClient)(int pnum, int fd);
+
+  /**
+   * @brief Runs the Game State logic of an event to do [State] action outside of the server/host's normal turn
+   * @param pnum Situationally acts as either the target player number or the original player number
+   */
+  int (*RecvServer)(int pnum, int fd);
 } NetworkStateManager;
 
-NetworkStateManager netStates[num_network_events];
+NetworkStateManager netStates[NUM_NETWORK_EVENTS];
 
-void init_network_states();
+/**
+ * @brief Initializes the network state machine manager "netStates"
+ */
+void InitNetworkStates(void);
 
-void clientSendEndGame(int winningpnum, int fd);
-int clientStateEndTurn(int orig_pnum, int fd);
-int clientStateEndGame(int orig_pnum, int fd);
-int clientStateNeigh(int orig_pnum, int fd);
-int clientStateDiscard(int orig_pnum, int fd);
-int clientStateSacrifice(int orig_pnum, int fd);
-int clientStateDestroy(int orig_pnum, int fd);
-int clientStateEnterStable(int orig_pnum, int fd);
+void ClientSendEndGame(int winningPnum, int fd);
+int ClientStateEndTurn(int origPnum, int fd);
+int ClientStateEndGame(int origPnum, int fd);
+int ClientStateNeigh(int origPnum, int fd);
+int ClientStateDiscard(int origPnum, int fd);
+int ClientStateSacrifice(int origPnum, int fd);
+int ClientStateDestroy(int origPnum, int fd);
+int ClientStateEnterStable(int origPnum, int fd);
 
-void serverSendEndGame(int winningpnum);
-int serverStateEndTurn(int orig_pnum, int fd);
-int serverStateEndGame(int orig_pnum, int fd);
-int serverStateQuitLoop(int orig_pnum, int fd);
-int serverStateNeigh(int orig_pnum, int fd);
-int serverStateDiscard(int orig_pnum, int fd);
-int serverStateSacrifice(int orig_pnum, int fd);
-int serverStateDestroy(int orig_pnum, int fd);
-int serverStateEnterStable(int orig_pnum, int fd);
+void ServerSendEndGame(int winningPnum);
+int ServerStateEndTurn(int origPnum, int fd);
+int ServerStateEndGame(int origPnum, int fd);
+int ServerStateQuitLoop(int origPnum, int fd);
+int ServerStateNeigh(int origPnum, int fd);
+int ServerStateDiscard(int origPnum, int fd);
+int ServerStateSacrifice(int origPnum, int fd);
+int ServerStateDestroy(int origPnum, int fd);
+int ServerStateEnterStable(int origPnum, int fd);

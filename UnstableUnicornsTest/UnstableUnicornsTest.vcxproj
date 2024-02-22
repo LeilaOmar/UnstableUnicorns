@@ -218,7 +218,7 @@
     <ClInclude Include="Tests\DowngradeTests.h" />
     <ClInclude Include="Tests\InstantTests.h" />
     <ClInclude Include="Tests\MagicTests.h" />
-    <ClInclude Include="Tests\MagicUnicornTests.h" />
+    <ClInclude Include="Tests\MagicalUnicornTests.h" />
     <ClInclude Include="Tests\UpgradeTests.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

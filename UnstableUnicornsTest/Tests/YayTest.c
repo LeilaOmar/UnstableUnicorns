@@ -1,35 +1,35 @@
 #include "UpgradeTests.h"
 
 // sanity test
-int yay_basic_check() {
-	int num_fails = 0;
-	struct Unicorn yay_tmp = basedeck[100];
+int yay_basic_check(void) {
+  int num_fails = 0;
+  struct Unicorn yay_tmp = Base_DECK[100];
 
-	addStable(0, yay_tmp);
+  AddStable(0, yay_tmp);
 
-	assert(player[0].flags == yay);
+  assert(player[0].flags == YAY);
 
-	if (canBeNeighed(0)) {
-		num_fails++;
-		red();
-		fprintf(stderr, "    sanity test: canBeNeighed failed\n");
-		reset_col();
-	}
+  if (CanBeNeighed(0)) {
+    num_fails++;
+    Red();
+    fprintf(stderr, "    sanity test: CanBeNeighed failed\n");
+    ResetCol();
+  }
 
-	reset_players();
-	return num_fails;
+  reset_players();
+  return num_fails;
 }
 
 // Yay
 //
 // Cards you play cannot be Neigh'd.
-int yay_tests() {
-	int num_fails = 0;
+int yay_tests(void) {
+  int num_fails = 0;
 
-	if (!isclient) {
-		rainbow_error("\nStarting Yay tests...\n");
+  if (!isClient) {
+    rainbow_error("\nStarting Yay tests...\n");
 
-		num_fails += yay_basic_check();
-	}
-	return num_fails;
+    num_fails += yay_basic_check();
+  }
+  return num_fails;
 }

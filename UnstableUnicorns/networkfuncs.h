@@ -1,42 +1,107 @@
 #pragma once
+
 #include <time.h>
 #include "globals.h"
 
 #define MSGBUF 1024
-#define NEIGHTIME 4000 // 4000 ms
+#define NEIGHTIME 4000 //!< 4000 ms
 
-int sendInt(int num, int fd);
-int receiveInt(int* num, int fd);
+// ********************************************************************************
+// *************************** Send/Recv Data Functions ***************************
+// ********************************************************************************
 
-// sends the entire player structure up to current_players
-int sendPlayers(int fd);
-int receivePlayers(int fd);
+/**
+ * @brief Serializes and sends an integer to the given socket file descriptor
+ * @param[in] num The int sent in network byte order
+ */
+int SendInt(int num, int fd);
 
-// sends the entire unicorn array
-int sendUnicorns(struct Unicorn* corns, int size, int fd);
-int receiveUnicorns(struct Unicorn* corns, int size, int fd);
+/**
+ * @brief Receives and deserializes an integer from the given socket file descriptor
+ * @param[out] num The int saved in host byte order
+ */
+int ReceiveInt(int *num, int fd);
 
-// sends deck, nursery, discard pile, and player info
-int sendGamePacket(int fd);
-int receiveGamePacket(int fd);
+/**
+ * @brief Sends the entire global player structure up to currentPlayers
+ */
+int SendPlayers(int fd);
 
-// currently wraps the data to send during discard and sacrifice events
-int sendCardEffectPacket(int target_pnum, int desired_type, int fd);
+/**
+ * @brief Receives the entire global player structure up to currentPlayers
+ */
+int ReceivePlayers(int fd);
 
-// currently wraps the data to receive during discard and sacrifice events
-int receiveCardEffectPacket(int* target_pnum, int* desired_type, int fd);
+/**
+ * @brief Sends size number of elements in the struct Unicorn array corns
+ */
+int SendUnicorns(struct Unicorn *corns, int size, int fd);
 
-// client sends target_pnum under pnum
-// server sends orig_pnum under pnum
-int sendEnterStablePacket(struct Unicorn corn, int pnum, int fd);
+/**
+ * @brief Receives size number of elements in the struct Unicorn array corns
+ */
+int ReceiveUnicorns(struct Unicorn *corns, int size, int fd);
 
-// client receives orig_pnum under pnum
-// server receives target_pnum under pnum
-int receiveEnterStablePacket(struct Unicorn* corn, int* pnum, int fd);
+// ********************************************************************************
+// ******************************* Packet Functions *******************************
+// ********************************************************************************
 
-int sendMsg(char* str, int count, int fd);
-int receiveMsg(char* str, int fd);
+/**
+ * @brief Sends the Deck, Nursery, and Discard piles, the whole global player struct, and any misc. standalone card flags (e.g. puppicorn)
+ */
+int SendGamePacket(int fd);
 
-// handles stdin events and filters everything but keydown presses
-// https://stackoverflow.com/questions/19955617/win32-read-from-stdin-with-timeout
-void processStdin(char* stdinbuf, int* bufindex);
+/**
+ * @brief Receives the Deck, Nursery, and Discard piles, the whole global player struct, and any misc. standalone card flags (e.g. puppicorn)
+ */
+int ReceiveGamePacket(int fd);
+
+/**
+ * @brief Sends data during Discard and Sacrifice events
+ * @param targetPnum Target player number for the effect
+ * @param desiredType Required card type
+ */
+int SendCardEffectPacket(int targetPnum, int desiredType, int fd);
+
+/**
+ * @brief Receives data during Discard and Sacrifice events
+ * @param[out] targetPnum Target player number for the effect
+ * @param[out] desiredType Required card type
+ */
+int ReceiveCardEffectPacket(int *targetPnum, int *desiredType, int fd);
+
+/**
+ * @brief Sends data during Enter Stable events
+ * @param pnum (client) sends targetPnum; (server) sends origPnum
+ */
+int SendEnterStablePacket(struct Unicorn corn, int pnum, int fd);
+
+/**
+ * @brief Receives data during Enter Stable events
+ * @param pnum (client) receives origPnum; (server) receives targetPnum
+ */
+int ReceiveEnterStablePacket(struct Unicorn* corn, int *pnum, int fd);
+
+// ********************************************************************************
+// **************************** Message/Input Functions ***************************
+// ********************************************************************************
+
+/**
+ * @brief Sends the size and contents of the message string
+ */
+int SendMsg(char *str, int count, int fd);
+
+/**
+ * @brief Receives a C string message from the socket file descriptor
+ */
+int ReceiveMsg(char *str, int fd);
+
+/**
+ * @brief Handles stdin events from the console and filters everything but KeyDown presses
+ * 
+ * https://stackoverflow.com/questions/19955617/win32-read-from-stdin-with-timeout
+ * 
+ * @param[out] stdinBuf Char* buffer that contains the user's console input
+ * @param[out] bufIndex Current index number/length of stdinBuf
+ */
+void ProcessStdin(char *stdinBuf, int *bufIndex);

@@ -1,16 +1,15 @@
 #include "networkevents.h"
 #include "gamemechanics.h"
-#include <windows.h>
 
 // was unable to properly link this with an external file ;~;
 #ifdef TEST_RUN
-#define processStdin(a, b) processStdin_mock(a, b)
+#define ProcessStdin(a, b) ProcessStdin_mock(a, b)
 #define WaitForSingleObject(a, b) simple(a, b)
 
-void processStdin_mock(char* stdinbuf, int* bufindex) {
+void ProcessStdin_mock(char *stdinBuf, int *bufIndex) {
 
-  fgets(stdinbuf, 1024, fpinput);
-  *bufindex = strlen(stdinbuf);
+  fgets(stdinBuf, 64, fpinput);
+  *bufIndex = strlen(stdinBuf);
 
 }
 
@@ -19,18 +18,15 @@ DWORD simple(HANDLE hHandle, DWORD dwMilliseconds) {
 }
 #endif
 
-// codes the part where players are able to use an instant card against a play
-// 0 = nobody used Neigh/Super Neigh cards, or Neigh cards cancelled out
-// 1 = card is gone
-int clientNeigh(int clientpnum, int orig_pnum, int *orig_cindex) {
-  int pnum = orig_pnum;
-  int cindex = *orig_cindex;
+int ClientNeigh(int clientpnum, int origPnum, int *origCindex) {
+  int pnum = origPnum;
+  int cindex = *origCindex;
   int loopend = 0;
   int oddcheck = 0;
 
   // receive updated player list to include new/discarded cards since the start of the turn
-  if (clientpnum != orig_pnum) {
-    receivePlayers(sockfd);
+  if (clientpnum != origPnum) {
+    ReceivePlayers(sockfd);
   }
 
   do {
@@ -45,16 +41,16 @@ int clientNeigh(int clientpnum, int orig_pnum, int *orig_cindex) {
       }
     }
     else {
-      red();
+      Red();
       printf("\nWaiting to see if other players will neigh in return...\n");
-      reset_col();
+      ResetCol();
     }
 
-    // only have to check if the current player can neigh others, because canBeNeighed is checked
+    // only have to check if the current player can neigh others, because CanBeNeighed is checked
     // before the start of each cycle (e.g. at the end of the loop or before the function call)
-    if (!canNeighOthers(clientpnum)) {
+    if (!CanNeighOthers(clientpnum)) {
       printf("You are unable to play neigh cards due to the card");
-      if ((player[clientpnum].flags & ginormous_unicorn) == ginormous_unicorn) {
+      if ((player[clientpnum].flags & GINORMOUS_UNICORN) == GINORMOUS_UNICORN) {
         printf("\033[1;31m Ginormous Unicorn's \033[0m");
       }
       else {
@@ -62,21 +58,21 @@ int clientNeigh(int clientpnum, int orig_pnum, int *orig_cindex) {
       }
       printf("effect.\n");
 
-      sendInt(-1, sockfd);
+      SendInt(-1, sockfd);
     }
     else {
 
       if (pnum != clientpnum) {
-        printHand(clientpnum);
+        PrintHand(clientpnum);
         printf("Choose the neigh card to counter with, or enter 0 to skip: ");
       }
 
       int ret2;
       int selection;
       int isvalid = 0;
-      char* end = NULL;
+      char *end = NULL;
       char buf[LINE_MAX] = { 0 };
-      int input_index = 0;
+      int inputIndex = 0;
 
       WSAPOLLFD pfd;
       pfd.fd = sockfd;
@@ -97,38 +93,38 @@ int clientNeigh(int clientpnum, int orig_pnum, int *orig_cindex) {
         // skip the neigh input selection if the player already made a valid choice
         // or if the player played the last card in the cycle
         if (WaitForSingleObject(GetStdHandle(STD_INPUT_HANDLE), 0) == WAIT_OBJECT_0 && pnum != clientpnum && !isvalid) {
-          processStdin(buf, &input_index);
-          if (input_index >= (sizeof(buf) - 1) || buf[input_index - 1] == '\r' || buf[input_index - 1] == '\n') {
+          ProcessStdin(buf, &inputIndex);
+          if (inputIndex >= (sizeof(buf) - 1) || buf[inputIndex - 1] == '\r' || buf[inputIndex - 1] == '\n') {
 
             buf[strlen(buf) - 1] = 0;
             selection = strtol(buf, &end, 10) - 1;
 
             if (selection == -1 && strlen(buf) > 0) {
-              sendInt(selection, sockfd);
+              SendInt(selection, sockfd);
               isvalid = 1;
             }
 
             // index validation
-            else if (selection < -1 || selection >= player[clientpnum].hand.num_cards ||
+            else if (selection < -1 || selection >= player[clientpnum].hand.numCards ||
                 player[clientpnum].hand.cards[selection].cType != INSTANT) {
               printf("Choose the neigh card to counter with, or enter 0 to skip: ");
             }
 
             else {
-              sendInt(selection, sockfd);
+              SendInt(selection, sockfd);
               isvalid = 1;
             }
 
             memset(buf, '\0', sizeof buf);
-            input_index = 0;
+            inputIndex = 0;
           }
         }
 
         if (pfd.revents & POLLIN) {
           int quitter;
-          receiveInt(&quitter, sockfd);
+          ReceiveInt(&quitter, sockfd);
 
-          if (quitter == quit_loop)
+          if (quitter == QUIT_LOOP)
             break;
         }
 
@@ -136,59 +132,56 @@ int clientNeigh(int clientpnum, int orig_pnum, int *orig_cindex) {
       }
     }
 
-    receiveInt(&loopend, sockfd);
-    receivePlayers(sockfd);
+    ReceiveInt(&loopend, sockfd);
+    ReceivePlayers(sockfd);
 
     if (!loopend) {
-      receiveInt(&pnum, sockfd);
+      ReceiveInt(&pnum, sockfd);
       cindex = -1;
     }
 
   } while (!loopend);
 
-  receiveInt(&oddcheck, sockfd);
-  receiveInt(orig_cindex, sockfd);
-  receiveInt(&discardpile.size, sockfd);
-  receiveUnicorns(discardpile.cards, discardpile.size, sockfd);
+  ReceiveInt(&oddcheck, sockfd);
+  ReceiveInt(origCindex, sockfd);
+  ReceiveInt(&discardpile.size, sockfd);
+  ReceiveUnicorns(discardpile.cards, discardpile.size, sockfd);
 
   if ((oddcheck & 1) == 0) {
     printf("\nA neigh did not go through, and");
-    red();
-    printf(" %s ", player[orig_pnum].username);
-    reset_col();
+    Red();
+    printf(" %s ", player[origPnum].username);
+    ResetCol();
     printf("successfully played their card.\n");
   }
   else {
     printf("\nThe card");
-    red();
+    Red();
     printf(" '%s' ", discardpile.cards[discardpile.size - 1].name);
-    reset_col();
+    ResetCol();
     printf("was neighed, so");
-    red();
-    printf(" %s ", player[orig_pnum].username);
-    reset_col();
+    Red();
+    printf(" %s ", player[origPnum].username);
+    ResetCol();
     printf("was unable to play their card.\n");
   }
 
   return oddcheck;
 }
 
-// codes the part where players are able to use an instant card against a play
-// 0 = nobody used Neigh/Super Neigh cards, or Neigh cards cancelled out
-// 1 = card is gone
-int serverNeigh(int orig_pnum, int *orig_cindex) {
+int ServerNeigh(int origPnum, int *origCindex) {
 
-  for (int i = 0; i < current_players - 1; i++) {
-    if (orig_pnum == (i + 1)) continue;
+  for (int i = 0; i < currentPlayers - 1; i++) {
+    if (origPnum == (i + 1)) continue;
 
-    sendInt(neigh_event, clientsockfd[i]);
-    sendInt(orig_pnum, clientsockfd[i]);
-    sendInt(*orig_cindex, clientsockfd[i]);
-    sendPlayers(clientsockfd[i]);
+    SendInt(NEIGH_EVENT, clientsockfd[i]);
+    SendInt(origPnum, clientsockfd[i]);
+    SendInt(*origCindex, clientsockfd[i]);
+    SendPlayers(clientsockfd[i]);
   }
 
-  int pnum = orig_pnum;
-  int cindex = *orig_cindex;
+  int pnum = origPnum;
+  int cindex = *origCindex;
   int loopend = 0;
   int oddcheck = 0;
 
@@ -197,7 +190,7 @@ int serverNeigh(int orig_pnum, int *orig_cindex) {
   pfd[0].events = POLLIN | POLLOUT;
   pfd[1].fd = sockfd;
   pfd[1].events = POLLIN | POLLOUT;
-  for (int i = 0; i < current_players - 1; i++) {
+  for (int i = 0; i < currentPlayers - 1; i++) {
     pfd[i + 2].fd = clientsockfd[i];
     pfd[i + 2].events = POLLIN | POLLOUT;
   }
@@ -208,9 +201,9 @@ int serverNeigh(int orig_pnum, int *orig_cindex) {
     int neigh_cindex = 0;
     int playerneigh = -1;
     int playerneighflag = 0;
-    char* end = NULL;
+    char *end = NULL;
     char buf[LINE_MAX] = { 0 };
-    int input_index = 0;
+    int inputIndex = 0;
 
     if (pnum != 0) {
       if (cindex != -1) {
@@ -222,13 +215,13 @@ int serverNeigh(int orig_pnum, int *orig_cindex) {
           player[pnum].username);
       }
 
-      if (canNeighOthers(0)) {
-        printHand(0);
+      if (CanNeighOthers(0)) {
+        PrintHand(0);
         printf("Choose the neigh card to counter with, or enter 0 to skip: ");
       }
       else {
         printf("You are unable to play neigh cards due to the card");
-        if ((player[0].flags & ginormous_unicorn) == ginormous_unicorn) {
+        if ((player[0].flags & GINORMOUS_UNICORN) == GINORMOUS_UNICORN) {
           printf("\033[1;31m Ginormous Unicorn's \033[0m");
         }
         else {
@@ -240,9 +233,9 @@ int serverNeigh(int orig_pnum, int *orig_cindex) {
       }
     }
     else {
-      red();
+      Red();
       printf("\nWaiting to see if other players will neigh in return...\n");
-      reset_col();
+      ResetCol();
     }
 
     time_t endTime = time(NULL) + (NEIGHTIME / 1000);
@@ -261,8 +254,8 @@ int serverNeigh(int orig_pnum, int *orig_cindex) {
       // skip the neigh input selection if the player already made a valid choice
       // or if the player played the last card in the cycle
       if (WaitForSingleObject(GetStdHandle(STD_INPUT_HANDLE), 0) == WAIT_OBJECT_0 && pnum != 0 && ((playerneighflag & 1) == 0)) {
-        processStdin(buf, &input_index);
-        if (input_index >= (sizeof(buf) - 1) || buf[input_index - 1] == '\r' || buf[input_index - 1] == '\n') {
+        ProcessStdin(buf, &inputIndex);
+        if (inputIndex >= (sizeof(buf) - 1) || buf[inputIndex - 1] == '\r' || buf[inputIndex - 1] == '\n') {
 
           buf[strlen(buf) - 1] = 0;
           selection = strtol(buf, &end, 10) - 1;
@@ -272,7 +265,7 @@ int serverNeigh(int orig_pnum, int *orig_cindex) {
           }
 
           // index validation
-          else if (selection < -1 || selection >= player[0].hand.num_cards ||
+          else if (selection < -1 || selection >= player[0].hand.numCards ||
               player[0].hand.cards[selection].cType != INSTANT) {
             printf("Choose the neigh card to counter with, or enter 0 to skip: ");
           }
@@ -287,13 +280,13 @@ int serverNeigh(int orig_pnum, int *orig_cindex) {
           }
 
           memset(buf, '\0', sizeof buf);
-          input_index = 0;
+          inputIndex = 0;
         }
       }
 
-      for (int j = 0; j < current_players - 1; j++) {
+      for (int j = 0; j < currentPlayers - 1; j++) {
         if (pfd[j + 2].revents & POLLIN && pnum != (j + 1)) {
-          receiveInt(&selection, clientsockfd[j]);
+          ReceiveInt(&selection, clientsockfd[j]);
 
           if (selection > -1 && playerneigh == -1) {
             playerneigh = j + 1;
@@ -304,37 +297,37 @@ int serverNeigh(int orig_pnum, int *orig_cindex) {
         }
       }
 
-      if (playerneigh != -1 || playerneighflag == ((1 << current_players) - 1 - (1 << pnum))) {
+      if (playerneigh != -1 || playerneighflag == ((1 << currentPlayers) - 1 - (1 << pnum))) {
         break;
       }
 
       Sleep(20);
     }
 
-    for (int i = 0; i < current_players - 1; i++) {
+    for (int i = 0; i < currentPlayers - 1; i++) {
       // send it to every client that did not skip the polling process
       // this is sent in order to trigger the end of the loop
-      if (canNeighOthers(i + 1)) {
-        sendInt(quit_loop, clientsockfd[i]);
+      if (CanNeighOthers(i + 1)) {
+        SendInt(QUIT_LOOP, clientsockfd[i]);
       }
     }
 
     if (playerneigh != -1) {
       struct Unicorn tmp = player[playerneigh].hand.cards[neigh_cindex];
-      addDiscard(tmp);
-      rearrangeHand(playerneigh, neigh_cindex);
+      AddDiscard(tmp);
+      RearrangeHand(playerneigh, neigh_cindex);
       oddcheck++;
 
       // adjust the original card index appropriately in the event of chain neigh cards
-      if (playerneigh == orig_pnum && neigh_cindex < *orig_cindex)
-        (*orig_cindex)--;
+      if (playerneigh == origPnum && neigh_cindex < *origCindex)
+        (*origCindex)--;
 
-      if (canBeNeighed(playerneigh) && strcmp(tmp.name, "Super Neigh") != 0) {
-        for (int i = 0; i < current_players - 1; i++) {
-          sendInt(loopend, clientsockfd[i]);
-          sendPlayers(clientsockfd[i]);
+      if (CanBeNeighed(playerneigh) && tmp.effect != SUPER_NEIGH) {
+        for (int i = 0; i < currentPlayers - 1; i++) {
+          SendInt(loopend, clientsockfd[i]);
+          SendPlayers(clientsockfd[i]);
 
-          sendInt(playerneigh, clientsockfd[i]);
+          SendInt(playerneigh, clientsockfd[i]);
         }
 
         pnum = playerneigh;
@@ -352,60 +345,60 @@ int serverNeigh(int orig_pnum, int *orig_cindex) {
 
   if ((oddcheck & 1) == 0) {
     printf("\nA neigh did not go through, and");
-    red();
-    printf(" %s ", player[orig_pnum].username);
-    reset_col();
+    Red();
+    printf(" %s ", player[origPnum].username);
+    ResetCol();
     printf("successfully played their card.\n");
   }
   else {
     printf("\nThe card");
-    red();
-    printf(" '%s' ", player[orig_pnum].hand.cards[*orig_cindex].name);
-    reset_col();
+    Red();
+    printf(" '%s' ", player[origPnum].hand.cards[*origCindex].name);
+    ResetCol();
     printf("was neighed, so");
-    red();
-    printf(" %s ", player[orig_pnum].username);
-    reset_col();
+    Red();
+    printf(" %s ", player[origPnum].username);
+    ResetCol();
     printf("was unable to play their card.\n");
 
-    addDiscard(player[orig_pnum].hand.cards[*orig_cindex]);
-    rearrangeHand(orig_pnum, *orig_cindex);
+    AddDiscard(player[origPnum].hand.cards[*origCindex]);
+    RearrangeHand(origPnum, *origCindex);
   }
 
-  for (int i = 0; i < current_players - 1; i++) {
-    sendInt(loopend, clientsockfd[i]);
-    sendPlayers(clientsockfd[i]);
+  for (int i = 0; i < currentPlayers - 1; i++) {
+    SendInt(loopend, clientsockfd[i]);
+    SendPlayers(clientsockfd[i]);
 
-    sendInt(oddcheck, clientsockfd[i]);
-    sendInt(*orig_cindex, clientsockfd[i]);
-    sendInt(discardpile.size, clientsockfd[i]);
-    sendUnicorns(discardpile.cards, discardpile.size, clientsockfd[i]);
+    SendInt(oddcheck, clientsockfd[i]);
+    SendInt(*origCindex, clientsockfd[i]);
+    SendInt(discardpile.size, clientsockfd[i]);
+    SendUnicorns(discardpile.cards, discardpile.size, clientsockfd[i]);
   }
 
   return oddcheck;
 }
 
-void clientSacrifice(int clientpnum, int target_pnum, int cType) {
+void ClientSacrifice(int clientpnum, int targetPnum, int cType) {
   int ret2;
   int selection;
   int isvalid = 1;
-  char* end = NULL;
+  char *end = NULL;
   char buf[LINE_MAX] = { 0 };
-  int input_index = 0;
+  int inputIndex = 0;
 
-  if (target_pnum == ANY || target_pnum == clientpnum) {
+  if (targetPnum == ANY || targetPnum == clientpnum) {
     // check if clientpnum even has any cards to sacrifice
     for (int i = 0; i < player[clientpnum].stable.size; i++) {
-      if (canBeSacrificed(clientpnum, i, cType)) {
+      if (CanBeSacrificed(clientpnum, i, cType)) {
         isvalid = 0;
-        printStable(clientpnum);
+        PrintStable(clientpnum);
         printf("Pick a valid card number to sacrifice: ");
         break;
       }
     }
 
     if (isvalid) {
-      sendInt(-1, sockfd); // no available cards to sacrifice
+      SendInt(-1, sockfd); // no available cards to sacrifice
     }
   }
 
@@ -428,25 +421,25 @@ void clientSacrifice(int clientpnum, int target_pnum, int cType) {
     // skip the neigh input selection if the player already made a valid choice
     // or if the player played the last card in the cycle
     if (WaitForSingleObject(GetStdHandle(STD_INPUT_HANDLE), 0) == WAIT_OBJECT_0 &&
-        (target_pnum == clientpnum || target_pnum == ANY) && !isvalid) {
-      processStdin(buf, &input_index);
-      if (input_index >= (sizeof(buf) - 1) || buf[input_index - 1] == '\r' || buf[input_index - 1] == '\n') {
+        (targetPnum == clientpnum || targetPnum == ANY) && !isvalid) {
+      ProcessStdin(buf, &inputIndex);
+      if (inputIndex >= (sizeof(buf) - 1) || buf[inputIndex - 1] == '\r' || buf[inputIndex - 1] == '\n') {
 
         buf[strlen(buf) - 1] = 0;
         selection = strtol(buf, &end, 10) - 1;
 
         memset(buf, '\0', sizeof buf);
-        input_index = 0;
+        inputIndex = 0;
 
         // index validation
         if (selection < 0 || selection >= player[clientpnum].stable.size ||
-            !canBeSacrificed(clientpnum, selection, cType) ||
-            !checkType(cType, player[clientpnum].stable.unicorns[selection].cType)) {
+            !CanBeSacrificed(clientpnum, selection, cType) ||
+            !CheckType(cType, player[clientpnum].stable.unicorns[selection].cType)) {
           printf("Pick a valid card number to sacrifice: ");
         }
 
         else {
-          sendInt(selection, sockfd);
+          SendInt(selection, sockfd);
           isvalid = 1;
         }
       }
@@ -454,17 +447,17 @@ void clientSacrifice(int clientpnum, int target_pnum, int cType) {
 
     if (pfd.revents & POLLIN) {
       int signal;
-      receiveInt(&signal, sockfd);
+      ReceiveInt(&signal, sockfd);
 
-      if (signal == quit_loop) {
+      if (signal == QUIT_LOOP) {
         // all eligible players sent in their choice
         break;
       }
-      else if (signal == incoming_msg) {
-        char stdinbuf[DESC_SIZE] = { 0 };
+      else if (signal == INCOMING_MSG) {
+        char stdinBuf[DESC_SIZE] = { 0 };
 
-        receiveMsg(stdinbuf, sockfd);
-        printf("\n%s\n", stdinbuf);
+        ReceiveMsg(stdinBuf, sockfd);
+        printf("\n%s\n", stdinBuf);
       }
     }
 
@@ -472,44 +465,44 @@ void clientSacrifice(int clientpnum, int target_pnum, int cType) {
   }
 
   // that's all!
-  receiveGamePacket(sockfd);
+  ReceiveGamePacket(sockfd);
 }
 
-void serverSacrifice(int orig_pnum, int target_pnum, int cType) {
+void ServerSacrifice(int origPnum, int targetPnum, int cType) {
   int ret2;
   int selection;
   int isvalid = 1;
-  int playersacrificeflag = 0;
-  int end_condition = 0;
-  char* end = NULL;
+  int playerSacrificeFlag = 0;
+  int endCondition = 0;
+  char *end = NULL;
   char buf[LINE_MAX] = { 0 };
-  int input_index = 0;
+  int inputIndex = 0;
 
   // send sacrifice event to all other players
-  for (int i = 0; i < current_players - 1; i++) {
-    if (orig_pnum == (i + 1)) continue;
+  for (int i = 0; i < currentPlayers - 1; i++) {
+    if (origPnum == (i + 1)) continue;
 
-    sendInt(sacrifice_event, clientsockfd[i]);
-    sendCardEffectPacket(target_pnum, cType, clientsockfd[i]);
+    SendInt(SACRIFICE_EVENT, clientsockfd[i]);
+    SendCardEffectPacket(targetPnum, cType, clientsockfd[i]);
   }
 
-  if (target_pnum == ANY) end_condition = (1 << current_players) - 1;
-  else end_condition = (1 << target_pnum);
+  if (targetPnum == ANY) endCondition = (1 << currentPlayers) - 1;
+  else endCondition = (1 << targetPnum);
 
-  if (target_pnum == ANY || target_pnum == 0) {
+  if (targetPnum == ANY || targetPnum == 0) {
     // check if the host even has any cards to sacrifice
     for (int i = 0; i < player[0].stable.size; i++) {
-      if (canBeSacrificed(0, i, cType)) {
+      if (CanBeSacrificed(0, i, cType)) {
         isvalid = 0;
         break;
       }
     }
 
     if (isvalid) {
-      playersacrificeflag = 1;
+      playerSacrificeFlag = 1;
     }
     else {
-      printStable(0);
+      PrintStable(0);
       printf("Pick a valid card number to sacrifice: ");
     }
   }
@@ -519,7 +512,7 @@ void serverSacrifice(int orig_pnum, int target_pnum, int cType) {
   pfd[0].events = POLLIN | POLLOUT;
   pfd[1].fd = sockfd;
   pfd[1].events = POLLIN | POLLOUT;
-  for (int i = 0; i < current_players - 1; i++) {
+  for (int i = 0; i < currentPlayers - 1; i++) {
     pfd[i + 2].fd = clientsockfd[i];
     pfd[i + 2].events = POLLIN | POLLOUT;
   }
@@ -539,70 +532,70 @@ void serverSacrifice(int orig_pnum, int target_pnum, int cType) {
     // skip the neigh input selection if the player already made a valid choice
     // or if the player played the last card in the cycle
     if (WaitForSingleObject(GetStdHandle(STD_INPUT_HANDLE), 0) == WAIT_OBJECT_0 &&
-        (target_pnum == 0 || target_pnum == ANY) && !isvalid) {
-      processStdin(buf, &input_index);
-      if (input_index >= (sizeof(buf) - 1) || buf[input_index - 1] == '\r' || buf[input_index - 1] == '\n') {
+        (targetPnum == 0 || targetPnum == ANY) && !isvalid) {
+      ProcessStdin(buf, &inputIndex);
+      if (inputIndex >= (sizeof(buf) - 1) || buf[inputIndex - 1] == '\r' || buf[inputIndex - 1] == '\n') {
 
         buf[strlen(buf) - 1] = 0;
         selection = strtol(buf, &end, 10) - 1;
 
         memset(buf, '\0', sizeof buf);
-        input_index = 0;
+        inputIndex = 0;
 
         // index validation
         if (selection < 0 || selection >= player[0].stable.size ||
-            !canBeSacrificed(0, selection, cType) ||
-            !checkType(cType, player[0].stable.unicorns[selection].cType)) {
+            !CanBeSacrificed(0, selection, cType) ||
+            !CheckType(cType, player[0].stable.unicorns[selection].cType)) {
           printf("Pick a valid card number to sacrifice: ");
         }
 
         else {
-          playersacrificeflag |= 1;
+          playerSacrificeFlag |= 1;
           isvalid = 1;
 
-          char stdinbuf[DESC_SIZE] = { 0 };
-          sprintf_s(stdinbuf, sizeof stdinbuf, "\033[1;31m%s\033[0m sacrificed the card '\033[1;31m%s\033[0m'.",
+          char stdinBuf[DESC_SIZE] = { 0 };
+          sprintf_s(stdinBuf, sizeof stdinBuf, "\033[1;31m%s\033[0m sacrificed the card '\033[1;31m%s\033[0m'.",
             player[0].username, player[0].stable.unicorns[selection].name);
 
-          sacrificeDestroyEffects(0, selection, player[0].stable.unicorns[selection].effect);
+          Base_SacrificeDestroyEffects(0, selection, player[0].stable.unicorns[selection].effect);
 
-          for (int j = 0; j < current_players - 1; j++) {
-            sendInt(incoming_msg, clientsockfd[j]);
-            sendMsg(stdinbuf, sizeof stdinbuf, clientsockfd[j]);
+          for (int j = 0; j < currentPlayers - 1; j++) {
+            SendInt(INCOMING_MSG, clientsockfd[j]);
+            SendMsg(stdinBuf, sizeof stdinBuf, clientsockfd[j]);
           }
         }
       }
     }
 
-    for (int i = 0; i < current_players - 1; i++) {
+    for (int i = 0; i < currentPlayers - 1; i++) {
       if (pfd[i + 2].revents & POLLIN) {
         int cindex;
-        receiveInt(&cindex, clientsockfd[i]);
+        ReceiveInt(&cindex, clientsockfd[i]);
 
-        playersacrificeflag |= (1 << (i + 1));
+        playerSacrificeFlag |= (1 << (i + 1));
 
         if (cindex == -1) continue;
 
-        char stdinbuf[DESC_SIZE] = { 0 };
-        sprintf_s(stdinbuf, sizeof stdinbuf, "\033[1;31m%s\033[0m sacrificed the card '\033[1;31m%s\033[0m'.",
+        char stdinBuf[DESC_SIZE] = { 0 };
+        sprintf_s(stdinBuf, sizeof stdinBuf, "\033[1;31m%s\033[0m sacrificed the card '\033[1;31m%s\033[0m'.",
           player[i + 1].username, player[i + 1].stable.unicorns[cindex].name);
 
-        sacrificeDestroyEffects(i + 1, cindex, player[i + 1].stable.unicorns[cindex].effect);
+        Base_SacrificeDestroyEffects(i + 1, cindex, player[i + 1].stable.unicorns[cindex].effect);
         
-        for (int j = 0; j < current_players - 1; j++) {
+        for (int j = 0; j < currentPlayers - 1; j++) {
           if (j == i) continue;
 
-          sendInt(incoming_msg, clientsockfd[j]);
-          sendMsg(stdinbuf, sizeof stdinbuf, clientsockfd[j]);
+          SendInt(INCOMING_MSG, clientsockfd[j]);
+          SendMsg(stdinBuf, sizeof stdinBuf, clientsockfd[j]);
         }
 
-        printf("\n%s\n", stdinbuf);
+        printf("\n%s\n", stdinBuf);
       }
     }
 
-    if (playersacrificeflag == end_condition) {
-      for (int i = 0; i < current_players - 1; i++) {
-        sendInt(quit_loop, clientsockfd[i]);
+    if (playerSacrificeFlag == endCondition) {
+      for (int i = 0; i < currentPlayers - 1; i++) {
+        SendInt(QUIT_LOOP, clientsockfd[i]);
       }
       break;
     }
@@ -611,26 +604,26 @@ void serverSacrifice(int orig_pnum, int target_pnum, int cType) {
   }
 
   // that's all!
-  for (int i = 0; i < current_players - 1; i++) {
-    sendGamePacket(clientsockfd[i]);
+  for (int i = 0; i < currentPlayers - 1; i++) {
+    SendGamePacket(clientsockfd[i]);
   }
 }
 
-void clientDiscard(int clientpnum, int target_pnum, int cType) {
+void ClientDiscard(int clientpnum, int targetPnum, int cType) {
   int ret2;
   int selection;
   int isvalid = 1;
-  char* end = NULL;
+  char *end = NULL;
   char buf[LINE_MAX] = { 0 };
-  int input_index = 0;
+  int inputIndex = 0;
 
-  if (target_pnum == ANY || target_pnum == clientpnum) {
-    if (player[clientpnum].hand.num_cards <= 0) {
-      sendInt(-1, sockfd); // no available cards to discard
+  if (targetPnum == ANY || targetPnum == clientpnum) {
+    if (player[clientpnum].hand.numCards <= 0) {
+      SendInt(-1, sockfd); // no available cards to discard
     }
     else {
       isvalid = 0;
-      printHand(clientpnum);
+      PrintHand(clientpnum);
       printf("Pick a valid card number to discard: ");
     }
   }
@@ -655,24 +648,24 @@ void clientDiscard(int clientpnum, int target_pnum, int cType) {
     // skip the neigh input selection if the player already made a valid choice
     // or if the player played the last card in the cycle
     if (WaitForSingleObject(GetStdHandle(STD_INPUT_HANDLE), 0) == WAIT_OBJECT_0 &&
-        (target_pnum == clientpnum || target_pnum == ANY) && !isvalid) {
-      processStdin(buf, &input_index);
-      if (input_index >= (sizeof(buf) - 1) || buf[input_index - 1] == '\r' || buf[input_index - 1] == '\n') {
+        (targetPnum == clientpnum || targetPnum == ANY) && !isvalid) {
+      ProcessStdin(buf, &inputIndex);
+      if (inputIndex >= (sizeof(buf) - 1) || buf[inputIndex - 1] == '\r' || buf[inputIndex - 1] == '\n') {
 
         buf[strlen(buf) - 1] = 0;
         selection = strtol(buf, &end, 10) - 1;
 
         memset(buf, '\0', sizeof buf);
-        input_index = 0;
+        inputIndex = 0;
 
         // index validation
-        if (selection < 0 || selection >= player[clientpnum].hand.num_cards ||
-            !checkType(cType, player[clientpnum].hand.cards[selection].cType)) {
+        if (selection < 0 || selection >= player[clientpnum].hand.numCards ||
+            !CheckType(cType, player[clientpnum].hand.cards[selection].cType)) {
           printf("Pick a valid card number to discard: ");
         }
 
         else {
-          sendInt(selection, sockfd);
+          SendInt(selection, sockfd);
           isvalid = 1;
         }
       }
@@ -680,17 +673,17 @@ void clientDiscard(int clientpnum, int target_pnum, int cType) {
 
     if (pfd.revents & POLLIN) {
       int signal;
-      receiveInt(&signal, sockfd);
+      ReceiveInt(&signal, sockfd);
 
-      if (signal == quit_loop) {
+      if (signal == QUIT_LOOP) {
         // all eligible players sent in their choice
         break;
       }
-      else if (signal == incoming_msg) {
-        char stdinbuf[DESC_SIZE] = { 0 };
+      else if (signal == INCOMING_MSG) {
+        char stdinBuf[DESC_SIZE] = { 0 };
 
-        receiveMsg(stdinbuf, sockfd);
-        printf("\n%s\n", stdinbuf);
+        ReceiveMsg(stdinBuf, sockfd);
+        printf("\n%s\n", stdinBuf);
       }
     }
 
@@ -698,37 +691,37 @@ void clientDiscard(int clientpnum, int target_pnum, int cType) {
   }
 
   // that's all!
-  receiveGamePacket(sockfd);
+  ReceiveGamePacket(sockfd);
 }
 
-void serverDiscard(int orig_pnum, int target_pnum, int cType) {
+void ServerDiscard(int origPnum, int targetPnum, int cType) {
   int ret2;
   int selection;
   int isvalid = 1;
-  int playerdiscardflag = 0;
-  int end_condition = 0;
-  char* end = NULL;
+  int playerDiscardFlag = 0;
+  int endCondition = 0;
+  char *end = NULL;
   char buf[LINE_MAX] = { 0 };
-  int input_index = 0;
+  int inputIndex = 0;
 
   // send discard event to all other players
-  for (int i = 0; i < current_players - 1; i++) {
-    if (orig_pnum == (i + 1)) continue;
+  for (int i = 0; i < currentPlayers - 1; i++) {
+    if (origPnum == (i + 1)) continue;
 
-    sendInt(discard_event, clientsockfd[i]);
-    sendCardEffectPacket(target_pnum, cType, clientsockfd[i]);
+    SendInt(DISCARD_EVENT, clientsockfd[i]);
+    SendCardEffectPacket(targetPnum, cType, clientsockfd[i]);
   }
 
-  if (target_pnum == ANY) end_condition = (1 << current_players) - 1;
-  else end_condition = (1 << target_pnum);
+  if (targetPnum == ANY) endCondition = (1 << currentPlayers) - 1;
+  else endCondition = (1 << targetPnum);
 
-  if (target_pnum == ANY || target_pnum == 0) {
-    if (player[0].hand.num_cards <= 0) {
-      playerdiscardflag = 1;
+  if (targetPnum == ANY || targetPnum == 0) {
+    if (player[0].hand.numCards <= 0) {
+      playerDiscardFlag = 1;
     }
     else {
       isvalid = 0;
-      printHand(0);
+      PrintHand(0);
       printf("Pick a valid card number to discard: ");
     }
   }
@@ -738,7 +731,7 @@ void serverDiscard(int orig_pnum, int target_pnum, int cType) {
   pfd[0].events = POLLIN | POLLOUT;
   pfd[1].fd = sockfd;
   pfd[1].events = POLLIN | POLLOUT;
-  for (int i = 0; i < current_players - 1; i++) {
+  for (int i = 0; i < currentPlayers - 1; i++) {
     pfd[i + 2].fd = clientsockfd[i];
     pfd[i + 2].events = POLLIN | POLLOUT;
   }
@@ -758,71 +751,71 @@ void serverDiscard(int orig_pnum, int target_pnum, int cType) {
     // skip the neigh input selection if the player already made a valid choice
     // or if the player played the last card in the cycle
     if (WaitForSingleObject(GetStdHandle(STD_INPUT_HANDLE), 0) == WAIT_OBJECT_0 &&
-        (target_pnum == 0 || target_pnum == ANY) && !isvalid) {
-      processStdin(buf, &input_index);
-      if (input_index >= (sizeof(buf) - 1) || buf[input_index - 1] == '\r' || buf[input_index - 1] == '\n') {
+        (targetPnum == 0 || targetPnum == ANY) && !isvalid) {
+      ProcessStdin(buf, &inputIndex);
+      if (inputIndex >= (sizeof(buf) - 1) || buf[inputIndex - 1] == '\r' || buf[inputIndex - 1] == '\n') {
 
         buf[strlen(buf) - 1] = 0;
         selection = strtol(buf, &end, 10) - 1;
 
         memset(buf, '\0', sizeof buf);
-        input_index = 0;
+        inputIndex = 0;
 
         // index validation
-        if (selection < 0 || selection >= player[0].hand.num_cards ||
-            !checkType(cType, player[0].hand.cards[selection].cType)) {
+        if (selection < 0 || selection >= player[0].hand.numCards ||
+            !CheckType(cType, player[0].hand.cards[selection].cType)) {
           printf("Pick a valid card number to discard: ");
         }
 
         else {
-          playerdiscardflag |= 1;
+          playerDiscardFlag |= 1;
           isvalid = 1;
 
-          char stdinbuf[DESC_SIZE] = { 0 };
-          sprintf_s(stdinbuf, sizeof stdinbuf, "\033[1;31m%s\033[0m discarded the card '\033[1;31m%s\033[0m'.",
+          char stdinBuf[DESC_SIZE] = { 0 };
+          sprintf_s(stdinBuf, sizeof stdinBuf, "\033[1;31m%s\033[0m discarded the card '\033[1;31m%s\033[0m'.",
             player[0].username, player[0].hand.cards[selection].name);
 
-          addDiscard(player[0].hand.cards[selection]);
-          rearrangeHand(0, selection);
+          AddDiscard(player[0].hand.cards[selection]);
+          RearrangeHand(0, selection);
 
-          for (int j = 0; j < current_players - 1; j++) {
-            sendInt(incoming_msg, clientsockfd[j]);
-            sendMsg(stdinbuf, sizeof stdinbuf, clientsockfd[j]);
+          for (int j = 0; j < currentPlayers - 1; j++) {
+            SendInt(INCOMING_MSG, clientsockfd[j]);
+            SendMsg(stdinBuf, sizeof stdinBuf, clientsockfd[j]);
           }
         }
       }
     }
 
-    for (int i = 0; i < current_players - 1; i++) {
+    for (int i = 0; i < currentPlayers - 1; i++) {
       if (pfd[i + 2].revents & POLLIN) {
         int cindex;
-        receiveInt(&cindex, clientsockfd[i]);
+        ReceiveInt(&cindex, clientsockfd[i]);
 
-        playerdiscardflag |= (1 << (i + 1));
+        playerDiscardFlag |= (1 << (i + 1));
 
         if (cindex == -1) continue;
 
-        char stdinbuf[DESC_SIZE] = { 0 };
-        sprintf_s(stdinbuf, sizeof stdinbuf, "\033[1;31m%s\033[0m discarded the card '\033[1;31m%s\033[0m'.",
+        char stdinBuf[DESC_SIZE] = { 0 };
+        sprintf_s(stdinBuf, sizeof stdinBuf, "\033[1;31m%s\033[0m discarded the card '\033[1;31m%s\033[0m'.",
           player[i + 1].username, player[i + 1].hand.cards[cindex].name);
 
-        addDiscard(player[i + 1].hand.cards[cindex]);
-        rearrangeHand(i + 1, cindex);
+        AddDiscard(player[i + 1].hand.cards[cindex]);
+        RearrangeHand(i + 1, cindex);
 
-        for (int j = 0; j < current_players - 1; j++) {
+        for (int j = 0; j < currentPlayers - 1; j++) {
           if (j == i) continue;
 
-          sendInt(incoming_msg, clientsockfd[j]);
-          sendMsg(stdinbuf, sizeof stdinbuf, clientsockfd[j]);
+          SendInt(INCOMING_MSG, clientsockfd[j]);
+          SendMsg(stdinBuf, sizeof stdinBuf, clientsockfd[j]);
         }
 
-        printf("\n%s\n", stdinbuf);
+        printf("\n%s\n", stdinBuf);
       }
     }
 
-    if (playerdiscardflag == end_condition) {
-      for (int i = 0; i < current_players - 1; i++) {
-        sendInt(quit_loop, clientsockfd[i]);
+    if (playerDiscardFlag == endCondition) {
+      for (int i = 0; i < currentPlayers - 1; i++) {
+        SendInt(QUIT_LOOP, clientsockfd[i]);
       }
       break;
     }
@@ -831,16 +824,15 @@ void serverDiscard(int orig_pnum, int target_pnum, int cType) {
   }
 
   // that's all!
-  for (int i = 0; i < current_players - 1; i++) {
-    sendGamePacket(clientsockfd[i]);
+  for (int i = 0; i < currentPlayers - 1; i++) {
+    SendGamePacket(clientsockfd[i]);
   }
 }
 
-// idle function that handles nested network events;
-// this works for both enter stable effects and unicorn sacrificeDestroy effects
-void clientEnterLeaveStable(int clientpnum) {
+void ClientEnterLeaveStable(int clientpnum) {
   int ret2;
   int eventloop = 0;
+  int nEvents;
 
   WSAPOLLFD pfd;
   pfd.fd = sockfd;
@@ -858,9 +850,9 @@ void clientEnterLeaveStable(int clientpnum) {
     }
 
     if (pfd.revents & POLLIN) {
-      receiveInt(&network_events, sockfd);
+      ReceiveInt(&nEvents, sockfd);
 
-      eventloop = netStates[network_events].recvClient(clientpnum, sockfd);
+      eventloop = netStates[nEvents].RecvClient(clientpnum, sockfd);
     }
 
     Sleep(20);
@@ -868,18 +860,17 @@ void clientEnterLeaveStable(int clientpnum) {
   } while (!eventloop);
 }
 
-// idle function that handles nested network events;
-// this works for both enter stable effects and unicorn sacrificeDestroy effects
-void serverEnterLeaveStable(int orig_pnum, int target_pnum) {
-  // can always assume that target_pnum is a separate player from the host (or else this function wouldn't be called);
-  // orig_pnum can either be the host or a player that's different from target_pnum
+void ServerEnterLeaveStable(int origPnum, int targetPnum) {
+  // can always assume that targetPnum is a separate player from the host (or else this function wouldn't be called);
+  // origPnum can either be the host or a player that's different from targetPnum
   int ret2;
   int eventloop = 0;
+  int nEvents;
 
   WSAPOLLFD pfd[2] = { -1 };  // original sockfd + relevant client
   pfd[0].fd = sockfd;
   pfd[0].events = POLLIN | POLLOUT;
-  pfd[1].fd = clientsockfd[target_pnum - 1];
+  pfd[1].fd = clientsockfd[targetPnum - 1];
   pfd[1].events = POLLIN | POLLOUT;
 
   do {
@@ -896,16 +887,16 @@ void serverEnterLeaveStable(int orig_pnum, int target_pnum) {
     }
 
     if (pfd[1].revents & POLLIN) {
-      // target_pnum becomes the new "orig_pnum" because that player is
+      // targetPnum becomes the new "origPnum" because that player is
       // the catalyst that starts the next nested loop
-      receiveInt(&network_events, clientsockfd[target_pnum - 1]);
+      ReceiveInt(&nEvents, clientsockfd[targetPnum - 1]);
 
-      eventloop = netStates[network_events].recvServer(target_pnum, clientsockfd[target_pnum - 1]);
+      eventloop = netStates[nEvents].RecvServer(targetPnum, clientsockfd[targetPnum - 1]);
 
       // this is all to avoid adding a 3rd parameter just for one instance...
-      if (eventloop && orig_pnum != 0) {
-        sendInt(quit_loop, clientsockfd[orig_pnum - 1]);
-        sendGamePacket(clientsockfd[orig_pnum - 1]);
+      if (eventloop && origPnum != 0) {
+        SendInt(QUIT_LOOP, clientsockfd[origPnum - 1]);
+        SendGamePacket(clientsockfd[origPnum - 1]);
       }
     }
 

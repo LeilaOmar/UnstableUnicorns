@@ -2,14 +2,30 @@
 #include "networkfuncs.h"
 #include "gamemechanics.h"
 
-void serialize_int(unsigned char* buffer, int num) {
+// ********************************************************************************
+// ****************************** Serialize Functions *****************************
+// ********************************************************************************
+
+/**
+ * @brief Enforces Big Endian byte order by right shifting the integer value of num into 4 individual bytes and saving it into buffer
+ * @param[out] buffer Unsigned char byte stream to send across a TCP socket
+ * @param[in] num The number that's getting serialized
+ * @note This assumes integers are stored as 4 bytes
+ */
+static void SerializeInt(unsigned char *buffer, int num) {
   buffer[0] = num >> 24;
   buffer[1] = num >> 16;
   buffer[2] = num >> 8;
   buffer[3] = num;
 }
 
-int deserialize_int(unsigned char* buffer) {
+/**
+ * @brief Left shifts the Big Endian-stored value of buffer into 4 individual bytes and stores it as an integer
+ * @param[in] buffer Unsigned char byte stream that's getting processed and deserialized
+ * @return num Value of the deserialized integer
+ * @note This assumes integers are stored as 4 bytes
+ */
+static int DeserializeInt(unsigned char *buffer) {
   int num = 0;
 
   num |= buffer[0] << 24;
@@ -19,12 +35,22 @@ int deserialize_int(unsigned char* buffer) {
   return num;
 }
 
-void serialize_short(unsigned char* buffer, int num) {
+/**
+ * @brief Enforces Big Endian byte order by shifting the short value of num into 2 individual bytes and saving it into buffer
+ * @param[out] buffer Unsigned char byte stream to send across a TCP socket
+ * @param[in] num The number that's getting serialized
+ */
+static void SerializeShort(unsigned char *buffer, int num) {
   buffer[0] = num >> 8;
   buffer[1] = num;
 }
 
-short deserialize_short(unsigned char* buffer) {
+/**
+ * @brief Left shifts the Big Endian-stored value of buffer into 2 individual bytes and stores it as a short
+ * @param[in] buffer Unsigned char byte stream that's getting processed and deserialized
+ * @return num Value of the deserialized short
+ */
+static short DeserializeShort(unsigned char *buffer) {
   int num = 0;
 
   num |= buffer[0] << 8;
@@ -32,36 +58,14 @@ short deserialize_short(unsigned char* buffer) {
   return num;
 }
 
-// unsigned char* serialize_long(unsigned char* buffer, int num) {
-//   buffer[0] = num >> 56;
-//   buffer[1] = num >> 48;
-//   buffer[2] = num >> 40;
-//   buffer[3] = num >> 32;
-//   buffer[4] = num >> 24;
-//   buffer[5] = num >> 16;
-//   buffer[6] = num >> 8;
-//   buffer[7] = num;
-//   return buffer + 8;
-// }
-// 
-// long deserialize_long(unsigned char* buffer) {
-//   long num = 0;
-// 
-//   num |= buffer[0] << 56;
-//   num |= buffer[1] << 48;
-//   num |= buffer[2] << 40;
-//   num |= buffer[3] << 32;
-//   num |= buffer[4] << 24;
-//   num |= buffer[5] << 16;
-//   num |= buffer[6] << 8;
-//   num |= buffer[7];
-//   return num;
-// }
+// ********************************************************************************
+// *************************** Send/Recv Data Functions ***************************
+// ********************************************************************************
 
-int sendInt(int num, int fd) {
+int SendInt(int num, int fd) {
   int32_t tmp = htonl(num);
   int count = sizeof(tmp);
-  char* data = (char*)&tmp;
+  char *data = (char*)&tmp;
   int rc;
 
   do {
@@ -75,10 +79,10 @@ int sendInt(int num, int fd) {
   return 0;
 }
 
-int receiveInt(int* num, int fd) {
+int ReceiveInt(int *num, int fd) {
   int32_t ret;
   int count = sizeof(ret);
-  char* data = (char*)&ret;
+  char *data = (char*)&ret;
   int rc;
 
   do {
@@ -94,24 +98,24 @@ int receiveInt(int* num, int fd) {
   return 0;
 }
 
-int sendPlayers(int fd) {
-  int count = sizeof(struct Player) * current_players;
+int SendPlayers(int fd) {
+  int count = sizeof(struct Player) * currentPlayers;
   int rc;
 
   static char data[sizeof(struct Player) * MAX_PLAYERS];
   int offset = 0;
 
-  sendInt(current_players, fd);
+  SendInt(currentPlayers, fd);
 
-  for (int i = 0; i < current_players; i++) {
+  for (int i = 0; i < currentPlayers; i++) {
     // cards in hand
-    sendInt(player[i].hand.num_cards, fd);
-    sendUnicorns(player[i].hand.cards, player[i].hand.num_cards, fd);
+    SendInt(player[i].hand.numCards, fd);
+    SendUnicorns(player[i].hand.cards, player[i].hand.numCards, fd);
 
     // stable
-    sendInt(player[i].stable.size, fd);
-    sendInt(player[i].stable.num_unicorns, fd);
-    sendUnicorns(player[i].stable.unicorns, player[i].stable.size, fd);
+    SendInt(player[i].stable.size, fd);
+    SendInt(player[i].stable.numUnicorns, fd);
+    SendUnicorns(player[i].stable.unicorns, player[i].stable.size, fd);
 
     // username
     for (int j = 0; j < sizeof player[i].username; j++) {
@@ -119,12 +123,12 @@ int sendPlayers(int fd) {
     }
 
     // flags
-    serialize_short(data + offset, player[i].flags);
+    SerializeShort(data + offset, player[i].flags);
     offset += 2;
   }
 
   count = offset;
-  sendInt(count, fd);
+  SendInt(count, fd);
   offset = 0;
   do {
     rc = send(fd, data + offset, count, 0);
@@ -137,27 +141,27 @@ int sendPlayers(int fd) {
   return 0;
 }
 
-int receivePlayers(int fd) {
+int ReceivePlayers(int fd) {
   int count;
   int rc;
 
   static char data[sizeof(struct Player) * MAX_PLAYERS];
   int offset = 0;
 
-  receiveInt(&current_players, fd);
+  ReceiveInt(&currentPlayers, fd);
 
-  for (int i = 0; i < current_players; i++) {
+  for (int i = 0; i < currentPlayers; i++) {
     // cards in hand
-    receiveInt(&player[i].hand.num_cards, fd);
-    receiveUnicorns(player[i].hand.cards, player[i].hand.num_cards, fd);
+    ReceiveInt(&player[i].hand.numCards, fd);
+    ReceiveUnicorns(player[i].hand.cards, player[i].hand.numCards, fd);
 
     // stable
-    receiveInt(&player[i].stable.size, fd);
-    receiveInt(&player[i].stable.num_unicorns, fd);
-    receiveUnicorns(player[i].stable.unicorns, player[i].stable.size, fd);
+    ReceiveInt(&player[i].stable.size, fd);
+    ReceiveInt(&player[i].stable.numUnicorns, fd);
+    ReceiveUnicorns(player[i].stable.unicorns, player[i].stable.size, fd);
   }
 
-  receiveInt(&count, fd);
+  ReceiveInt(&count, fd);
   while (count > 0) {
     rc = recv(fd, data + offset, count, 0);
     if (rc > 0) {
@@ -168,18 +172,18 @@ int receivePlayers(int fd) {
 
   offset = 0;
 
-  for (int i = 0; i < current_players; i++) {
+  for (int i = 0; i < currentPlayers; i++) {
     for (int j = 0; j < sizeof player[i].username; j++) {
       player[i].username[j] = data[offset++];
     }
-    player[i].flags = deserialize_short(data + offset);
+    player[i].flags = DeserializeShort(data + offset);
     offset += 2;
   }
 
   return 0;
 }
 
-int sendUnicorns(struct Unicorn* corns, int size, int fd) {
+int SendUnicorns(struct Unicorn *corns, int size, int fd) {
   int count = sizeof(struct Unicorn) * size;
   int rc;
 
@@ -195,14 +199,14 @@ int sendUnicorns(struct Unicorn* corns, int size, int fd) {
     for (int j = 0; j < sizeof corns[i].description; j++) {
       data[offset++] = corns[i].description[j];
     }
-    serialize_short(data + offset, corns[i].effect);
+    SerializeShort(data + offset, corns[i].effect);
     offset += 2;
-    serialize_int(data + offset, corns[i].id);
+    SerializeInt(data + offset, corns[i].id);
     offset += 4;
   }
 
   // send the size of the array before sending the data
-  sendInt(count, fd);
+  SendInt(count, fd);
 
   offset = 0;
   do {
@@ -216,10 +220,10 @@ int sendUnicorns(struct Unicorn* corns, int size, int fd) {
   return 0;
 }
 
-int receiveUnicorns(struct Unicorn* corns, int size, int fd) {
+int ReceiveUnicorns(struct Unicorn *corns, int size, int fd) {
   int count, rc, offset = 0;
   static char data[sizeof(struct Unicorn) * (DECK_SIZE + NURSERY_SIZE)];
-  receiveInt(&count, fd);
+  ReceiveInt(&count, fd);
 
   while (count > 0) {
     rc = recv(fd, data + offset, count, 0);
@@ -239,95 +243,103 @@ int receiveUnicorns(struct Unicorn* corns, int size, int fd) {
     for (int j = 0; j < sizeof corns[i].description; j++) {
       corns[i].description[j] = data[offset++];
     }
-    corns[i].effect = deserialize_short(data + offset);
+    corns[i].effect = DeserializeShort(data + offset);
     offset += 2;
-    corns[i].id = deserialize_int(data + offset);
+    corns[i].id = DeserializeInt(data + offset);
     offset += 4;
   }
 
   return 0;
 }
 
-int sendGamePacket(int fd) {
-  sendInt(deck.size, fd);
-  sendUnicorns(deck.cards, deck.size, fd);
+// ********************************************************************************
+// ******************************* Packet Functions *******************************
+// ********************************************************************************
 
-  sendInt(nursery.size, fd);
-  sendUnicorns(nursery.cards, nursery.size, fd);
+int SendGamePacket(int fd) {
+  SendInt(deck.size, fd);
+  SendUnicorns(deck.cards, deck.size, fd);
 
-  sendInt(discardpile.size, fd);
-  sendUnicorns(discardpile.cards, discardpile.size, fd);
+  SendInt(nursery.size, fd);
+  SendUnicorns(nursery.cards, nursery.size, fd);
 
-  sendInt(uni_lasso_flag[0], fd);
-  sendInt(uni_lasso_flag[1], fd);
-  sendInt(uni_lasso_flag[2], fd);
+  SendInt(discardpile.size, fd);
+  SendUnicorns(discardpile.cards, discardpile.size, fd);
 
-  sendInt(puppicorn_index[0], fd);
-  sendInt(puppicorn_index[1], fd);
+  SendInt(uniLassoIndex[0], fd);
+  SendInt(uniLassoIndex[1], fd);
+  SendInt(uniLassoIndex[2], fd);
 
-  sendPlayers(fd);
+  SendInt(puppicornIndex[0], fd);
+  SendInt(puppicornIndex[1], fd);
 
-  return 0;
-}
-
-int receiveGamePacket(int fd) {
-  receiveInt(&deck.size, fd);
-  receiveUnicorns(deck.cards, deck.size, fd);
-
-  receiveInt(&nursery.size, fd);
-  receiveUnicorns(nursery.cards, nursery.size, fd);
-
-  receiveInt(&discardpile.size, fd);
-  receiveUnicorns(discardpile.cards, discardpile.size, fd);
-
-  receiveInt(&uni_lasso_flag[0], fd);
-  receiveInt(&uni_lasso_flag[1], fd);
-  receiveInt(&uni_lasso_flag[2], fd);
-
-  receiveInt(&puppicorn_index[0], fd);
-  receiveInt(&puppicorn_index[1], fd);
-
-  receivePlayers(fd);
+  SendPlayers(fd);
 
   return 0;
 }
 
-int sendCardEffectPacket(int target_pnum, int desired_type, int fd) {
-  sendInt(target_pnum, fd);
-  sendInt(desired_type, fd);
-  sendGamePacket(fd);
+int ReceiveGamePacket(int fd) {
+  ReceiveInt(&deck.size, fd);
+  ReceiveUnicorns(deck.cards, deck.size, fd);
+
+  ReceiveInt(&nursery.size, fd);
+  ReceiveUnicorns(nursery.cards, nursery.size, fd);
+
+  ReceiveInt(&discardpile.size, fd);
+  ReceiveUnicorns(discardpile.cards, discardpile.size, fd);
+
+  ReceiveInt(&uniLassoIndex[0], fd);
+  ReceiveInt(&uniLassoIndex[1], fd);
+  ReceiveInt(&uniLassoIndex[2], fd);
+
+  ReceiveInt(&puppicornIndex[0], fd);
+  ReceiveInt(&puppicornIndex[1], fd);
+
+  ReceivePlayers(fd);
 
   return 0;
 }
 
-int receiveCardEffectPacket(int* target_pnum, int* desired_type, int fd) {
-  receiveInt(target_pnum, fd);
-  receiveInt(desired_type, fd);
-  receiveGamePacket(fd);
+int SendCardEffectPacket(int targetPnum, int desiredType, int fd) {
+  SendInt(targetPnum, fd);
+  SendInt(desiredType, fd);
+  SendGamePacket(fd);
 
   return 0;
 }
 
-int sendEnterStablePacket(struct Unicorn corn, int pnum, int fd) {
-  sendInt(pnum, fd);
-  sendUnicorns(&corn, 1, fd);
-  sendGamePacket(fd);
+int ReceiveCardEffectPacket(int *targetPnum, int *desiredType, int fd) {
+  ReceiveInt(targetPnum, fd);
+  ReceiveInt(desiredType, fd);
+  ReceiveGamePacket(fd);
 
   return 0;
 }
 
-int receiveEnterStablePacket(struct Unicorn* corn, int* pnum, int fd) {
-  receiveInt(pnum, fd);
-  receiveUnicorns(corn, 1, fd);
-  receiveGamePacket(fd);
+int SendEnterStablePacket(struct Unicorn corn, int pnum, int fd) {
+  SendInt(pnum, fd);
+  SendUnicorns(&corn, 1, fd);
+  SendGamePacket(fd);
 
   return 0;
 }
 
-int sendMsg(char* str, int count, int fd) {
+int ReceiveEnterStablePacket(struct Unicorn* corn, int *pnum, int fd) {
+  ReceiveInt(pnum, fd);
+  ReceiveUnicorns(corn, 1, fd);
+  ReceiveGamePacket(fd);
+
+  return 0;
+}
+
+// ********************************************************************************
+// **************************** Message/Input Functions ***************************
+// ********************************************************************************
+
+int SendMsg(char *str, int count, int fd) {
   int rc;
 
-  sendInt(count, fd);
+  SendInt(count, fd);
   do {
     rc = send(fd, str, count, 0);
     if (rc > 0) {
@@ -339,12 +351,12 @@ int sendMsg(char* str, int count, int fd) {
   return 0;
 }
 
-int receiveMsg(char* str, int fd) {
+int ReceiveMsg(char *str, int fd) {
   int count;
   int offset = 0;
   int rc;
 
-  receiveInt(&count, fd);
+  ReceiveInt(&count, fd);
 
   while (count > 0) {
     rc = recv(fd, str + offset, count, 0);
@@ -357,9 +369,7 @@ int receiveMsg(char* str, int fd) {
   return 0;
 }
 
-// handles stdin events and filters everything but keydown presses
-// https://stackoverflow.com/questions/19955617/win32-read-from-stdin-with-timeout
-void processStdin(char* stdinbuf, int* bufindex) {
+void ProcessStdin(char *stdinBuf, int *bufIndex) {
   INPUT_RECORD record;
   DWORD numRead;
 
@@ -381,24 +391,24 @@ void processStdin(char* stdinbuf, int* bufindex) {
 
   // use printf \b when backspacing
   if (record.Event.KeyEvent.wVirtualKeyCode == VK_BACK) {
-    if (*bufindex > 0) {
+    if (*bufIndex > 0) {
       printf("\b \b");
-      stdinbuf[*bufindex] = '\0';
-      (*bufindex)--;
+      stdinBuf[*bufIndex] = '\0';
+      (*bufIndex)--;
     }
     return;
   }
 
   // ascii input
   if (record.Event.KeyEvent.uChar.AsciiChar) {
-    stdinbuf[*bufindex] = record.Event.KeyEvent.uChar.AsciiChar;
+    stdinBuf[*bufIndex] = record.Event.KeyEvent.uChar.AsciiChar;
 
-    if (stdinbuf[*bufindex] == '\r' || stdinbuf[*bufindex] == '\n') {
+    if (stdinBuf[*bufIndex] == '\r' || stdinBuf[*bufIndex] == '\n') {
       printf("\n");
     }
     else {
-      printf("%c", stdinbuf[*bufindex]);
+      printf("%c", stdinBuf[*bufIndex]);
     }
-    (*bufindex)++;
+    (*bufIndex)++;
   }
 }

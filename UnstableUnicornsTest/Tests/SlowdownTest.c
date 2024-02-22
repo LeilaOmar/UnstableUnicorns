@@ -1,34 +1,34 @@
 #include "DowngradeTests.h"
 
 // sanity check
-int slowdown_basic_check() {
-	int num_fails = 0;
-	struct Unicorn slowdown_tmp = basedeck[109];
+int slowdown_basic_check(void) {
+  int num_fails = 0;
+  struct Unicorn slowdown_tmp = Base_DECK[109];
 
-	addStable(0, slowdown_tmp);
-	assert(player[0].flags == slowdown);
+  AddStable(0, slowdown_tmp);
+  assert(player[0].flags == SLOWDOWN);
 
-	if (canNeighOthers(0)) {
-		num_fails++;
-		red();
-		fprintf(stderr, "    sanity test: canNeighOthers failed\n");
-		reset_col();
-	}
+  if (CanNeighOthers(0)) {
+    num_fails++;
+    Red();
+    fprintf(stderr, "    sanity test: CanNeighOthers failed\n");
+    ResetCol();
+  }
 
-	reset_players();
-	return num_fails;
+  reset_players();
+  return num_fails;
 }
 
-// Slowdown
+// SLOWDOWN
 //
 // You cannot play Instant cards.
-int slowdown_tests() {
-	int num_fails = 0;
+int slowdown_tests(void) {
+  int num_fails = 0;
 
-	if (!isclient) {
-		rainbow_error("\nStarting Slowdown tests...\n");
+  if (!isClient) {
+    rainbow_error("\nStarting SLOWDOWN tests...\n");
 
-		num_fails += slowdown_basic_check();
-	}
-	return num_fails;
+    num_fails += slowdown_basic_check();
+  }
+  return num_fails;
 }

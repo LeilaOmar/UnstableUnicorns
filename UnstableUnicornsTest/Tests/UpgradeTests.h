@@ -1,15 +1,16 @@
 #pragma once
-#include "gamemechanics.h"
-#include "basedeck.h"
-#include "gamephase.h"
-#include "../resetfns.h"
-#include <assert.h>
 
-int rainbow_mane_tests();
-int extra_tail_tests();
-int glitter_bomb_tests();
-int yay_tests();
-int unicorn_lasso_tests();
-int rainbow_aura_tests();
-int double_dutch_tests();
-int summoning_ritual_tests();
+#include <assert.h>
+#include <gamemechanics.h>
+#include <gamephase.h>
+#include <basedeck.h>
+#include "../resetfns.h"
+
+int rainbow_mane_tests(void);
+int extra_tail_tests(void);
+int glitter_bomb_tests(void);
+int yay_tests(void);
+int unicorn_lasso_tests(void);
+int rainbow_aura_tests(void);
+int double_dutch_tests(void);
+int summoning_ritual_tests(void);

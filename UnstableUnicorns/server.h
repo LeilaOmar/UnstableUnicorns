@@ -1,5 +1,8 @@
 #pragma once
+
 #include "networkevents.h"
 
-int newConnection(SOCKET *cfd);
-int serverMain(void);
+/**
+ * @brief The main server/host loop for Console applications
+ */
+int ServerMain(void);

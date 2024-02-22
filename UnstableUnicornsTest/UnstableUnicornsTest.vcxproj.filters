@@ -248,7 +248,7 @@
     <ClInclude Include="Tests\MagicTests.h">
       <Filter>Header Files\Tests</Filter>
     </ClInclude>
-    <ClInclude Include="Tests\MagicUnicornTests.h">
+    <ClInclude Include="Tests\MagicalUnicornTests.h">
       <Filter>Header Files\Tests</Filter>
     </ClInclude>
     <ClInclude Include="Tests\UpgradeTests.h">

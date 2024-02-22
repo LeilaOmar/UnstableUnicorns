@@ -2,34 +2,30 @@
 #include "gamephase.h"
 #include "networkevents.h"
 
-// beginning turn effects all trigger at once, so any cards that enter before
-// the action phase do not count towards these card effects
-// (e.g. gained a card through unicorn lasso or puppicorn)
-void beginningOfTurn(int pnum) {
-  turn_count = 1;
-  uni_lasso_flag[0] = -1;
+void BeginningOfTurn(int pnum) {
+  turnCount = 1;
+  uniLassoIndex[0] = -1;
 
   // Nanny Cam check
-  for (int i = 0; i < current_players; i++) {
-    if (i != pnum && (player[i].flags & nanny_cam) != 0)
-      printHand(i);
+  for (int i = 0; i < currentPlayers; i++) {
+    if (i != pnum && (player[i].flags & NANNY_CAM) != 0)
+      PrintHand(i);
   }
 
   for (int i = 0; i < player[pnum].stable.size; i++) {
-    beginningTurnEffects(pnum, player[pnum].stable.unicorns[i]);
+    Base_BeginningTurnEffects(pnum, player[pnum].stable.unicorns[i]);
   }
 
   // drawing comes after the beginning turn effects
-  draw(pnum, 1);
+  Draw(pnum, 1);
 }
 
-// choose between drawing or playing a card
-void actionPhase(int pnum) {
+void ActionPhase(int pnum) {
   int index;
-  char* end, buf[LINE_MAX];
+  char *end, buf[LINE_MAX];
 
-  while (turn_count > 0) {
-    printHand(pnum);
+  while (turnCount > 0) {
+    PrintHand(pnum);
     do {
       printf(
         "\nAction phase options:"
@@ -41,94 +37,88 @@ void actionPhase(int pnum) {
         "\n6. Display Nursery"
         "\n7. Display Discard Pile"
         "\nChoice: ");
-      index = numinput(buf, &end, sizeof buf);
+      index = NumInput(buf, &end, sizeof buf);
 
       if (index == 3)
-        displayCardDesc();
+        DisplayCardDesc();
       else if (index == 4)
-        displayDesiredStable();
+        DisplayDesiredStable();
       else if (index == 5)
-        printHand(pnum);
+        PrintHand(pnum);
       else if (index == 6) {
-        yellow();
-        printPile(nursery);
-        reset_col();
+        Yellow();
+        PrintPile(nursery);
+        ResetCol();
       }
       else if (index == 7) {
-        magenta();
-        printPile(discardpile);
-        reset_col();
+        Magenta();
+        PrintPile(discardpile);
+        ResetCol();
       }
     } while (index < 1 || index > 2 || end != (buf + strlen(buf)));
 
     if (index == 1)
-      draw(pnum, 1);
+      Draw(pnum, 1);
     else
-      playCard(pnum);
+      PlayCard(pnum);
 
-    turn_count--;
+    turnCount--;
   }
 
 }
 
-// end of turn sequence, so
-// - discard extra cards
-// - check win condition (return 1 = game over, return 0 = continue)
-// - return cards to their owner (unicorn lasso)
-// - give puppicorn to next player (puppicorn)
-int endOfTurn(int pnum) {
+int EndOfTurn(int pnum) {
   // discard extra cards since max hand limit in-game is 7
-  if (player[pnum].hand.num_cards > 7) {
-    discard(pnum, player[pnum].hand.num_cards - 7, ANY);
+  if (player[pnum].hand.numCards > 7) {
+    Discard(pnum, player[pnum].hand.numCards - 7, ANY);
   }
 
   // print stuff to see what's going on
-  printHand(pnum);
-  printStable(pnum);
+  PrintHand(pnum);
+  PrintStable(pnum);
 
   // check if the player has enough unicorns (notably not pandas) to win the game
-  if (checkWin(pnum))
+  if (CheckWin(pnum))
     return 1;
 
   // return any unicorns or pass any unicorns to their proper owner
-  if (uni_lasso_flag[0] != -1) {
-    // uni_lasso_flag[2] represents proper owner, and the thief [1] has the
-    // card removed from their stable
-    int cindex = uni_lasso_flag[0];
-    int thief = uni_lasso_flag[1];
-    int owner = uni_lasso_flag[2];
+  if (uniLassoIndex[0] != -1) {
+    // uniLassoIndex[2] represents the proper owner, and the thief [1] has the card removed from their stable
+    int cindex = uniLassoIndex[0];
+    int thief = uniLassoIndex[1];
+    int owner = uniLassoIndex[2];
     struct Unicorn tmp = player[thief].stable.unicorns[cindex];
 
     // rearrange the player's stable and toggle any flags before swapping the card to the other stable;
     // this will (hopefully) prevent dupes from card effect shenanigans
-    rearrangeStable(thief, cindex);
+    RearrangeStable(thief, cindex);
 
     // send a notice to add a card to the person's stable outside of their normal turn
-    if (isclient) {
-      sendInt(enter_stable_event, sockfd);
-      sendEnterStablePacket(tmp, owner, sockfd); // index = target player index
+    if (isClient) {
+      SendInt(ENTER_STABLE_EVENT, sockfd);
+      SendEnterStablePacket(tmp, owner, sockfd); // index = target player index
     
       // need to look out for nested network events
-      clientEnterLeaveStable(pnum);
+      ClientEnterLeaveStable(pnum);
     }
     else {
-      sendInt(enter_stable_event, clientsockfd[owner - 1]);
-      sendEnterStablePacket(tmp, pnum, clientsockfd[owner - 1]); // pnum = original player index
+      SendInt(ENTER_STABLE_EVENT, clientsockfd[owner - 1]);
+      SendEnterStablePacket(tmp, pnum, clientsockfd[owner - 1]); // pnum = original player index
     
       // need to look out for nested network events
-      serverEnterLeaveStable(pnum, owner);
+      ServerEnterLeaveStable(pnum, owner);
     }
   }
 
-  // puppicorn swap; pnum isn't always equal to the current puppicorn_index[1]
-  if (puppicorn_index[0] != -1) {
-    int old_cindex = puppicorn_index[0]; // this gets changed in addStable
-    int old_pindex = puppicorn_index[1];
+  // puppicorn swap; pnum isn't always equal to the current puppicornIndex[1]
+  if (puppicornIndex[0] != -1) {
+    int old_cindex = puppicornIndex[0]; // this gets changed in AddStable
+    int old_pindex = puppicornIndex[1];
     int next_pnum;
     struct Unicorn corn = player[old_pindex].stable.unicorns[old_cindex];
-    rearrangeStable(old_pindex, old_cindex);
+    RearrangeStable(old_pindex, old_cindex);
 
-    if (old_pindex == current_players - 1) {
+    if (old_pindex == currentPlayers - 1) {
       next_pnum = 0;
     }
     else {
@@ -136,21 +126,21 @@ int endOfTurn(int pnum) {
     }
 
     // send a notice to add a card to the person's stable outside of their normal turn;
-    // just doing addStable for them ignores effects like "Tiny Stable" or "Barbed Wire" where
+    // just doing AddStable for them ignores effects like "Tiny Stable" or "Barbed Wire" where
     // they have to perform some action
-    if (isclient) {
-      sendInt(enter_stable_event, sockfd);
-      sendEnterStablePacket(corn, next_pnum, sockfd); // index = target player index
+    if (isClient) {
+      SendInt(ENTER_STABLE_EVENT, sockfd);
+      SendEnterStablePacket(corn, next_pnum, sockfd); // index = target player index
 
       // need to look out for nested network events
-      clientEnterLeaveStable(pnum);
+      ClientEnterLeaveStable(pnum);
     }
     else {
-      sendInt(enter_stable_event, clientsockfd[next_pnum - 1]);
-      sendEnterStablePacket(corn, pnum, clientsockfd[next_pnum - 1]); // pnum = original player index
+      SendInt(ENTER_STABLE_EVENT, clientsockfd[next_pnum - 1]);
+      SendEnterStablePacket(corn, pnum, clientsockfd[next_pnum - 1]); // pnum = original player index
 
       // need to look out for nested network events
-      serverEnterLeaveStable(pnum, next_pnum);
+      ServerEnterLeaveStable(pnum, next_pnum);
     }
   }
 

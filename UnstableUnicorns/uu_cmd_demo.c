@@ -144,13 +144,13 @@
 int main(void) {
 
   // register the termination function
-  atexit(cleanup);
+  atexit(Cleanup);
 
   // initialize the deck here for now
-  init_deck(&nursery, &deck, &discardpile);
+  InitDeck(&nursery, &deck, &discardpile);
 
   // initialize the network states too
-  init_network_states();
+  InitNetworkStates();
 
   // file stream pointer to use as a placeholder for stdin or the test input files
   fpinput = stdin;
@@ -194,7 +194,7 @@ int main(void) {
 
   // website to convert text to ascii art
   // https://patorjk.com/software/taag/#p=display&f=Standard&t=Unstable%20Unicorns
-  rainbow(
+  Rainbow(
     "  _   _           _        _     _        _   _       _                          \n"
     " | | | |_ __  ___| |_ __ _| |__ | | ___  | | | |_ __ (_) ___ ___  _ __ _ __  ___ \n"
     " | | | | '_ \\/ __| __/ _` | '_ \\| |/ _ \\ | | | | '_ \\| |/ __/ _ \\| '__| '_ \\/ __|\n"
@@ -205,7 +205,7 @@ int main(void) {
   
   // website to convert images to ascii art
   // https://manytools.org/hacker-tools/convert-images-to-ascii-art/
-  rainbow(
+  Rainbow(
     "                                 (#                                              \n"
     "                 /            %##*###%                                           \n"
     "                ***  %,   ( %%%%####%%                                           \n"
@@ -241,7 +241,7 @@ int main(void) {
     "                                   *#/                                           \n"
   );
 
-  rainbow("\nWelcome to Unstable Unicorns for the command line!\n");
+  Rainbow("\nWelcome to Unstable Unicorns for the command line!\n");
 
   do {
     printf("\nEnter \"host\" or \"1\" if you would like to host your own game, or\n"
@@ -253,11 +253,11 @@ int main(void) {
            strncmp(buf, "1", 1) != 0 && strncmp(buf, "2", 1) != 0);
 
   if (strncmp(buf, "host", 4) == 0 || strncmp(buf, "1", 1) == 0) {
-    if ((result = serverMain()) != 0) {
+    if ((result = ServerMain()) != 0) {
       exit(result);
     }
   } else {
-    if ((result = clientMain()) != 0) {
+    if ((result = ClientMain()) != 0) {
       exit(result);
     }
   }
