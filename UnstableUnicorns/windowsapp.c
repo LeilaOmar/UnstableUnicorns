@@ -68,8 +68,8 @@ static enum Fonts { OLDFONT, CHONKYFONT, BOLDFONT, ITALICFONT, FANCYFONT, FANCYI
 static HWND networkThread, textNameHwnd, portHwnd, codeHwnd;
 static DWORD tIdweb;
 static HBITMAP hBitmapBG[NUMSTATES], hBitmapBorder[MAX_PLAYERS], hBitmapCard[84], hBitmapTab[3];
-static BOOL windowOpen[2] = { FALSE };
-static BOOL childWindow[2] = { FALSE };
+static BOOL isChildOpen = FALSE; //!< TRUE if the Host or Join dialogue box is open, FALSE if inactive
+static BOOL isChildInit[2] = { FALSE }; //!< Boolean check for initializing the child windows (RegisterClass is only supposed to run once); [0] is host/server, [1] is client
 static HFONT fonts[NUMCUSTOMFONTS] = { NULL };
 
 static enum Tab tabnum;    //!< The tab number representation of the window to display on the bottom of the in-game screen
@@ -411,7 +411,7 @@ static void InitCardWindowButtons(struct Button *b) {
 }
 
 static void InitCardButtons(struct Button *b, int size) {
-  // start is the starting point for the display, of course, with the scroll bar it could go to 0
+  // start is the starting point for the display
   POINT start = { 87, 507 };
   BITMAP bm;
   GetObject(hBitmapBack, (int)sizeof bm, &bm); // fetches width/height; all cards have the same w/h
@@ -477,9 +477,9 @@ enum { ID_BUTTON, ID_TEXT };
  * @brief Creates a child window to set up a game as the host
  */
 static void CreateHostWindow(HWND hwnd) {
-  WNDCLASSEX wcexHost;
+  static WNDCLASSEX wcexHost;
 
-  if (childWindow[0] == FALSE) {
+  if (!isChildInit[0]) {
     ZeroMemory(&wcexHost, sizeof(WNDCLASSEX)); // TODO: figure out what this does
     wcexHost.cbSize = sizeof(WNDCLASSEX);
     wcexHost.cbClsExtra = 0;
@@ -503,7 +503,7 @@ static void CreateHostWindow(HWND hwnd) {
       return;
     }
     else {
-      childWindow[0] = TRUE;
+      isChildInit[0] = TRUE;
     }
   }
 
@@ -536,9 +536,9 @@ static void CreateHostWindow(HWND hwnd) {
  * @brief Creates a child window to join the game as a client
  */
 static void CreateJoinWindow(HWND hwnd) {
-  WNDCLASSEX wcexJoin;
+  static WNDCLASSEX wcexJoin;
 
-  if (childWindow[1] == FALSE) {
+  if (!isChildInit[1]) {
     ZeroMemory(&wcexJoin, sizeof(WNDCLASSEX)); // TODO: figure out what this does
     wcexJoin.cbSize = sizeof(WNDCLASSEX);
     wcexJoin.cbClsExtra = 0;
@@ -562,7 +562,7 @@ static void CreateJoinWindow(HWND hwnd) {
       return;
     }
     else {
-      childWindow[1] = TRUE;
+      isChildInit[1] = TRUE;
     }
   }
 
@@ -1421,7 +1421,7 @@ static void ClickTitle(POINT pnt) {
     if (pnt.x >= titleButtons[i].x && pnt.x < titleButtons[i].x + titleButtons[i].width &&
       pnt.y >= titleButtons[i].y && pnt.y < titleButtons[i].y + titleButtons[i].height) {
       // left click action
-      if (windowOpen[1] == FALSE) {
+      if (isChildOpen == FALSE) {
         PlaySound(TEXT("Assets\\Audio\\button-click.wav"), NULL, SND_FILENAME | SND_ASYNC);
         titleButtons[i].OnClick(titleButtons[i].source);
         hornButton.source = FALSE;
@@ -1678,7 +1678,7 @@ static void HostGeneration(HWND hWnd) {
   // this won't work in a thread unless there's a message loop, but that would create bliting issues
   CreateHostWindow(hWnd);
 
-  while (windowOpen[1]) {
+  while (isChildOpen) {
     if (GetMessage(&msg, NULL, 0, 0)) {
       TranslateMessage(&msg);
       DispatchMessage(&msg);
@@ -1693,7 +1693,7 @@ static void JoinGeneration(HWND hWnd) {
   // this won't work in a thread unless there's a message loop, but that would create bliting issues
   CreateJoinWindow(hWnd);
 
-  while (windowOpen[1]) {
+  while (isChildOpen) {
     if (GetMessage(&msg, NULL, 0, 0)) {
       TranslateMessage(&msg);
       DispatchMessage(&msg);
@@ -1780,7 +1780,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     // initialize the network states too
     InitNetworkStates();
 
-    windowOpen[0] = TRUE;
     break;
   case WM_TIMER:
     InvalidateRect(hWnd, NULL, FALSE); // TRUE = bg is erased when BeginPaint is called; FALSE = no
@@ -1856,7 +1855,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
   }
   case WM_DESTROY:
   {
-    windowOpen[0] = FALSE;
     for (int i = 0; i < sizeof hBitmapBG / sizeof hBitmapBG[0]; i++) {
       DeleteObject(hBitmapBG[i]);
     }
@@ -1908,7 +1906,7 @@ static LRESULT CALLBACK WndProcHost(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
   switch (uMsg)
   {
   case WM_CREATE:
-    windowOpen[1] = TRUE;
+    isChildOpen = TRUE;
 
     textNameHwnd = CreateWindow(TEXT("EDIT"), NULL, WS_BORDER | WS_CHILD | WS_VISIBLE, 10, 50, 200, 20, hWnd, (HMENU)ID_TEXT, g_hInstance, NULL);
     portHwnd = CreateWindow(TEXT("EDIT"), NULL, WS_BORDER | WS_CHILD | WS_VISIBLE, 10, 145, 200, 20, hWnd, (HMENU)ID_TEXT, g_hInstance, NULL);
@@ -1976,7 +1974,7 @@ static LRESULT CALLBACK WndProcHost(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
     ReleaseDC(hWnd, hdc);
     break;
   case WM_DESTROY:
-    windowOpen[1] = FALSE;
+    isChildOpen = FALSE;
     break;
   }
 
@@ -1993,7 +1991,7 @@ static LRESULT CALLBACK WndProcJoin(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
   switch (uMsg)
   {
   case WM_CREATE:
-    windowOpen[1] = TRUE;
+    isChildOpen = TRUE;
 
     textNameHwnd = CreateWindow(TEXT("EDIT"), NULL, WS_BORDER | WS_CHILD | WS_VISIBLE, 10, 40, 200, 20, hWnd, (HMENU)ID_TEXT, g_hInstance, NULL);
     portHwnd = CreateWindow(TEXT("EDIT"), NULL, WS_BORDER | WS_CHILD | WS_VISIBLE, 10, 115, 200, 20, hWnd, (HMENU)ID_TEXT, g_hInstance, NULL);
@@ -2047,7 +2045,7 @@ static LRESULT CALLBACK WndProcJoin(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
     ReleaseDC(hWnd, hdc);
     break;
   case WM_DESTROY:
-    windowOpen[1] = FALSE;
+    isChildOpen = FALSE;
     break;
   }
 
