@@ -147,6 +147,7 @@
     <ClCompile Include="..\UnstableUnicorns\networkevents.c" />
     <ClCompile Include="..\UnstableUnicorns\networkfuncs.c" />
     <ClCompile Include="..\UnstableUnicorns\networkstates.c" />
+    <ClCompile Include="mockfns.c" />
     <ClCompile Include="resetfns.c" />
     <ClCompile Include="Tests\AlluringNarwhalTest.c" />
     <ClCompile Include="Tests\AmericornTest.c" />
@@ -214,6 +215,7 @@
     <ClCompile Include="unittests.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="mockfns.h" />
     <ClInclude Include="resetfns.h" />
     <ClInclude Include="Tests\DowngradeTests.h" />
     <ClInclude Include="Tests\InstantTests.h" />

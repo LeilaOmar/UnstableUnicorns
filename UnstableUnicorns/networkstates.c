@@ -1,14 +1,8 @@
 #include "gamemechanics.h"
 #include "networkevents.h"
 
-// was unable to properly link this with an external file ;~;
 #ifdef TEST_RUN
-#define EndGame EndGame_mock
-
-void EndGame_mock(int winningPnum) {
-  // blank function to avoid ending the tests prematurely
-  return;
-}
+#include "../UnstableUnicornsTest/mockfns.h"
 #endif
 
 void InitNetworkStates(void) {
