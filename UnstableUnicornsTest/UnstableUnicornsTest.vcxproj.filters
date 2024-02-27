@@ -237,6 +237,9 @@
     <ClCompile Include="..\UnstableUnicorns\networkstates.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="mockfns.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Tests\DowngradeTests.h">
@@ -255,6 +258,9 @@
       <Filter>Header Files\Tests</Filter>
     </ClInclude>
     <ClInclude Include="resetfns.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="mockfns.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

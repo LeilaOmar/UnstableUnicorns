@@ -1,21 +1,8 @@
 #include "networkevents.h"
 #include "gamemechanics.h"
 
-// was unable to properly link this with an external file ;~;
 #ifdef TEST_RUN
-#define ProcessStdin(a, b) ProcessStdin_mock(a, b)
-#define WaitForSingleObject(a, b) simple(a, b)
-
-void ProcessStdin_mock(char *stdinBuf, int *bufIndex) {
-
-  fgets(stdinBuf, 64, fpinput);
-  *bufIndex = strlen(stdinBuf);
-
-}
-
-DWORD simple(HANDLE hHandle, DWORD dwMilliseconds) {
-  return WAIT_OBJECT_0;
-}
+#include "../UnstableUnicornsTest/mockfns.h"
 #endif
 
 int ClientNeigh(int clientpnum, int origPnum, int *origCindex) {
