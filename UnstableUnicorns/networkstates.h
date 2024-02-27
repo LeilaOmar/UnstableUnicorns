@@ -16,7 +16,7 @@ enum NetworkEvents {
   NUM_NETWORK_EVENTS    //!< Total size
 };
 
-typedef struct {
+typedef struct NetworkStateManager {
   /**
    * @brief Runs the Game State logic of an event to do [State] action outside of the client's normal turn
    * @param pnum Situationally acts as either the target player number or the original player number
