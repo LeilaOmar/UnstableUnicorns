@@ -185,6 +185,8 @@ int ServerNeigh(int origPnum, int *origCindex) {
   int loopend = 0;
   int oddcheck = 0;
 
+  if (isLog && pnum == 0) LogMove(pnum, player[pnum].hand.cards[cindex], "play");
+
   WSAPOLLFD pfd[MAX_PLAYERS + 1] = { -1 };  // stdin + original sockfd + 7 additional players
   pfd[0].fd = _fileno(stdin);
   pfd[0].events = POLLIN | POLLOUT;
@@ -209,10 +211,14 @@ int ServerNeigh(int origPnum, int *origCindex) {
       if (cindex != -1) {
         printf("\n\033[1;31m%s\033[0m is trying to play the card \033[1;31m'%s'\033[0m.\n",
           player[pnum].username, player[pnum].hand.cards[cindex].name);
+
+        if (isLog) LogMove(pnum, player[pnum].hand.cards[cindex], "play");
       }
       else {
         printf("\n\033[1;31m%s\033[0m is trying to Neigh the last played card.\n",
           player[pnum].username);
+
+        if (isLog) LogMove(pnum, player[pnum].hand.cards[cindex], "neigh");
       }
 
       if (CanNeighOthers(0)) {
@@ -557,6 +563,8 @@ void ServerSacrifice(int origPnum, int targetPnum, int cType) {
           sprintf_s(stdinBuf, sizeof stdinBuf, "\033[1;31m%s\033[0m sacrificed the card '\033[1;31m%s\033[0m'.",
             player[0].username, player[0].stable.unicorns[selection].name);
 
+          if (isLog) LogMove(0, player[0].stable.unicorns[selection], "sacrifice");
+
           Base_SacrificeDestroyEffects(0, selection, player[0].stable.unicorns[selection].effect);
 
           for (int j = 0; j < currentPlayers - 1; j++) {
@@ -579,6 +587,8 @@ void ServerSacrifice(int origPnum, int targetPnum, int cType) {
         char stdinBuf[DESC_SIZE] = { 0 };
         sprintf_s(stdinBuf, sizeof stdinBuf, "\033[1;31m%s\033[0m sacrificed the card '\033[1;31m%s\033[0m'.",
           player[i + 1].username, player[i + 1].stable.unicorns[cindex].name);
+
+        if (isLog) LogMove(i + 1, player[i + 1].stable.unicorns[selection], "sacrifice");
 
         Base_SacrificeDestroyEffects(i + 1, cindex, player[i + 1].stable.unicorns[cindex].effect);
         
@@ -775,6 +785,8 @@ void ServerDiscard(int origPnum, int targetPnum, int cType) {
           sprintf_s(stdinBuf, sizeof stdinBuf, "\033[1;31m%s\033[0m discarded the card '\033[1;31m%s\033[0m'.",
             player[0].username, player[0].hand.cards[selection].name);
 
+          if (isLog) LogMove(0, player[0].stable.unicorns[selection], "discard");
+
           AddDiscard(player[0].hand.cards[selection]);
           RearrangeHand(0, selection);
 
@@ -798,6 +810,8 @@ void ServerDiscard(int origPnum, int targetPnum, int cType) {
         char stdinBuf[DESC_SIZE] = { 0 };
         sprintf_s(stdinBuf, sizeof stdinBuf, "\033[1;31m%s\033[0m discarded the card '\033[1;31m%s\033[0m'.",
           player[i + 1].username, player[i + 1].hand.cards[cindex].name);
+
+        if (isLog) LogMove(i + 1, player[i + 1].stable.unicorns[selection], "discard");
 
         AddDiscard(player[i + 1].hand.cards[cindex]);
         RearrangeHand(i + 1, cindex);

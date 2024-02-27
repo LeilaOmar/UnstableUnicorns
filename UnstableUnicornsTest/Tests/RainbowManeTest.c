@@ -72,6 +72,46 @@ int rainbow_mane_empty_check(void) {
   return num_fails;
 }
 
+// checks to see whether or not it follows the queen bee unicorn rule
+// where other players cannot play basic unicorn cards
+int rainbow_mane_queen_check(void) {
+  int num_fails = 0;
+  struct Unicorn rainmane_tmp = Base_DECK[92];
+  struct Unicorn queen_tmp = Base_DECK[51];
+  struct Unicorn basic_tmp = Base_DECK[13];
+  struct Unicorn basic_tmp2 = Base_DECK[17];
+
+  currentPlayers = 2;
+  AddStable(0, basic_tmp);
+  AddStable(0, rainmane_tmp);
+  AddStable(1, queen_tmp);
+
+  player[0].hand.cards[player[0].hand.numCards++] = basic_tmp2;
+
+  assert(player[0].stable.size == 2);
+  assert(player[0].hand.numCards == 1);
+  assert(player[0].flags == QUEEN_BEE_UNICORN);
+  Base_BeginningTurnEffects(0, rainmane_tmp);
+
+  if (player[0].hand.numCards != 1 ||
+      strcmp(player[0].hand.cards[0].name, basic_tmp2.name) != 0) {
+    num_fails++;
+    Red();
+    fprintf(stderr, "    queen bee unicorn test: hand size failed\n");
+    ResetCol();
+  }
+
+  if (player[0].stable.size != 2 || player[0].stable.numUnicorns != 1) {
+    num_fails++;
+    Red();
+    fprintf(stderr, "    queen bee unicorn test: stable size failed\n");
+    ResetCol();
+  }
+
+  reset_players();
+  return num_fails;
+}
+
 // Rainbow Mane
 //
 // This card can only enter a Stable if there is a Basic Unicorn card in that Stable.
@@ -96,6 +136,7 @@ int rainbow_mane_tests(void) {
 
     num_fails += rainbow_mane_basic_check();
     num_fails += rainbow_mane_empty_check();
+    num_fails += rainbow_mane_queen_check();
 
     fclose(fp);
   }

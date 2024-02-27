@@ -104,7 +104,7 @@ int pandamonium_tests(void) {
   int num_fails = 0;
 
   if (!isClient) {
-    rainbow_error("\nStarting PANDAMONIUM tests...\n");
+    rainbow_error("\nStarting Pandamonium tests...\n");
 
     // file input stream setup
     FILE *fp;

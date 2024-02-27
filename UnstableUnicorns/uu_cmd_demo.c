@@ -141,7 +141,7 @@
 // 115: Neigh [ID: 127]
 // 116: Super Neigh [ID: 128]
 
-int main(void) {
+int main(int argc, char *argv[]) {
 
   // register the termination function
   atexit(Cleanup);
@@ -158,21 +158,19 @@ int main(void) {
   // seed for randomized pulls
   srand((unsigned int)time(NULL));
 
-  // create a log file for all input
-  /*char filename[40];
-  struct tm* timenow;
-  time_t now = time(NULL);
-  timenow = gmtime(&now);
+  // create a log file to document the game data
+  if (argc > 1 && strcmp("log", argv[1]) == 0) {
+    isLog = 1;
 
-  strftime(filename, sizeof(filename), "/log/GAME_%Y-%m-%d_%H:%M:%S", timenow);
+    char filename[40];
+    struct tm timenow;
+    time_t now = time(NULL);
+    gmtime_s(&timenow, &now);
 
-  fopen(filename, "w");*/
+    strftime(filename, sizeof(filename), "log/GAME_%Y-%m-%d_%H-%M-%S.log", &timenow);
 
-  //HANDLE new_stdout = CreateFileA("");
-  //SetStdHandle(STD_OUTPUT_HANDLE, new_stdout);
-  //int fd = _open_osfhandle(new_stdout, O_WRONGLY | O_TEXT);
-  //dup2(fd, STDOUT_FILENO);
-  //close(fd);
+    SetLogFD(filename);
+  }
 
   // *****************************************************
   // ***************** Networking Set-up *****************
