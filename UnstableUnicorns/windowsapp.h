@@ -17,7 +17,7 @@ enum GameState {
   NUMSTATES   //!< Total size
 };
 
-typedef struct {
+typedef struct StateManager {
   enum GameState state;
   void (*StatePaint)(HDC *hdcMem);
   void (*StateHover)(POINT pnt);

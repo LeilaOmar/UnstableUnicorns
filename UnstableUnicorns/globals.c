@@ -215,6 +215,7 @@ void Cleanup(void) {
 // https://www.codeproject.com/Tips/5255355/How-to-Put-Color-on-Windows-Console
 // add: reg add HKEY_CURRENT_USER\Console /v VirtualTerminalLevel /t REG_DWORD /d 0x00000001 /f
 // undo: reg add HKEY_CURRENT_USER\Console /v VirtualTerminalLevel /t REG_DWORD /d 0x00000000 /f
+
 void Red(void) { printf("\033[1;31m"); }
 void Yellow(void) { printf("\033[1;33m"); }
 void Green(void) { printf("\033[1;32m"); }

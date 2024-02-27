@@ -202,7 +202,7 @@ void add_stable_tests(void) {
   reset_players();
   fclose(fp);
 
-  // barbed wire + PANDAMONIUM test (it should activate because it enters as a unicorn)
+  // barbed wire + pandamonium test (it should activate because it enters as a unicorn)
   player[0].hand.cards[player[0].hand.numCards++] = narwhal_tmp;
   player[0].flags |= BARBED_WIRE;
   player[0].flags |= PANDAMONIUM;
@@ -222,7 +222,7 @@ void add_stable_tests(void) {
   if (player[0].hand.numCards != 0) {
     num_fails++;
     Red();
-    fprintf(stderr, "    barbed wire test w/ PANDAMONIUM failed\n");
+    fprintf(stderr, "    barbed wire test w/ pandamonium failed\n");
     ResetCol();
   }
   reset_players();
@@ -269,7 +269,7 @@ void add_stable_tests(void) {
 
   fpinput = stdin; // to prevent an infinite loop due to some error
 
-  // tiny stable w/ PANDAMONIUM
+  // tiny stable w/ pandamonium
   player[0].flags |= TINY_STABLE;
   player[0].flags |= PANDAMONIUM;
   for (int i = 0; i < 7; i++) {
@@ -279,7 +279,7 @@ void add_stable_tests(void) {
   if (player[0].stable.size != 7 || player[0].stable.numUnicorns != 7) {
     num_fails++;
     Red();
-    fprintf(stderr, "    tiny stable test w/ PANDAMONIUM failed\n");
+    fprintf(stderr, "    tiny stable test w/ pandamonium failed\n");
     ResetCol();
   }
   reset_players();
@@ -292,7 +292,7 @@ void rearrange_stable_tests(void) {
 
   rainbow_error("\nStarting RearrangeStable tests...\n");
 
-  // barbed wire w/o PANDAMONIUM (general test pt 1)
+  // barbed wire w/o pandamonium (general test pt 1)
   AddStable(0, basic_tmp);
   AddStable(0, narwhal_tmp);
   AddStable(0, broken_stable_tmp);
@@ -309,7 +309,7 @@ void rearrange_stable_tests(void) {
   }
   reset_players();
 
-  // barbed wire w/o PANDAMONIUM (general test pt 2)
+  // barbed wire w/o pandamonium (general test pt 2)
   AddStable(0, basic_tmp);
   AddStable(0, narwhal_tmp);
   player[0].hand.cards[player[0].hand.numCards++] = narwhal_tmp;
@@ -336,7 +336,7 @@ void rearrange_stable_tests(void) {
   reset_players();
   fclose(fp);
 
-  // barbed wire w/ PANDAMONIUM
+  // barbed wire w/ pandamonium
   AddStable(0, basic_tmp);
   AddStable(0, narwhal_tmp);
   player[0].hand.cards[player[0].hand.numCards++] = narwhal_tmp;
@@ -358,7 +358,7 @@ void rearrange_stable_tests(void) {
   if (player[0].stable.numUnicorns != 1 || player[0].stable.size != 1 || player[0].hand.numCards != 1) {
     num_fails++;
     Red();
-    fprintf(stderr, "    barbed wire w/ PANDAMONIUM check failed\n");
+    fprintf(stderr, "    barbed wire w/ pandamonium check failed\n");
     ResetCol();
   }
   reset_players();
@@ -455,7 +455,7 @@ void tiebreaker_tests(void) {
   }
   reset_players();
 
-  // check to see if PANDAMONIUM affects it or not
+  // check to see if pandamonium affects it or not
   currentPlayers = 2;
   AddStable(0, basic_tmp);
   AddStable(0, basic_tmp);
@@ -470,7 +470,7 @@ void tiebreaker_tests(void) {
   if (ret != 1) {
     num_fails++;
     Red();
-    fprintf(stderr, "    PANDAMONIUM test failed\n");
+    fprintf(stderr, "    pandamonium test failed\n");
     ResetCol();
   }
   reset_players();
