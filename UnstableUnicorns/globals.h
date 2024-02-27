@@ -84,9 +84,47 @@ extern int currentPlayers;
 extern int turnCount;
 extern int WIN_CONDITION;
 
+// ********************************************************************************
+// ******************************** Input Functions *******************************
+// ********************************************************************************
+
 extern FILE *fpinput;
 int NumInput(char *buf, char **end, int size);
 char CharInput(char *buf, int size);
+
+// ********************************************************************************
+// ******************************* Logging Functions ******************************
+// ********************************************************************************
+
+extern int isLog;
+
+/**
+ * @brief Creates a new log file and sets the file descriptor as write only
+ */
+void SetLogFD(char *filename);
+
+/**
+ * @brief Logs the player action
+ * @param pnum Player number
+ * @param corn Card played
+ * @param move C-string of the type of move/action performed (e.g. "play" or "discard")
+ */
+void LogMove(int pnum, struct Unicorn corn, char *move);
+
+/**
+ * @brief Logs all of player[pnum]'s data
+ */
+void LogPlayer(int pnum);
+
+/**
+ * @brief Logs info for every player and card pile during a game state
+ * @param state The current game state of the game (e.g. END_TURN = logging at the end of a turn)
+ */
+void LogGameData(int pnum, int state);
+
+// ********************************************************************************
+// ***************************** Init/De-Init Functions ***************************
+// ********************************************************************************
 
 /**
  * @brief Initializes the Deck, Nursery, and Discard piles based on the chosen card packs

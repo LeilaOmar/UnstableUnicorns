@@ -26,7 +26,7 @@ int slowdown_tests(void) {
   int num_fails = 0;
 
   if (!isClient) {
-    rainbow_error("\nStarting SLOWDOWN tests...\n");
+    rainbow_error("\nStarting Slowdown tests...\n");
 
     num_fails += slowdown_basic_check();
   }

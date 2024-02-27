@@ -1,6 +1,7 @@
 #include <conio.h>
 #include "globals.h"
 #include "basedeck.h"
+#include "networkstates.h"
 
 int isClient; //!< 0 = server, 1 = client
 
@@ -11,6 +12,10 @@ struct Player player[MAX_PLAYERS];
 int currentPlayers = 1; //!< the host is a player too! :)
 int turnCount = 0;      //!< number of moves during the action phase
 int WIN_CONDITION = 7;  //!< usually 7, but can be 6 with 6-8 players
+
+// ********************************************************************************
+// ******************************** Input Functions *******************************
+// ********************************************************************************
 
 FILE *fpinput; //!< stand-in for stdin in case it needs to read from a file instead
 
@@ -32,6 +37,114 @@ char CharInput(char *buf, int size) {
 
   return c;
 }
+
+// ********************************************************************************
+// ******************************* Logging Functions ******************************
+// ********************************************************************************
+
+int isLog = 0;
+FILE *fplog; //!< file descriptor for the log file
+
+void SetLogFD(char *filename) {
+  fopen_s(&fplog, filename, "w");
+
+  if (fplog == NULL) {
+    fprintf(stderr, "ERROR: Could not open/create the log file :(\n");
+    isLog = 0;
+  }
+}
+
+void LogMove(int pnum, struct Unicorn corn, char *move) {
+  if (strcmp(move, "play") == 0) {
+    fprintf(fplog, "\n\nplayer[%d] is trying to play the card %s [ID: %d]\n", pnum, corn.name, corn.id);
+  }
+  else if (strcmp(move, "neigh") == 0) {
+    fprintf(fplog, "\n\nplayer[%d] is trying to Neigh the last played card\n", pnum);
+  }
+  else if (strcmp(move, "discard") == 0) {
+    fprintf(fplog, "\n\nplayer[%d] discarded the card %s [ID: %d]\n", pnum, corn.name, corn.id);
+  }
+  else if (strcmp(move, "sacrifice") == 0) {
+    fprintf(fplog, "\n\nplayer[%d] sacrificed the card %s [ID: %d]\n", pnum, corn.name, corn.id);
+  }
+  else {
+    fprintf(fplog, "\n\nMove type error: player[%d] did something with the card %s [ID: %d]\n", pnum, corn.name, corn.id);
+  }
+}
+
+void LogPlayer(int pnum) {
+  fprintf(fplog, "\nplayer[%d]: %s", pnum, player[pnum].username);
+
+  char shortbits[18]; //!< num bits + num spaces in between bytes + NULL = (sizeof(short) * 8) + (sizeof(short) - 1) + 1
+  int count = 0;
+  for (int k = 2; k > 0; k--) {
+    for (int j = 7; j >= 0; j--) {
+      shortbits[count] = ((player[pnum].flags >> (((k - 1) * 8) + j)) & 1) ? '1' : '0';
+      count++;
+    }
+    shortbits[count] = ' ';
+    count++;
+  }
+  shortbits[count - 1] = '\0';
+  fprintf(fplog, "\n    flags = %s", shortbits);
+
+  fprintf(fplog, "\n    numCards = %d", player[pnum].hand.numCards);
+  for (int j = 0; j < player[pnum].hand.numCards; j++) {
+    fprintf(fplog, "\n        %s [ID: %d]", player[pnum].hand.cards[j].name, player[pnum].hand.cards[j].id);
+  }
+
+  fprintf(fplog, "\n    numUnicorns = %d"
+    "\n    size = %d", player[pnum].stable.numUnicorns, player[pnum].stable.size);
+  for (int j = 0; j < player[pnum].stable.size; j++) {
+    fprintf(fplog, "\n        %s [ID: %d]", player[pnum].stable.unicorns[j].name, player[pnum].stable.unicorns[j].id);
+  }
+}
+
+void LogGameData(int pnum, int state) {
+  if (state == END_TURN) {
+    fprintf(fplog, "\n\n***** End of player[%d]'s Turn *****\n", pnum);
+  }
+  else if (state == START_GAME) {
+    fprintf(fplog, "***** Game Start! *****");
+  }
+  else if (state == END_GAME) {
+    if (pnum != -1) {
+      fprintf(fplog, "\n\n***** Game End: %s (player[%d]) won the game! *****\n", player[pnum].username, pnum);
+    }
+    else {
+      fprintf(fplog, "\n\n***** Game End: Tie! Nobody Wins *****");
+    }
+  }
+
+  for (int i = 0; i < currentPlayers; i++) {
+    LogPlayer(i);
+  }
+
+  fprintf(fplog, "\nPuppicorn:"
+    "\n    puppicornIndex[1] (owner) = %d"
+    "\n    puppicornIndex[0] (index) = %d", puppicornIndex[1], puppicornIndex[0]);
+
+#ifdef SHOWDECK
+  fprintf(fplog, "\nDeck:");
+  for (int i = 0; i < deck.size; i++) {
+    fprintf(fplog, "\n    %03d. %s [ID: %d]", i + 1, deck.cards[i].name, deck.cards[i].id);
+  }
+#endif
+
+  fprintf(fplog, "\nNursery:");
+  for (int i = 0; i < nursery.size; i++) {
+    fprintf(fplog, "\n    %02d. %s [ID: %d]", i + 1, nursery.cards[i].name, nursery.cards[i].id);
+  }
+
+  fprintf(fplog, "\nDiscard Pile:");
+  for (int i = 0; i < discardpile.size; i++) {
+    fprintf(fplog, "\n    %02d. %s [ID: %d]", i + 1, discardpile.cards[i].name, discardpile.cards[i].id);
+  }
+}
+
+// ********************************************************************************
+// ***************************** Init/De-Init Functions ***************************
+// ********************************************************************************
 
 void InitDeck(struct Deck *nursery, struct Deck *deck, struct Deck *discard) {
   int counter = 0;
@@ -85,6 +198,8 @@ void Cleanup(void) {
 
   if (sockfd != INVALID_SOCKET)
     closesocket(sockfd);
+
+  if (isLog) fclose(fplog);
 
   free(nursery.cards);
   free(deck.cards);

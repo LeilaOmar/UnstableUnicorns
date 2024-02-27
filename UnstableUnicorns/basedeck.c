@@ -2080,16 +2080,17 @@ void Base_BeginningTurnEffects(int pnum, struct Unicorn corn) {
       }
     }
 
-    if (!isvalid)
+    // check if there's a basic unicorn card to play and whether or not the player is blocked from playing basic unicorns
+    if (!isvalid || (player[pnum].flags & QUEEN_BEE_UNICORN) != 0)
       break;
 
-    for (;;) {
-      printf("Choose a valid card number to place into your stable: \n");
-      for (int i = 0; i < player[pnum].hand.numCards; i++) {
-        if (player[pnum].hand.cards[i].cType == BASICUNICORN) {
-          printf("    %d. %s [ID: %d]\n", i + 1, player[pnum].hand.cards[i].name, player[pnum].hand.cards[i].id);
-        }
+    printf("Choose a valid card number to place into your stable: \n");
+    for (int i = 0; i < player[pnum].hand.numCards; i++) {
+      if (player[pnum].hand.cards[i].cType == BASICUNICORN) {
+        printf("    %d. %s [ID: %d]\n", i + 1, player[pnum].hand.cards[i].name, player[pnum].hand.cards[i].id);
       }
+    }
+    for (;;) {
       printf("Choice: ");
       index = NumInput(buf, &end, sizeof buf) - 1;
 

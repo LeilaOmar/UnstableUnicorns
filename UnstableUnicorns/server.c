@@ -334,6 +334,8 @@ int ServerMain(void) {
     SendUnicorns(nursery.cards, nursery.size, clientsockfd[i - 1]);
   }
 
+  if (isLog) LogGameData(-1, START_GAME);
+
   // *****************************************************
   // ******************** Game Start! ********************
   // *****************************************************
@@ -380,6 +382,8 @@ int ServerMain(void) {
         SendInt(END_TURN, clientsockfd[i]);
         SendGamePacket(clientsockfd[i]);
       }
+
+      if (isLog) LogGameData(counter, END_TURN);
     }
     else {
       printf("waiting for %s to make a move...\n", player[counter].username);
@@ -410,6 +414,8 @@ int ServerMain(void) {
         }
 
       } while (!eventloop);
+
+      if (isLog) LogGameData(counter, END_TURN);
     }
 
     // print state of nursery and discard piles

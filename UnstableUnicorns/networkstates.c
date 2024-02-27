@@ -140,6 +140,8 @@ void ServerSendEndGame(int winningPnum) {
     SendGamePacket(clientsockfd[i]);
   }
 
+  if (isLog) LogGameData(winningPnum, END_GAME);
+
   EndGame(winningPnum);
 }
 
@@ -169,6 +171,9 @@ int ServerStateEndGame(int origPnum, int fd) {
     SendInt(winningPnum, clientsockfd[i]);
     SendGamePacket(clientsockfd[i]);
   }
+
+  if (isLog) LogGameData(winningPnum, END_GAME);
+
   EndGame(winningPnum);
 
   return winningPnum;
@@ -210,7 +215,7 @@ int ServerStateSacrifice(int origPnum, int fd) {
   return 0;
 }
 
-// this is specifically for when the host's cards are getting destroyed
+// this is specifically for when the target player's cards are getting destroyed
 // so they can enter any necessary info in the sacrificeDestroyEffects function
 int ServerStateDestroy(int origPnum, int fd) {
   int target_player;
