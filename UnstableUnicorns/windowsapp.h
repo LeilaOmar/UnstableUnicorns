@@ -71,3 +71,18 @@ LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
  * @return 1 A Baby Unicorn was picked by player[pnum]
  */
 int SelectBabyUnicorn(int pnum, POINT pnt);
+
+/**
+ * @brief Sets the starting tab display window to show your own hand
+ */
+void SetTabs(int pnum);
+
+/**
+ * @brief Sets the client-instance player number
+ */
+void SetClientPnum(int pnum);
+
+/**
+ * @brief Sets the current player number upon the start of a new turn
+ */
+void SetCurrPnum(int pnum);

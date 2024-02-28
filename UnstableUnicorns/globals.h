@@ -41,8 +41,8 @@ struct Unicorn {
   char name[LINE_MAX];
   char description[DESC_SIZE];
   short effect;
-  HBITMAP bitmap;
   int id;
+  int bitmap;
 };
 
 struct Deck {

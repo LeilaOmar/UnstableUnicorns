@@ -599,6 +599,7 @@ int ServerHost(LPVOID p) {
 
           // send an update on party size/names/unicorns to every player
           for (int j = 0; j < currentPlayers - 1; j++) {
+            SendInt(INCOMING_MSG, clientsockfd[j]);
             SendLobbyPacket(currentPlayers, j + 1, clientsockfd[j]);
           }
           memset(buf, 0, BUF_SIZE); // reset buf
@@ -612,6 +613,7 @@ int ServerHost(LPVOID p) {
           ret = SelectBabyUnicorn(i + 1, pnt);
           if (ret) {
             for (int j = 0; j < currentPlayers - 1; j++) {
+              SendInt(INCOMING_MSG, clientsockfd[j]);
               SendLobbyPacket(currentPlayers, j + 1, clientsockfd[j]);
             }
           }
@@ -634,9 +636,13 @@ int ServerHost(LPVOID p) {
           // deselect the unicorn
           pselect[j + 1].left = pselect[j + 2].left;
           pselect[j + 1].top = pselect[j + 2].top;
+          babyMap[j + 1] = babyMap[j + 2];
           player[j + 1].stable.unicorns[0] = player[j + 2].stable.unicorns[0];
           strcpy_s(player[j + 1].username, LINE_MAX, player[j + 2].username);
         }
+
+        // reset pselect in case other players join afterwards
+        pselect[currentPlayers].left = 0;
 
         // reset the previous last player index to zero since one person left;
         // currentPlayers has an offset of 1, so the current player count (after being decremented earlier)
@@ -656,6 +662,7 @@ int ServerHost(LPVOID p) {
 
         // send data to remaining clients
         for (int j = 0; j < currentPlayers - 1; j++) {
+          SendInt(INCOMING_MSG, clientsockfd[j]);
           SendLobbyPacket(currentPlayers, j + 1, clientsockfd[j]);
         }
       }
@@ -687,13 +694,163 @@ int ServerHost(LPVOID p) {
     else if (networkToggle & 2) {
       // host changed their baby unicorn and must send the updated list to every client
       for (int i = 0; i < currentPlayers - 1; i++) {
+        SendInt(INCOMING_MSG, clientsockfd[i]);
         SendLobbyPacket(currentPlayers, i + 1, clientsockfd[i]);
       }
       networkToggle ^= 2;
+    }
+    else if (networkToggle & 4) {
+      networkToggle ^= 4;
+
+      int isvalid = 1;
+      for (int i = 0; i < currentPlayers; i++) {
+        if (pselect[i].left == 0) {
+          isvalid = 0;
+          break;
+        }
+      }
+      if (isvalid) {
+        menuState = GAMESTART;
+        SetTabs(0);
+        SetClientPnum(0);
+        break;
+      }
     }
 
     Sleep(20);
   }
 
+  // *****************************************************
+  // ******************** Game Set-up ********************
+  // *****************************************************
+
   if (currentPlayers >= 6) WIN_CONDITION = 6;
+
+  for (int i = 0; i < currentPlayers; i++) {
+    int tmp = babyMap[i];
+
+    AddStable(i, nursery.cards[tmp]);
+    RearrangePile(&nursery, tmp);
+
+    for (int j = 0; j < currentPlayers; j++) {
+      if (babyMap[j] > tmp) {
+        babyMap[j]--;
+      }
+    }
+  }
+
+  // seed for randomized pulls
+  srand((unsigned int)time(NULL));
+
+  // all of the baby unicorns have been chosen, now initialize the hands/deck
+  ShuffleDeck(&deck);
+
+  // initialize variables, draw 5 cards and "pick" username
+  for (int i = 0; i < currentPlayers; i++) {
+    player[i].hand.numCards = 0;
+    Draw(i, HAND_START);
+  }
+
+  // just have to trust that pepole don't cheat by examining the code mid-game lol
+  for (int i = 0; i < currentPlayers - 1; i++) {
+    SendInt(START_GAME, clientsockfd[i]);
+
+    SendPlayers(clientsockfd[i]);
+    for (int j = 0; j < currentPlayers; j++) {
+      SendInt(player[j].icon, clientsockfd[i]);
+    }
+    SendInt(nursery.size, clientsockfd[i]);
+    SendUnicorns(nursery.cards, nursery.size, clientsockfd[i]);
+  }
+
+  if (isLog) LogGameData(-1, START_GAME);
+
+  // *****************************************************
+  // ******************** Game Start! ********************
+  // *****************************************************
+
+  int counter = 0;
+  int nEvents;
+
+  for (;;) {
+    // loop
+    Sleep(25);
+  }
+
+  // loop until win condition occurs (7 unicorns in stable)
+  do {
+    // printf("\n*** %s's turn ***\n\n", player[counter].username);
+
+    SetCurrPnum(counter);
+
+    if (counter == 0) {
+      // it's your turn! do your thing :>
+      BeginningOfTurn(counter);
+
+      ActionPhase(counter);
+
+      if (EndOfTurn(counter)) {
+        ServerSendEndGame(counter);
+        // break just to avoid looping in case the function actually returns
+        break;
+      }
+
+      // signal the next turn cycle and send the deck/player data to everyone else
+      for (int i = 0; i < currentPlayers - 1; i++) {
+        SendInt(END_TURN, clientsockfd[i]);
+        SendGamePacket(clientsockfd[i]);
+      }
+
+      if (isLog) LogGameData(counter, END_TURN);
+    }
+    else {
+      // printf("waiting for %s to make a move...\n", player[counter].username);
+      int eventloop = 0;
+
+      do {
+        ret = WSAPoll(pfd, MAX_PLAYERS + 1, -1);
+        if (ret == SOCKET_ERROR) {
+          sprintf_s(errormsg, DESC_SIZE, "ERROR: server timed out. Error code : %d", WSAGetLastError());
+          MessageBoxA(NULL,
+            errormsg,
+            _T("Server Set-up"),
+            MB_ICONERROR | MB_OK);
+          closesocket(sockfd);
+          menuState = TITLEBLANK;
+          return 2;
+        }
+        else if (ret == 0) {
+          sprintf_s(errormsg, DESC_SIZE, "ERROR: server timed out. Error code : %d", WSAGetLastError());
+          MessageBoxA(NULL,
+            errormsg,
+            _T("Server Set-up"),
+            MB_ICONERROR | MB_OK);
+          closesocket(sockfd);
+          menuState = TITLEBLANK;
+          return 2;
+        }
+
+        for (int k = 0; k < currentPlayers - 1; k++) {
+          if (pfd[k + 2].revents & POLLIN) {
+            ReceiveInt(&nEvents, clientsockfd[k]);
+
+            // delayed input from timing issues
+            if (nEvents < 0) continue;
+
+            eventloop = netStates[nEvents].RecvServer(k + 1, clientsockfd[k]);
+          }
+
+          Sleep(20);
+        }
+
+      } while (!eventloop);
+
+      if (isLog) LogGameData(counter, END_TURN);
+    }
+
+    counter = (counter + 1) % currentPlayers;
+  } while (42);
+
+  // this shouldn't happen
+  return 1;
 }

@@ -332,6 +332,7 @@ int ClientJoin(LPVOID p) {
   short portno = *((short*)p);
   struct sockaddr_in server;
   int clientpnum;
+  int nEvents;
   char errormsg[DESC_SIZE];
 
   // *****************************************************
@@ -393,6 +394,7 @@ int ClientJoin(LPVOID p) {
   // using player[0] just for the start; will be overwritten later
   send(sockfd, player[0].username, strlen(player[0].username), 0);
   recv(sockfd, hexcode, sizeof(hexcode), 0); // this isn't part of the lobby packet because it never changes
+  ReceiveInt(&nEvents, sockfd);
   ReceiveLobbyPacket(&currentPlayers, &clientpnum, sockfd);
 
   // ***** test *****
@@ -438,7 +440,27 @@ int ClientJoin(LPVOID p) {
     // incoming IO
     if (pfd.revents & POLLIN) {
       // character selection update or the game is about to start
-      ReceiveLobbyPacket(&currentPlayers, &clientpnum, sockfd);
+      ReceiveInt(&nEvents, sockfd);
+
+      if (nEvents == INCOMING_MSG) {
+        ReceiveLobbyPacket(&currentPlayers, &clientpnum, sockfd);
+      }
+      else if (nEvents == START_GAME) {
+        // receive final list of players/nursery
+        ReceivePlayers(sockfd);
+        for (int j = 0; j < currentPlayers; j++) {
+          ReceiveInt(&player[j].icon, sockfd);
+        }
+        ReceiveInt(&nursery.size, sockfd);
+        ReceiveUnicorns(nursery.cards, nursery.size, sockfd);
+
+        if (currentPlayers >= 6) WIN_CONDITION = 6;
+        SetTabs(clientpnum);
+        SetClientPnum(clientpnum);
+
+        menuState = GAMESTART;
+        break;
+      }
     }
 
     // TODO: the client gets borked whenever the host leaves, presumably due to trying to connect before the timeout is over.
@@ -480,5 +502,81 @@ int ClientJoin(LPVOID p) {
     Sleep(20);
   }
 
-  return 0;
+  // *****************************************************
+  // ******************** Game Start! ********************
+  // *****************************************************
+
+  int counter = 0;
+
+  for (;;) {
+    // loop
+    Sleep(25);
+  }
+
+  // loop until win condition occurs (7 unicorns in stable)
+  do {
+    // printf("\n*** %s's turn ***\n\n", player[counter].username);
+
+    SetCurrPnum(counter);
+
+    if (counter == clientpnum) {
+      // it's your turn! do your thing :>
+      BeginningOfTurn(clientpnum);
+
+      ActionPhase(clientpnum);
+
+      if (EndOfTurn(clientpnum)) {
+        ClientSendEndGame(clientpnum, sockfd);
+        // break just to avoid looping in case the function actually returns
+        break;
+      }
+
+      // send updates of stuff
+      SendInt(END_TURN, sockfd);
+      SendGamePacket(sockfd);
+    }
+    else {
+      // printf("waiting for %s to make a move...\n", player[counter].username);
+      int eventloop = 0;
+
+      do {
+        ret = WSAPoll(&pfd, 1, -1);
+        if (ret == SOCKET_ERROR) {
+          sprintf_s(errormsg, DESC_SIZE, "ERROR: poll() failed. Error code : %d", WSAGetLastError());
+          MessageBoxA(NULL,
+            errormsg,
+            _T("Client Connection"),
+            MB_ICONERROR | MB_OK);
+          closesocket(sockfd);
+          menuState = TITLEBLANK;
+          memset(pselect, 0, sizeof pselect);
+          return 2;
+        }
+        else if (ret == 0) {
+          sprintf_s(errormsg, DESC_SIZE, "ERROR: server timed out. Error code : %d", WSAGetLastError());
+          MessageBoxA(NULL,
+            errormsg,
+            _T("Client Connection"),
+            MB_ICONERROR | MB_OK);
+          closesocket(sockfd);
+          menuState = TITLEBLANK;
+          memset(pselect, 0, sizeof pselect);
+          return 2;
+        }
+
+        if (pfd.revents & POLLIN) {
+          ReceiveInt(&nEvents, sockfd);
+
+          eventloop = netStates[nEvents].RecvClient(clientpnum, sockfd);
+        }
+
+        Sleep(20);
+      } while (!eventloop);
+    }
+
+    counter = (counter + 1) % currentPlayers;
+  } while (42);
+
+  // this shouldn't happen
+  return 1;
 }

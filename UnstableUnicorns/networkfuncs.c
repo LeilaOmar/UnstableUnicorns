@@ -357,6 +357,8 @@ int SendUnicorns(struct Unicorn *corns, int size, int fd) {
     offset += 2;
     SerializeInt(data + offset, corns[i].id);
     offset += 4;
+    SerializeInt(data + offset, corns[i].bitmap);
+    offset += 4;
   }
 
   // send the size of the array before sending the data
@@ -400,6 +402,8 @@ int ReceiveUnicorns(struct Unicorn *corns, int size, int fd) {
     corns[i].effect = DeserializeShort(data + offset);
     offset += 2;
     corns[i].id = DeserializeInt(data + offset);
+    offset += 4;
+    corns[i].bitmap = DeserializeInt(data + offset);
     offset += 4;
   }
 

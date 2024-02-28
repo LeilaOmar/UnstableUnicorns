@@ -24,6 +24,7 @@ static void ClickTitle(POINT);
 static void ClickRules(POINT);
 static void ClickLobby(POINT);
 static void ClickDebug(POINT);
+static void ClickGame(POINT);
 
 static void PaintTitle(HDC*);
 static void PaintLobby(HDC*);
@@ -67,7 +68,7 @@ static enum Fonts { OLDFONT, CHONKYFONT, BOLDFONT, ITALICFONT, FANCYFONT, FANCYI
 
 static HWND networkThread, textNameHwnd, portHwnd, codeHwnd;
 static DWORD tIdweb;
-static HBITMAP hBitmapBG[NUMSTATES], hBitmapBorder[MAX_PLAYERS], hBitmapCard[84], hBitmapTab[3];
+static HBITMAP hBitmapBG[NUMSTATES], hBitmapBorder[MAX_PLAYERS], hBitmapCard[85], hBitmapTab[3];
 static BOOL isChildOpen = FALSE; //!< TRUE if the Host or Join dialogue box is open, FALSE if inactive
 static BOOL isChildInit[2] = { FALSE }; //!< Boolean check for initializing the child windows (RegisterClass is only supposed to run once); [0] is host/server, [1] is client
 static HFONT fonts[NUMCUSTOMFONTS] = { NULL };
@@ -76,6 +77,9 @@ static enum Tab tabnum;    //!< The tab number representation of the window to d
 static int tabsize;        //!< Number of total cards within the current tab view array (e.g. if you're looking at the deck, then tabsize could be anywhere from 1 to 116)
 static int pagenum = 1;    //!< The page number within the current tab view array
 static int pnumindex = 0;  //!< Used to switch between player indices to show their respective stables inside the DisplayCardWindow function
+
+static int currPnum = 0;
+static int clientPnum = 0;
 
 static struct ToolTip hoverTip; //!< A color coded tooltip that displays the card info when hovering over cards
 static const int STABLE_PADDING = 15; //!< arbitrary number of pixels to pad between the displayed list of cards in their respective stables/hands/decks
@@ -222,8 +226,8 @@ static const unsigned int CARD_MAP[] = {
   82,   // 114: Neigh [ID: 126]
   82,   // 115: Neigh [ID: 127]
   83,   // 116: Super Neigh [ID: 128]
+  84
 };
-static unsigned int numcardbm = 84;
 static HBITMAP hBitmapBack;
 
 // ********************************************************************************
@@ -267,6 +271,18 @@ static struct Button playerNums[] = {
   { 1175, 298, 95, 81, "Assets\\player8.bmp", NULL, NULL, NULL }
 };
 static struct Button stableNums[8];
+
+static struct Offset {
+  int width;
+  int height;
+  int offsetX;
+  int offsetY;
+};
+
+// static const struct Offset clientOverlayIcon = { 96, 36, -12, 57 };
+static const struct Offset clientOverlayIcon = { 99, 51, -6, 40 };
+static HBITMAP hBitmapClient; //!< the cloud ornament surrounding the client's player icon
+static HBITMAP hBitmapCurrPlayer[8]; //!< the red highlight on top of the current player num icon (TODO: create a font and just type the numbers w/ a border and shadow...)
 
 // Baby Unicorn point coordinates in the lobby selection
 // ordered: left, top, right, bottom
@@ -663,6 +679,7 @@ static struct ToolTip ReturnPlayerHoverTip(int pnum, int buttonX, int buttonY) {
 
   // TODO: update size for longer names
   strcpy_s(tippy.title, sizeof tippy.title, player[pnum].username);
+  if (pnum == clientPnum) strcat_s(tippy.title, sizeof tippy.title, " (You)");
   tippy.subtitle[0] = '\0';
   snprintf(tippy.msg, sizeof tippy.msg, "# of cards in hand: %d\n# of unicorns in stable: %d",
     player[pnum].hand.numCards, player[pnum].stable.numUnicorns);
@@ -800,7 +817,7 @@ static void DisplayCardWindow(HDC *hdcMem, HDC hdcSprite) {
         cardSlots[skip].source = &player[pnumindex].stable.unicorns[i];
 
         // draw the sprite
-        oldSprite = SelectObject(hdcSprite, player[pnumindex].stable.unicorns[i].bitmap);
+        oldSprite = SelectObject(hdcSprite, hBitmapCard[player[pnumindex].stable.unicorns[i].bitmap]);
         BitBlt(*hdcMem, start.x + (distance * skip), start.y, bm.bmWidth, bm.bmHeight, hdcSprite, 0, 0, SRCCOPY);
         SelectObject(hdcSprite, oldSprite);
         skip++;
@@ -832,7 +849,7 @@ static void DisplayCardWindow(HDC *hdcMem, HDC hdcSprite) {
         cardSlots[skip].source = &player[pnumindex].stable.unicorns[i];
 
         // draw the sprite
-        oldSprite = SelectObject(hdcSprite, player[pnumindex].stable.unicorns[i].bitmap);
+        oldSprite = SelectObject(hdcSprite, hBitmapCard[player[pnumindex].stable.unicorns[i].bitmap]);
         BitBlt(*hdcMem, start.x + (distance * skip), start.y, bm.bmWidth, bm.bmHeight, hdcSprite, 0, 0, SRCCOPY);
         SelectObject(hdcSprite, oldSprite);
         skip++;
@@ -850,11 +867,11 @@ static void DisplayCardWindow(HDC *hdcMem, HDC hdcSprite) {
     tabsize = player[pnumindex].hand.numCards;
     snprintf(windowtxt, sizeof windowtxt, "%s's Hand", player[pnumindex].username);
 
-    for (int i = index_start; i < player[pnumindex].hand.numCards && i < index_start + 7; i++) {
+    for (int i = index_start; i < tabsize && i < index_start + 7; i++) {
       // save the source into cardSlots
       cardSlots[skip++].source = &player[pnumindex].hand.cards[i];
 
-      oldSprite = SelectObject(hdcSprite, player[pnumindex].hand.cards[i].bitmap);
+      oldSprite = SelectObject(hdcSprite, hBitmapCard[player[pnumindex].hand.cards[i].bitmap]);
       BitBlt(*hdcMem, start.x + (distance * (i % 7)), start.y, bm.bmWidth, bm.bmHeight, hdcSprite, 0, 0, SRCCOPY);
       SelectObject(hdcSprite, oldSprite);
     }
@@ -865,11 +882,11 @@ static void DisplayCardWindow(HDC *hdcMem, HDC hdcSprite) {
     tabsize = nursery.size;
     strcpy_s(windowtxt, sizeof windowtxt, "Nursery");
 
-    for (int i = index_start; i < NURSERY_SIZE && i < index_start + 7; i++) {
+    for (int i = index_start; i < tabsize && i < index_start + 7; i++) {
       // save the source into cardSlots
       cardSlots[skip++].source = &nursery.cards[i];
 
-      oldSprite = SelectObject(hdcSprite, nursery.cards[i].bitmap);
+      oldSprite = SelectObject(hdcSprite, hBitmapCard[nursery.cards[i].bitmap]);
       BitBlt(*hdcMem, start.x + (distance * (i % 7)), start.y, bm.bmWidth, bm.bmHeight, hdcSprite, 0, 0, SRCCOPY);
       SelectObject(hdcSprite, oldSprite);
     }
@@ -886,12 +903,11 @@ static void DisplayCardWindow(HDC *hdcMem, HDC hdcSprite) {
     tabsize = deck.size;
     strcpy_s(windowtxt, sizeof windowtxt, "Deck");
 
-    for (int i = index_start; i < DECK_SIZE && i < index_start + 7; i++) {
+    for (int i = index_start; i < tabsize && i < index_start + 7; i++) {
       // save the source into cardSlots
       cardSlots[skip++].source = &deck.cards[i];
 
-      // oldSprite = SelectObject(hdcSprite, hBitmapCard[CARD_MAP[deck_ref[i]]]);
-      oldSprite = SelectObject(hdcSprite, deck.cards[i].bitmap);
+      oldSprite = SelectObject(hdcSprite, hBitmapCard[deck.cards[i].bitmap]);
       BitBlt(*hdcMem, start.x + (distance * (i % 7)), start.y, bm.bmWidth, bm.bmHeight, hdcSprite, 0, 0, SRCCOPY);
       SelectObject(hdcSprite, oldSprite);
     }
@@ -903,11 +919,11 @@ static void DisplayCardWindow(HDC *hdcMem, HDC hdcSprite) {
     tabsize = discardpile.size;
     strcpy_s(windowtxt, sizeof windowtxt, "Discard Pile");
 
-    for (int i = index_start; i < discardpile.size && i < index_start + 7; i++) {
+    for (int i = index_start; i < tabsize && i < index_start + 7; i++) {
       // save the source into cardSlots
       cardSlots[skip++].source = &discardpile.cards[i];
 
-      oldSprite = SelectObject(hdcSprite, discardpile.cards[i].bitmap);
+      oldSprite = SelectObject(hdcSprite, hBitmapCard[discardpile.cards[i].bitmap]);
       BitBlt(*hdcMem, start.x + (distance * (i % 7)), start.y, bm.bmWidth, bm.bmHeight, hdcSprite, 0, 0, SRCCOPY);
       SelectObject(hdcSprite, oldSprite);
     }
@@ -998,7 +1014,7 @@ static void LoadImages(HWND hWnd) {
     snprintf(borderfn, 19, "Assets\\border%d.bmp", i + 1);
     hBitmapBorder[i] = (HBITMAP)LoadImage(NULL, borderfn,
       IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-    if (hBitmapBorder[0] == NULL) {
+    if (hBitmapBorder[i] == NULL) {
       issuccess = FALSE;
       strcat_s(errors, sizeof errors, borderfn);
       strcat_s(errors, sizeof errors, " ");
@@ -1025,6 +1041,28 @@ static void LoadImages(HWND hWnd) {
       strcat_s(errors, sizeof errors, playerNums[i].filename);
       strcat_s(errors, sizeof errors, " ");
     }
+  }
+
+  // the red player numbers to signify whose turn it is
+  for (int i = 0; i < MAX_PLAYERS; i++) {
+    char playerfn[32] = "";
+
+    snprintf(playerfn, 22, "Assets\\player%dred.bmp", i + 1);
+    hBitmapCurrPlayer[i] = (HBITMAP)LoadImage(NULL, playerfn,
+      IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+    if (hBitmapCurrPlayer[i] == NULL) {
+      issuccess = FALSE;
+      strcat_s(errors, sizeof errors, playerfn);
+      strcat_s(errors, sizeof errors, " ");
+    }
+  }
+
+  // bitmap for the decorative image around the client-specific player icon
+  hBitmapClient = (HBITMAP)LoadImage(NULL, "Assets\\player_self.bmp",
+    IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+  if (hBitmapClient == NULL) {
+    issuccess = FALSE;
+    strcat_s(errors, sizeof errors, "player_self.bmp ");
   }
 
   // bitmaps displaying the stable count; it goes from 0 to 7, so 8 in total
@@ -1059,18 +1097,6 @@ static void LoadImages(HWND hWnd) {
     strcat_s(errors, sizeof errors, "unicorntab_bg.bmp ");
   }
 
-  // char cardname[64];
-  // for (int i = 0; i < numcardbm; i++) {
-  //   snprintf(cardname, sizeof cardname, "Assets\\Cards\\default_%03d.bmp", i + 1);
-  //   hBitmapCard[i] = (HBITMAP)LoadImage(NULL, cardname,
-  //     IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-  //   if (hBitmapCard[i] == NULL) {
-  //     issuccess = FALSE;
-  //     strcat_s(errors, sizeof errors, cardname + 13);
-  //     strcat_s(errors, sizeof errors, " ");
-  //   }
-  // }
-
   if (issuccess == FALSE) {
     MessageBox(hWnd, errors, "Error", MB_ICONWARNING | MB_OK);
   }
@@ -1095,6 +1121,8 @@ static void LoadCards(HWND hWnd) {
     strcat_s(errors, sizeof errors, "back.bmp ");
   }
 
+  hBitmapCard[sizeof(hBitmapCard) - 1] = hBitmapBack;
+
   // read through the file directory to find the bitmaps
   HANDLE fileHandle;
   WIN32_FIND_DATA ffd;
@@ -1103,16 +1131,19 @@ static void LoadCards(HWND hWnd) {
   char tmp[128];
   int decksize = sizeof Base_DECK / sizeof Base_DECK[0];
   int index = 0;
+  int mapindex = 0;
 
   snprintf(tmp, sizeof tmp,  "Assets\\Cards\\%s", ffd.cFileName);
-  Base_DECK[index].bitmap = (HBITMAP)LoadImage(NULL, tmp,
+  hBitmapCard[mapindex] = (HBITMAP)LoadImage(NULL, tmp,
     IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-  if (Base_DECK[index].bitmap == NULL) {
+  if (hBitmapCard[mapindex] == NULL) {
     issuccess = FALSE;
     strcat_s(errors, sizeof errors, ffd.cFileName);
     strcat_s(errors, sizeof errors, ", ");
   }
+  Base_DECK[index].bitmap = mapindex;
   index++;
+  mapindex++;
   FindNextFile(fileHandle, &ffd);
 
   do {
@@ -1123,19 +1154,21 @@ static void LoadCards(HWND hWnd) {
     }
 
     snprintf(tmp, sizeof tmp, "Assets\\Cards\\%s", ffd.cFileName);
-    Base_DECK[index].bitmap = (HBITMAP)LoadImage(NULL, tmp,
+    hBitmapCard[mapindex] = (HBITMAP)LoadImage(NULL, tmp,
       IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-    if (Base_DECK[index].bitmap == NULL) {
+    if (hBitmapCard[mapindex] == NULL) {
       issuccess = FALSE;
       strcat_s(errors, sizeof errors, ffd.cFileName);
       strcat_s(errors, sizeof errors, ", ");
     }
+    Base_DECK[index].bitmap = mapindex;
     index++;
+    mapindex++;
   } while (FindNextFile(fileHandle, &ffd) != 0 && index < decksize);
 
   // in case there are missing files, in which i should have just named the cards after their names in the deck
   while (index < decksize) {
-    Base_DECK[index++].bitmap = hBitmapBack;
+    Base_DECK[index++].bitmap = CARD_MAP[sizeof CARD_MAP - 1];
   }
 
   if (issuccess == FALSE) {
@@ -1341,8 +1374,9 @@ int SelectBabyUnicorn(int pnum, POINT pnt) {
         // baby unicorn card numbers, player[num].stable.unicorns[0] can be used as an index)
         babyToggle[babyMap[pnum]] = FALSE;
       }
-      player[pnum].stable.unicorns[0] = Base_DECK[i];
       babyMap[pnum] = i;
+      player[pnum].icon = i;
+
       pselect[pnum].left = BABY_COORDS[i].left - 7; // the actual border should be offset by 7 pixels
       pselect[pnum].top = BABY_COORDS[i].top;
       PlaySound(TEXT("Assets\\Audio\\lobby-select.wav"), NULL, SND_FILENAME | SND_ASYNC);
@@ -1351,6 +1385,19 @@ int SelectBabyUnicorn(int pnum, POINT pnt) {
   }
 
   return 0;
+}
+
+void SetTabs(int pnum) {
+  pnumindex = pnum;
+  tabnum = HAND_TAB;
+}
+
+void SetClientPnum(int pnum) {
+  clientPnum = pnum;
+}
+
+void SetCurrPnum(int pnum) {
+  currPnum = pnum;
 }
 
 // ********************************************************************************
@@ -1365,7 +1412,7 @@ static void InitStateMachine(void) {
   stateMach[RULESONE]   = (StateManager){ RULESONE  , NULL      , NULL      , ClickRules };
   stateMach[RULESTWO]   = (StateManager){ RULESTWO  , NULL      , NULL      , ClickRules };
   stateMach[LOBBY]      = (StateManager){ LOBBY     , PaintLobby, NULL      , ClickLobby };
-  stateMach[GAMESTART]  = (StateManager){ GAMESTART , PaintDebug, HoverDebug, ClickDebug };
+  stateMach[GAMESTART]  = (StateManager){ GAMESTART , PaintDebug, HoverDebug, ClickGame  };
   stateMach[DEBUGMODE]  = (StateManager){ DEBUGMODE , PaintDebug, HoverDebug, ClickDebug };
 }
 
@@ -1565,6 +1612,42 @@ static void ClickDebug(POINT pnt) {
   }
 }
 
+static void ClickGame(POINT pnt) {
+  // general tab buttons
+  for (int i = 0; i < sizeof debugButtons / sizeof debugButtons[0]; i++) {
+    if (pnt.x >= debugButtons[i].x && pnt.x < debugButtons[i].x + debugButtons[i].width &&
+        pnt.y >= debugButtons[i].y && pnt.y < debugButtons[i].y + debugButtons[i].height) {
+      // left click action
+      debugButtons[i].OnClick(debugButtons[i].source);
+      return;
+    }
+  }
+
+  // select the player to view
+  // 
+  // TODO: should probably only initialize playerNums up to the current_player count instead of the full MAX_PLAYERS count
+  // anything with playerNums will bug out unless the loops go up to currentPlayers, so limiting the playerNums array
+  // or initializing it as negative numbers would reduce the possibility of more bugs popping up
+  // 
+  // TODO: will need to add an additional action here (or in a separate state) for whenever the user has to select a player to
+  // apply their card effect on; could also potentially just make another window for those cases, but that sounds lame :/
+  for (int i = 0; i < currentPlayers; i++) {
+    if (pnt.x >= playerNums[i].x && pnt.x < playerNums[i].x + playerNums[i].width &&
+        pnt.y >= playerNums[i].y && pnt.y < playerNums[i].y + playerNums[i].height) {
+      pnumindex = i;
+      pagenum = 1;
+
+      // this will switch to the new player window in case the user previously looked at the nursery, deck, or discard piles
+      if (tabnum == NURSERY_TAB || tabnum == DECK_TAB || tabnum == DISCARD_TAB) {
+        tabnum = UNICORN_TAB;
+      }
+
+      PlaySound(TEXT("Assets\\Audio\\button-click.wav"), NULL, SND_FILENAME | SND_ASYNC);
+      return;
+    }
+  }
+}
+
 // WM_PAINT
 
 static void PaintTitle(HDC *hdcMem) {
@@ -1624,8 +1707,21 @@ static void PaintDebug(HDC *hdcMem) {
     TransparentBlt(*hdcMem, playerNums[i].x, playerNums[i].y, playerNums[i].width, playerNums[i].height, hdcSprite, 0, 0, playerNums[i].width, playerNums[i].height, RGB(0, 255, 0));
     SelectObject(hdcSprite, oldSprite);
 
+    // overlay for the client's player icon
+    if (i == clientPnum) {
+      oldSprite = SelectObject(hdcSprite, hBitmapClient);
+      TransparentBlt(*hdcMem, playerNums[i].x + clientOverlayIcon.offsetX, playerNums[i].y + clientOverlayIcon.offsetY, clientOverlayIcon.width, clientOverlayIcon.height, hdcSprite, 0, 0, clientOverlayIcon.width, clientOverlayIcon.height, RGB(0, 255, 0));
+      SelectObject(hdcSprite, oldSprite);
+    }
+
     // player number
-    oldSprite = SelectObject(hdcSprite, playerNums[i].bitmap);
+    if (i == currPnum) {
+      // TODO: just switch playerNums[i].bitmap at the start of every turn
+      oldSprite = SelectObject(hdcSprite, hBitmapCurrPlayer[i]);
+    }
+    else {
+      oldSprite = SelectObject(hdcSprite, playerNums[i].bitmap);
+    }
     TransparentBlt(*hdcMem, playerNums[i].x, playerNums[i].y, playerNums[i].width, playerNums[i].height, hdcSprite, 0, 0, playerNums[i].width, playerNums[i].height, RGB(0, 255, 0));
     SelectObject(hdcSprite, oldSprite);
 
@@ -1642,13 +1738,13 @@ static void PaintDebug(HDC *hdcMem) {
 
   // display the nursery and discard pile if they are not empty
   if (nursery.size > 0) {
-    oldSprite = SelectObject(hdcSprite, nursery.cards[0].bitmap);
+    oldSprite = SelectObject(hdcSprite, hBitmapCard[nursery.cards[0].bitmap]);
     BitBlt(*hdcMem, debugButtons[NURSERY_TAB].x, debugButtons[NURSERY_TAB].y, debugButtons[NURSERY_TAB].width, debugButtons[NURSERY_TAB].height, hdcSprite, 0, 0, SRCCOPY);
     SelectObject(hdcSprite, oldSprite);
   }
 
   if (discardpile.size > 0) {
-    oldSprite = SelectObject(hdcSprite, discardpile.cards[discardpile.size - 1].bitmap);
+    oldSprite = SelectObject(hdcSprite, hBitmapCard[discardpile.cards[discardpile.size - 1].bitmap]);
     BitBlt(*hdcMem, debugButtons[DISCARD_TAB].x, debugButtons[DISCARD_TAB].y, debugButtons[DISCARD_TAB].width, debugButtons[DISCARD_TAB].height, hdcSprite, 0, 0, SRCCOPY);
     SelectObject(hdcSprite, oldSprite);
 
@@ -1657,6 +1753,16 @@ static void PaintDebug(HDC *hdcMem) {
   // display the list of cards under the current tab
   DisplayCardWindow(hdcMem, hdcSprite);
   DeleteDC(hdcSprite);
+
+  // display the current player as text
+  char playertxt[64];
+  snprintf(playertxt, sizeof playertxt, "%s is currently playing", player[currPnum].username);
+
+  SelectObject(*hdcMem, fonts[FANCYITALICS]);
+  SetBkMode(*hdcMem, TRANSPARENT); // box surrounding text is transparent instead of white
+  SetTextColor(*hdcMem, RGB(255, 255, 255));
+  RECT rc = { 600, 425, 1270, 457 }; // right side directly above the tabs
+  DrawText(*hdcMem, playertxt, strlen(playertxt), &rc, DT_RIGHT | DT_NOCLIP | DT_WORDBREAK);
 
   if (hoverTip.isHover) {
     DisplayCustomToolTip(hdcMem, hoverTip);
@@ -1715,7 +1821,7 @@ static void StartGame(void) {
   // user clicked the start button; only the host can properly start the game
   if (!isClient && currentPlayers >= 2) {
     networkToggle ^= 4;
-    // closesocket(udpfd); // TODO: (look into this) i might still need the udp socket for instant neigh shenanigans
+    closesocket(udpfd);
   }
 
   // menuState will switch in the server file
@@ -1810,7 +1916,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
   }
   case WM_KEYDOWN:
     // TODO: don't forget to add the gamestate here too
-    if (menuState != DEBUGMODE) {
+    if (menuState != DEBUGMODE && menuState != GAMESTART) {
       break;
     }
 
@@ -1822,6 +1928,19 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     else if (wParam == VK_RIGHT || wParam == 0x44 || wParam == 0x64) {
       // user pressed the right arrow key, 'd', or 'D'
       TurnPage(PAGE_RIGHT);
+    }
+    else if ((wParam >= 0x31 && wParam <= 0x38) || (wParam >= 0x61 && wParam <= 0x68)) {
+      int tmp = (wParam > 0x38) ? wParam - 0x61 : wParam - 0x31;
+
+      if (tmp < currentPlayers) {
+        pnumindex = tmp;
+        pagenum = 1;
+        // this will switch to the new player window in case the user previously looked at the nursery, deck, or discard piles
+        if (tabnum == NURSERY_TAB || tabnum == DECK_TAB || tabnum == DISCARD_TAB) {
+          tabnum = UNICORN_TAB;
+        }
+        PlaySound(TEXT("Assets\\Audio\\button-click.wav"), NULL, SND_FILENAME | SND_ASYNC);
+      }
     }
 
     break;
@@ -1876,11 +1995,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     for (int i = 0; i < sizeof hBitmapTab / sizeof hBitmapTab[0]; i++) {
       DeleteObject(hBitmapTab[i]);
     }
-    // for (int i = 0; i < sizeof hBitmapCard / sizeof hBitmapCard[0]; i++) {
-    //   DeleteObject(hBitmapCard[i]);
-    // }
-    for (int i = 0; i < sizeof Base_DECK / sizeof Base_DECK[0]; i++) {
-      DeleteObject(Base_DECK[i].bitmap);
+    for (int i = 0; i < sizeof hBitmapCard / sizeof hBitmapCard[0]; i++) {
+      DeleteObject(hBitmapCard[i]);
     }
     DeleteObject(hBitmapBack);
     DestroyFonts();

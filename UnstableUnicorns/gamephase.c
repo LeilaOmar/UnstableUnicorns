@@ -6,12 +6,6 @@ void BeginningOfTurn(int pnum) {
   turnCount = 1;
   uniLassoIndex[0] = -1;
 
-  // Nanny Cam check
-  for (int i = 0; i < currentPlayers; i++) {
-    if (i != pnum && (player[i].flags & NANNY_CAM) != 0)
-      PrintHand(i);
-  }
-
   for (int i = 0; i < player[pnum].stable.size; i++) {
     Base_BeginningTurnEffects(pnum, player[pnum].stable.unicorns[i]);
   }
@@ -25,36 +19,9 @@ void ActionPhase(int pnum) {
   char *end, buf[LINE_MAX];
 
   while (turnCount > 0) {
-    PrintHand(pnum);
     do {
-      printf(
-        "\nAction phase options:"
-        "\n1. Draw a card"
-        "\n2. Play a card"
-        "\n3. Display card description"
-        "\n4. Display a player's stable"
-        "\n5. Display your own hand"
-        "\n6. Display Nursery"
-        "\n7. Display Discard Pile"
-        "\nChoice: ");
+      // SelectCard(player index (ANY/-1 if inapplicable), &card index, tab window enum) ??
       index = NumInput(buf, &end, sizeof buf);
-
-      if (index == 3)
-        DisplayCardDesc();
-      else if (index == 4)
-        DisplayDesiredStable();
-      else if (index == 5)
-        PrintHand(pnum);
-      else if (index == 6) {
-        Yellow();
-        PrintPile(nursery);
-        ResetCol();
-      }
-      else if (index == 7) {
-        Magenta();
-        PrintPile(discardpile);
-        ResetCol();
-      }
     } while (index < 1 || index > 2 || end != (buf + strlen(buf)));
 
     if (index == 1)
@@ -72,10 +39,6 @@ int EndOfTurn(int pnum) {
   if (player[pnum].hand.numCards > 7) {
     Discard(pnum, player[pnum].hand.numCards - 7, ANY);
   }
-
-  // print stuff to see what's going on
-  PrintHand(pnum);
-  PrintStable(pnum);
 
   // check if the player has enough unicorns (notably not pandas) to win the game
   if (CheckWin(pnum))
