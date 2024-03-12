@@ -1,6 +1,7 @@
 #pragma once
 #include "gamephase.h"
 #include "networkevents.h"
+#include "windowsapp.h"
 
 void BeginningOfTurn(int pnum) {
   turnCount = 1;
@@ -14,24 +15,28 @@ void BeginningOfTurn(int pnum) {
   Draw(pnum, 1);
 }
 
-void ActionPhase(int pnum) {
-  int index;
-  char *end, buf[LINE_MAX];
+int ActionPhase(int pnum) {
+  int tab = ACTION_TAB;
+  int cindex = -2;
 
   while (turnCount > 0) {
-    do {
-      // SelectCard(player index (ANY/-1 if inapplicable), &card index, tab window enum) ??
-      index = NumInput(buf, &end, sizeof buf);
-    } while (index < 1 || index > 2 || end != (buf + strlen(buf)));
+    if (networkToggle & 2) {
+      networkToggle ^= 2;
+      cindex = SelectCard(pnum, &tab, clientPnt);
+    }
+    // index = NumInput(buf, &end, sizeof buf);
 
-    if (index == 1)
-      Draw(pnum, 1);
+    if (cindex < -1)
+      return -1;
+    else if (cindex >= 0)
+      PlayCard(pnum); // TODO: include cindex as a param
     else
-      PlayCard(pnum);
+      Draw(pnum, 1);
 
     turnCount--;
   }
 
+  return 0;
 }
 
 int EndOfTurn(int pnum) {

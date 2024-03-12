@@ -17,6 +17,8 @@ enum GameState {
   NUMSTATES   //!< Total size
 };
 
+enum Tab { UNICORN_TAB, UPGRADE_TAB, HAND_TAB, PAGE_LEFT, PAGE_RIGHT, NURSERY_TAB, DECK_TAB, DISCARD_TAB, ACTION_TAB };
+
 typedef struct StateManager {
   enum GameState state;
   void (*StatePaint)(HDC *hdcMem);
@@ -71,6 +73,14 @@ LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
  * @return 1 A Baby Unicorn was picked by player[pnum]
  */
 int SelectBabyUnicorn(int pnum, POINT pnt);
+
+/**
+ * @brief Selects the card to play based off of the tab window and point location
+ * @return == -2 No valid card was selected
+ * @return == -1 Player clicked on the deck to draw a card
+ * @return >=  0 Returns the card index of the selected card in the *windownum tab
+ */
+int SelectCard(int pnum, enum Tab *windownum, POINT pnt);
 
 /**
  * @brief Sets the starting tab display window to show your own hand

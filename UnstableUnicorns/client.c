@@ -508,22 +508,20 @@ int ClientJoin(LPVOID p) {
 
   int counter = 0;
 
-  for (;;) {
-    // loop
-    Sleep(25);
-  }
-
   // loop until win condition occurs (7 unicorns in stable)
   do {
     // printf("\n*** %s's turn ***\n\n", player[counter].username);
 
     SetCurrPnum(counter);
+    networkToggle = 0; // reset this to avoid accidentally queueing up input outside of the player's turn
 
     if (counter == clientpnum) {
       // it's your turn! do your thing :>
       BeginningOfTurn(clientpnum);
 
-      ActionPhase(clientpnum);
+      while (ActionPhase(clientpnum) == -1) {
+        Sleep(20);
+      }
 
       if (EndOfTurn(clientpnum)) {
         ClientSendEndGame(clientpnum, sockfd);

@@ -13,8 +13,11 @@ void BeginningOfTurn(int pnum);
 
 /**
  * @brief Action Phase: Allows the player to choose between playing or drawing a card
+ * @return -1 No action took place, keep looping
+ * @return  0 player[pnum] finished their Action phase
+ * @note this loops externally to avoid blocking UI code during single-threaded debug mode tests
  */
-void ActionPhase(int pnum);
+int ActionPhase(int pnum);
 
 /**
  * @brief End Turn Phase: Discards all of the extra cards, checks if player[pnum] won the game, and resolves all active effect chains

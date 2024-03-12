@@ -772,22 +772,20 @@ int ServerHost(LPVOID p) {
   int counter = 0;
   int nEvents;
 
-  for (;;) {
-    // loop
-    Sleep(25);
-  }
-
   // loop until win condition occurs (7 unicorns in stable)
   do {
     // printf("\n*** %s's turn ***\n\n", player[counter].username);
 
     SetCurrPnum(counter);
+    networkToggle = 0; // reset this to avoid accidentally queueing up input outside of the player's turn
 
     if (counter == 0) {
       // it's your turn! do your thing :>
       BeginningOfTurn(counter);
 
-      ActionPhase(counter);
+      while (ActionPhase(counter) == -1) {
+        Sleep(20);
+      }
 
       if (EndOfTurn(counter)) {
         ServerSendEndGame(counter);

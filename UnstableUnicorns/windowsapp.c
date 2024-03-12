@@ -2,6 +2,7 @@
 #include "server.h"
 #include "client.h"
 #include "gamemechanics.h"
+#include "gamephase.h"
 
 #pragma comment(lib,"msimg32.lib") // Transparent blt
 #pragma comment(lib,"Winmm.lib") // play sound
@@ -37,6 +38,7 @@ static void HostGeneration(HWND);
 static void JoinGeneration(HWND);
 static void StartGame(void);
 static void LeaveLobby(void);
+static void ViewDeck(void);
 static void SwitchTab(int);
 static void TurnPage(int);
 
@@ -63,7 +65,6 @@ unsigned char networkToggle = 0;
 // ************************ Private/Static Global Variables ***********************
 // ********************************************************************************
 
-static enum Tab { UNICORN_TAB, UPGRADE_TAB, HAND_TAB, PAGE_LEFT, PAGE_RIGHT, NURSERY_TAB, DECK_TAB, DISCARD_TAB };
 static enum Fonts { OLDFONT, CHONKYFONT, BOLDFONT, ITALICFONT, FANCYFONT, FANCYITALICS, NUMCUSTOMFONTS };
 
 static HWND networkThread, textNameHwnd, portHwnd, codeHwnd;
@@ -463,7 +464,7 @@ static void InitDeckButtons(struct Button *b) {
   b[DECK_TAB].width = 145;
   b[DECK_TAB].height = 200;
   b[DECK_TAB].source = DECK_TAB;
-  b[DECK_TAB].OnClick = SwitchTab;
+  b[DECK_TAB].OnClick = ViewDeck;
 
   // discard pile
   b[DISCARD_TAB].x = 696;
@@ -894,14 +895,13 @@ static void DisplayCardWindow(HDC *hdcMem, HDC hdcSprite) {
   }
   case DECK_TAB:
   {
-    // TODO: ifdef, or put this check earlier?
-    if (menuState != DEBUGMODE) {
-      break;
-    }
-
     // TODO: include a check for card effects that allow deck viewing, and then include a check for specific cards
     tabsize = deck.size;
     strcpy_s(windowtxt, sizeof windowtxt, "Deck");
+
+    if (menuState != DEBUGMODE) {
+      break;
+    }
 
     for (int i = index_start; i < tabsize && i < index_start + 7; i++) {
       // save the source into cardSlots
@@ -1387,6 +1387,29 @@ int SelectBabyUnicorn(int pnum, POINT pnt) {
   return 0;
 }
 
+int SelectCard(int pnum, enum Tab *windownum, POINT pnt) {
+  if (tabnum == *windownum ||
+      (*windownum == ACTION_TAB && pnt.y > debugButtons[DECK_TAB].y + debugButtons[DECK_TAB].height)) {
+    for (int i = 0; i < sizeof cardSlots / sizeof cardSlots[0]; i++) {
+      if (pnum == pnumindex &&
+          pnt.x >= cardSlots[i].x && pnt.x < cardSlots[i].x + cardSlots[i].width &&
+          pnt.y >= cardSlots[i].y && pnt.y < cardSlots[i].y + cardSlots[i].height) {
+        if (cardSlots[i].source != NULL) {
+          return (pagenum * 7) + i;
+        }
+      }
+    }
+  }
+  else {
+    if (pnt.x >= debugButtons[DECK_TAB].x && pnt.x < debugButtons[DECK_TAB].x + debugButtons[DECK_TAB].width &&
+        pnt.y >= debugButtons[DECK_TAB].y && pnt.y < debugButtons[DECK_TAB].y + debugButtons[DECK_TAB].height) {
+      return -1;
+    }
+  }
+
+  return -2;
+}
+
 void SetTabs(int pnum) {
   pnumindex = pnum;
   tabnum = HAND_TAB;
@@ -1423,9 +1446,9 @@ static void HoverTitle(POINT pnt) {
 
   for (int i = 0; i < 3; i++) {
     if (pnt.x >= titleButtons[i].x && pnt.x <= titleButtons[i].x + titleButtons[i].width &&
-      pnt.y >= titleButtons[i].y && pnt.y <= titleButtons[i].y + titleButtons[i].height) {
-        HornPosition(titleButtons[i]);
-        return;
+        pnt.y >= titleButtons[i].y && pnt.y <= titleButtons[i].y + titleButtons[i].height) {
+      HornPosition(titleButtons[i]);
+      return;
     }
   }
 }
@@ -1435,7 +1458,7 @@ static void HoverDebug(POINT pnt) {
 
   for (int i = 0; i < sizeof cardSlots / sizeof cardSlots[0]; i++) {
     if (pnt.x >= cardSlots[i].x && pnt.x < cardSlots[i].x + cardSlots[i].width &&
-      pnt.y >= cardSlots[i].y && pnt.y < cardSlots[i].y + cardSlots[i].height) {
+        pnt.y >= cardSlots[i].y && pnt.y < cardSlots[i].y + cardSlots[i].height) {
       if (cardSlots[i].source != NULL) {
         hoverTip = ReturnCardHoverTip(cardSlots[i]);
         return;
@@ -1445,7 +1468,7 @@ static void HoverDebug(POINT pnt) {
 
   for (int i = 0; i < currentPlayers; i++) {
     if (pnt.x >= playerNums[i].x && pnt.x < playerNums[i].x + playerNums[i].width &&
-      pnt.y >= playerNums[i].y && pnt.y < playerNums[i].y + playerNums[i].height) {
+        pnt.y >= playerNums[i].y && pnt.y < playerNums[i].y + playerNums[i].height) {
       hoverTip = ReturnPlayerHoverTip(i, playerNums[i].x, playerNums[i].y);
       return;
     }
@@ -1466,7 +1489,7 @@ static void ClickTitle(POINT pnt) {
 
   for (int i = 0; i < sizeof titleButtons / sizeof titleButtons[0]; i++) {
     if (pnt.x >= titleButtons[i].x && pnt.x < titleButtons[i].x + titleButtons[i].width &&
-      pnt.y >= titleButtons[i].y && pnt.y < titleButtons[i].y + titleButtons[i].height) {
+        pnt.y >= titleButtons[i].y && pnt.y < titleButtons[i].y + titleButtons[i].height) {
       // left click action
       if (isChildOpen == FALSE) {
         PlaySound(TEXT("Assets\\Audio\\button-click.wav"), NULL, SND_FILENAME | SND_ASYNC);
@@ -1481,7 +1504,7 @@ static void ClickTitle(POINT pnt) {
 static void ClickRules(POINT pnt) {
   for (int i = 0; i < sizeof ruleButtons / sizeof ruleButtons[0]; i++) {
     if (pnt.x >= ruleButtons[i].x && pnt.x < ruleButtons[i].x + ruleButtons[i].width &&
-      pnt.y >= ruleButtons[i].y && pnt.y < ruleButtons[i].y + ruleButtons[i].height) {
+        pnt.y >= ruleButtons[i].y && pnt.y < ruleButtons[i].y + ruleButtons[i].height) {
       // left click action
       PlaySound(TEXT("Assets\\Audio\\button-click.wav"), NULL, SND_FILENAME | SND_ASYNC);
       ruleButtons[i].OnClick(ruleButtons[i].source);
@@ -1580,9 +1603,14 @@ static void ClickDebug(POINT pnt) {
   // general tab buttons
   for (int i = 0; i < sizeof debugButtons / sizeof debugButtons[0]; i++) {
     if (pnt.x >= debugButtons[i].x && pnt.x < debugButtons[i].x + debugButtons[i].width &&
-      pnt.y >= debugButtons[i].y && pnt.y < debugButtons[i].y + debugButtons[i].height) {
+        pnt.y >= debugButtons[i].y && pnt.y < debugButtons[i].y + debugButtons[i].height) {
       // left click action
       debugButtons[i].OnClick(debugButtons[i].source);
+
+      turnCount = 1;
+      networkToggle ^= 2;
+      clientPnt = pnt;
+      ActionPhase(0);
       return;
     }
   }
@@ -1613,6 +1641,11 @@ static void ClickDebug(POINT pnt) {
 }
 
 static void ClickGame(POINT pnt) {
+  // signal the game thread to select a card w/ the point
+  // TODO: actually use a mutex here >.<
+  networkToggle ^= 2;
+  clientPnt = pnt;
+
   // general tab buttons
   for (int i = 0; i < sizeof debugButtons / sizeof debugButtons[0]; i++) {
     if (pnt.x >= debugButtons[i].x && pnt.x < debugButtons[i].x + debugButtons[i].width &&
@@ -1825,6 +1858,17 @@ static void StartGame(void) {
   }
 
   // menuState will switch in the server file
+}
+
+static void ViewDeck(void) {
+  // the deck should only be viewable during special card events (e.g. classy narwhal allowing the player to pick an upgrade card from the deck)
+  // this checks against a random magic number for now, but it will be changed once the implementation is sorted out
+  if (((networkToggle & 255) == 255) || menuState == DEBUGMODE) {
+    tabnum = DECK_TAB;
+    pagenum = 1;
+  }
+
+  PlaySound(TEXT("Assets\\Audio\\button-click.wav"), NULL, SND_FILENAME | SND_ASYNC);
 }
 
 static void SwitchTab(int num) {
