@@ -1,5 +1,6 @@
 #include "gamemechanics.h"
 #include "networkevents.h"
+#include "windowsapp.h"
 
 // ********************************************************************************
 // **************************** Print/Display Functions ***************************
@@ -539,18 +540,26 @@ int Draw(int pnum, int numDrawn) {
 }
 
 void Discard(int pnum, int numDiscard, int cType) {
-  int index;
+  int index = -1;
+  enum Tab tab = HAND_TAB;
   char *end, buf[LINE_MAX];
 
   // repeat for numDiscard times or until the number of cards in hand is zero
   while (player[pnum].hand.numCards > 0 && numDiscard > 0) {
-    PrintHand(pnum);
+    // PrintHand(pnum);
     for (;;) {
-      printf("Pick a valid card number to discard: ");
-      index = NumInput(buf, &end, sizeof buf) - 1;
+      // printf("Pick a valid card number to discard: ");
+      // index = NumInput(buf, &end, sizeof buf) - 1;
+      DisplayMessage("Pick a valid card to discard.");
+      if (networkToggle & 2) {
+        networkToggle ^= 2;
+        index = SelectCard(pnum, &tab, clientPnt);
+      }
+
+      Sleep(20); // nap time sounds lovely
 
       // index validation
-      if (index < 0 || index >= player[pnum].hand.numCards || end != (buf + strlen(buf)))
+      if (index < 0 || index >= player[pnum].hand.numCards)
         continue;
 
       // check for a type match
@@ -561,6 +570,7 @@ void Discard(int pnum, int numDiscard, int cType) {
     AddDiscard(player[pnum].hand.cards[index]);
     RearrangeHand(pnum, index);
     numDiscard--;
+    index = -1;
   }
 }
 

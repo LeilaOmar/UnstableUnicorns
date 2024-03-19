@@ -15,6 +15,7 @@
 
 static LRESULT CALLBACK WndProcHost(HWND, UINT, WPARAM, LPARAM);
 static LRESULT CALLBACK WndProcJoin(HWND, UINT, WPARAM, LPARAM);
+static LRESULT CALLBACK WndProcGameMsg(HWND, UINT, WPARAM, LPARAM);
 
 // game state WM functions
 
@@ -67,12 +68,14 @@ unsigned char networkToggle = 0;
 
 static enum Fonts { OLDFONT, CHONKYFONT, BOLDFONT, ITALICFONT, FANCYFONT, FANCYITALICS, NUMCUSTOMFONTS };
 
-static HWND networkThread, textNameHwnd, portHwnd, codeHwnd;
+static HWND networkThread, textNameHwnd, portHwnd, codeHwnd, hWndGame;
 static DWORD tIdweb;
 static HBITMAP hBitmapBG[NUMSTATES], hBitmapBorder[MAX_PLAYERS], hBitmapCard[85], hBitmapTab[3];
 static BOOL isChildOpen = FALSE; //!< TRUE if the Host or Join dialogue box is open, FALSE if inactive
-static BOOL isChildInit[2] = { FALSE }; //!< Boolean check for initializing the child windows (RegisterClass is only supposed to run once); [0] is host/server, [1] is client
+static BOOL isChildInit[3] = { FALSE }; //!< Boolean check for initializing the child windows (RegisterClass is only supposed to run once); [0] is host/server, [1] is client, [2] is the game message box
 static HFONT fonts[NUMCUSTOMFONTS] = { NULL };
+
+static char *g_msg;
 
 static enum Tab tabnum;    //!< The tab number representation of the window to display on the bottom of the in-game screen
 static int tabsize;        //!< Number of total cards within the current tab view array (e.g. if you're looking at the deck, then tabsize could be anywhere from 1 to 116)
@@ -360,13 +363,13 @@ static void InitRuleButtons(struct Button *b, int size) {
   b[2].source = RULESTWO;
 }
 
-static void InitLobbyButtons(struct Button *b) {
+static void InitLobbyButtons(struct Button *b, HWND hWnd) {
   // start game
   b[0].x = 120;
   b[0].y = 590;
   b[0].width = 190;
   b[0].height = 50;
-  b[0].source = GAMESTART;
+  b[0].source = hWnd;
   b[0].OnClick = StartGame;
 
   // leave lobby
@@ -478,7 +481,7 @@ static void InitDeckButtons(struct Button *b) {
 static void InitButtonManager(HWND hWnd) {
   InitTitleButtons(titleButtons, hWnd, sizeof titleButtons / sizeof titleButtons[0]);
   InitRuleButtons(ruleButtons, sizeof ruleButtons / sizeof ruleButtons[0]);
-  InitLobbyButtons(lobbyButtons);
+  InitLobbyButtons(lobbyButtons, hWnd);
   InitCardWindowButtons(debugButtons);
   InitCardButtons(cardSlots, sizeof cardSlots / sizeof cardSlots[0]);
   InitDeckButtons(debugButtons);
@@ -606,6 +609,69 @@ static void CreateJoinWindow(HWND hwnd) {
   }
 
   ShowWindow(hWndJoin, SW_NORMAL);
+}
+
+/**
+ * @brief Creates a child window to display game messages
+ */
+static void CreateGameMsgWindow(HWND hwnd) {
+  static WNDCLASSEX wcexGame;
+
+  if (!isChildInit[2]) {
+    ZeroMemory(&wcexGame, sizeof(WNDCLASSEX));
+    wcexGame.cbSize = sizeof(WNDCLASSEX);
+    wcexGame.cbClsExtra = 0;
+    wcexGame.cbWndExtra = 0;
+    wcexGame.style = CS_HREDRAW | CS_VREDRAW;
+    wcexGame.hInstance = g_hInstance;
+    wcexGame.hCursor = LoadCursor(NULL, IDC_ARROW);
+    wcexGame.hbrBackground = GetSysColorBrush(COLOR_3DFACE);
+    wcexGame.lpszMenuName = NULL;
+    wcexGame.lpszClassName = _T("GameParameters");
+    wcexGame.lpfnWndProc = WndProcGameMsg;
+    wcexGame.hIcon = NULL;
+    wcexGame.hIconSm = NULL;
+
+    if (!RegisterClassEx(&wcexGame))
+    {
+      MessageBox(NULL,
+        _T("Call to RegisterClassEx failed!"),
+        _T("Windows Desktop Guided Tour"),
+        MB_ICONERROR | MB_OK);
+      return;
+    }
+    else {
+      isChildInit[2] = TRUE;
+    }
+  }
+
+  SetParent(hWndGame, hwnd);
+
+  hWndGame = CreateWindowEx(
+    WS_EX_TOPMOST,
+    wcexGame.lpszClassName,
+    NULL,
+    // WS_CHILD | WS_VISIBLE | WS_VSCROLL,
+    WS_OVERLAPPEDWINDOW | WS_VSCROLL,
+    // CW_USEDEFAULT, CW_USEDEFAULT,
+    0, 400,
+    300, 300,
+    hwnd, // parent/owner window; using the WS_CHILD flag w/ WS_OVERLAPPEDWINDOW or SetParent function makes the window bound to the dimensions of the game window
+    NULL,
+    g_hInstance,
+    NULL
+  );
+
+  if (!hWndGame)
+  {
+    MessageBox(NULL,
+      _T("Game message window creation failed! D:"),
+      _T("Windows Desktop Guided Tour"),
+      MB_ICONERROR | MB_OK);
+    return;
+  }
+
+  ShowWindow(hWndGame, SW_NORMAL);
 }
 
 /**
@@ -1360,6 +1426,15 @@ static void ResetDebugMode(void) {
 // ********************* General Game Logic Helper Functions **********************
 // ********************************************************************************
 
+void DisplayMessage(char *msg) {
+  // technically this could be grouped with the UI/window functions too
+  
+  g_msg = msg;
+
+  // just trigger the wm paint message
+  // RedrawWindow(hWndGame, NULL, NULL, RDW_INVALIDATE | RDW_INTERNALPAINT);
+}
+
 int SelectBabyUnicorn(int pnum, POINT pnt) {
   for (int i = 0; i < 13; i++) {
     if (pnt.y >= BABY_COORDS[i].top && pnt.y <= BABY_COORDS[i].bottom &&
@@ -1395,7 +1470,7 @@ int SelectCard(int pnum, enum Tab *windownum, POINT pnt) {
           pnt.x >= cardSlots[i].x && pnt.x < cardSlots[i].x + cardSlots[i].width &&
           pnt.y >= cardSlots[i].y && pnt.y < cardSlots[i].y + cardSlots[i].height) {
         if (cardSlots[i].source != NULL) {
-          return (pagenum * 7) + i;
+          return ((pagenum - 1) * 7) + i;
         }
       }
     }
@@ -1570,7 +1645,7 @@ static void ClickLobby(POINT pnt) {
 
   for (int i = 0; i < sizeof lobbyButtons / sizeof lobbyButtons[0]; i++) {
     if (pnt.x >= lobbyButtons[i].x && pnt.x < lobbyButtons[i].x + lobbyButtons[i].width &&
-      pnt.y >= lobbyButtons[i].y && pnt.y < lobbyButtons[i].y + lobbyButtons[i].height) {
+        pnt.y >= lobbyButtons[i].y && pnt.y < lobbyButtons[i].y + lobbyButtons[i].height) {
       // left click action
       PlaySound(TEXT("Assets\\Audio\\button-click.wav"), NULL, SND_FILENAME | SND_ASYNC);
       lobbyButtons[i].OnClick(lobbyButtons[i].source);
@@ -1850,7 +1925,7 @@ static void LeaveLobby(void) {
   // menuState will switch in the server file
 }
 
-static void StartGame(void) {
+static void StartGame(HWND hWnd) {
   // user clicked the start button; only the host can properly start the game
   if (!isClient && currentPlayers >= 2) {
     networkToggle ^= 4;
@@ -1858,6 +1933,8 @@ static void StartGame(void) {
   }
 
   // menuState will switch in the server file
+
+  // CreateGameMsgWindow(hWnd);
 }
 
 static void ViewDeck(void) {
@@ -2200,6 +2277,36 @@ static LRESULT CALLBACK WndProcJoin(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
     // string and DrawText computes the character count automatically
     DrawText(hdc, TEXT("Enter valid port number\n(between 1024 and 65535 inclusive):"), -1, &rc, DT_LEFT | DT_WORDBREAK);
     TextOut(hdc, 10, 150, TEXT("Enter room code:"), strlen("Enter room code:"));
+
+    EndPaint(hWnd, &ps);
+    ReleaseDC(hWnd, hdc);
+    break;
+  case WM_DESTROY:
+    isChildOpen = FALSE;
+    break;
+  }
+
+  return DefWindowProc(hWnd, uMsg, wParam, lParam);
+}
+
+static LRESULT CALLBACK WndProcGameMsg(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+  PAINTSTRUCT ps;
+  HDC hdc;
+  RECT rc;
+
+  switch (uMsg)
+  {
+  case WM_CREATE:
+    isChildOpen = TRUE;
+    break;
+  case WM_PAINT:
+    hdc = BeginPaint(hWnd, &ps);
+    SetBkMode(hdc, TRANSPARENT); // box surrounding text is transparent instead of white
+
+    SetRect(&rc, 10, 75, 300, 115);
+    // if nCount is -1, then the lpchText parameter is assumed to be a pointer to a null-terminated string
+    // and DrawText computes the character count automatically
+    DrawText(hdc, g_msg, -1, &rc, DT_LEFT | DT_WORDBREAK);
 
     EndPaint(hWnd, &ps);
     ReleaseDC(hWnd, hdc);

@@ -68,6 +68,11 @@ struct ToolTip {
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 
 /**
+ * @brief Displays game messages to indicate player actions
+ */
+void DisplayMessage(char *msg);
+
+/**
  * @brief Lobby helper function for checking pnt against Baby Unicorn RECTs and selecting the corresponding Baby Unicorn
  * @return 0 Nothing was successfully selected
  * @return 1 A Baby Unicorn was picked by player[pnum]

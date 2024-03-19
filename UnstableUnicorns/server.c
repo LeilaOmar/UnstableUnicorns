@@ -775,6 +775,7 @@ int ServerHost(LPVOID p) {
   // loop until win condition occurs (7 unicorns in stable)
   do {
     // printf("\n*** %s's turn ***\n\n", player[counter].username);
+    DisplayMessage("It's the host's turn!!");
 
     SetCurrPnum(counter);
     networkToggle = 0; // reset this to avoid accidentally queueing up input outside of the player's turn
@@ -782,6 +783,8 @@ int ServerHost(LPVOID p) {
     if (counter == 0) {
       // it's your turn! do your thing :>
       BeginningOfTurn(counter);
+
+      // TODO: update UI and hand/stable count stuff after each action?
 
       while (ActionPhase(counter) == -1) {
         Sleep(20);
