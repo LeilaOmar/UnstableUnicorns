@@ -542,14 +542,10 @@ int Draw(int pnum, int numDrawn) {
 void Discard(int pnum, int numDiscard, int cType) {
   int index = -1;
   enum Tab tab = HAND_TAB;
-  char *end, buf[LINE_MAX];
 
   // repeat for numDiscard times or until the number of cards in hand is zero
   while (player[pnum].hand.numCards > 0 && numDiscard > 0) {
-    // PrintHand(pnum);
     for (;;) {
-      // printf("Pick a valid card number to discard: ");
-      // index = NumInput(buf, &end, sizeof buf) - 1;
       DisplayMessage("Pick a valid card to discard.");
       if (networkToggle & 2) {
         networkToggle ^= 2;
@@ -723,40 +719,27 @@ void Steal(int pnum, int cType) {
 // *************************** Core Game Loop Functions ***************************
 // ********************************************************************************
 
-void PlayCard(int pnum) {
-  int index;
-  char *end, buf[LINE_MAX];
-
-  for (;;) {
-    printf("Pick the card number you'd like to play (non-instant card): ");
-    index = NumInput(buf, &end, sizeof buf) - 1;
-
-    // index validation
-    if (index < 0 || index >= player[pnum].hand.numCards || end != (buf + strlen(buf)))
-      continue;
-
-    // check for instant cards
-    if (player[pnum].hand.cards[index].cType != INSTANT)
-      break;
-  }
-
+void PlayCard(int pnum, int cindex) {
   // get the card ID before rearranging the hand so that enter stable effects
   // don't show the card you just played in your hand
-  struct Unicorn corn = player[pnum].hand.cards[index];
+  struct Unicorn corn = player[pnum].hand.cards[cindex];
   int target_pindex = pnum;
 
   // putting this in advance so that the neigh event stuff would only have to be written once
   if (corn.cType == UPGRADE || corn.cType == DOWNGRADE) {
-    PrintPlayers();
     do {
-      printf("Choose a player to give the upgrade/downgrade card: ");
-      target_pindex = NumInput(buf, &end, sizeof buf) - 1;
-    } while (target_pindex < 0 || target_pindex >= currentPlayers || end != (buf + strlen(buf)));
+      DisplayMessage("Choose a player to give the upgrade/downgrade card.");
+      if (networkToggle & 2) {
+        networkToggle ^= 2;
+        target_pindex = SelectPlayer(clientPnt);
+      }
+      Sleep(20);
+    } while (target_pindex < 0 || target_pindex >= currentPlayers);
   }
 
   // skip over unplayable cards before the neigh prompt so that people don't waste
   // their neighs over nothing
-  if (!Base_ConditionalEffects(pnum, corn, index, target_pindex)) {
+  if (!Base_ConditionalEffects(pnum, corn, cindex, target_pindex)) {
     return;
   }
 
@@ -765,19 +748,19 @@ void PlayCard(int pnum) {
     int ret;
     if (isClient) {
       SendInt(NEIGH_EVENT, sockfd);
-      SendInt(index, sockfd);
+      SendInt(cindex, sockfd);
       SendPlayers(sockfd);
-      ret = ClientNeigh(pnum, pnum, &index);
+      ret = ClientNeigh(pnum, pnum, &cindex);
     }
     else {
-      ret = ServerNeigh(pnum, &index);
+      ret = ServerNeigh(pnum, &cindex);
     }
 
     if (ret & 1) return;
   }
 
   // there were no successful neighs, so play the card!
-  RearrangeHand(pnum, index);
+  RearrangeHand(pnum, cindex);
   switch (corn.cType) {
   case BASICUNICORN:
   case MAGICALUNICORN:
@@ -799,46 +782,32 @@ void PlayCard(int pnum) {
     break;
   default:
     // something went wrong here... there should be no baby unicorns, instant, or typeless cards
-    printf("unicorn type error, please choose a different card\n");
+    DisplayMessage("Unicorn type error, please choose a different card.");
     turnCount++;
     return;
   }
 }
 
 void EndGame(int winningPnum) {
-  printf("\n********************************************************************************\n");
-  Red();
-  printf("\nPlayer Stables\n");
-  ResetCol();
-  PrintStableGrid();
-
-  // https://www.asciiart.eu/mythology/unicorns
-  printf("\n\n"
-    "                    /  \n"
-    "               ,.. /   \n"
-    "             ,'   ';        _____                         _____      _   _ \n"
-    "  ,,.__    _,' /';  .      / ____|                       / ____|    | | | |\n"
-    " :','  ~~~~    '. '~      | |  __  __ _ _ __ ___   ___  | (___   ___| |_| |\n"
-    ":' (   )         )::,     | | |_ |/ _` | '_ ` _ \\ / _ \\  \\___ \\ / _ \\ __| |\n"
-    "'. '. .=----=..-~  .;'    | |__| | (_| | | | | | |  __/  ____) |  __/ |_|_|\n"
-    " '  ;'  ::   ':.  '\"       \\_____|\\__,_|_| |_| |_|\\___| |_____/ \\___|\\__(_)\n"
-    "   (:   ':    ;)       \n"
-    "    \\\\   '\"  ./        \n"
-    "     '\"      '\"     *ASCII unicorn by Dr J   \n"
-    "\n");
+  // TODO: if feeling ambitious enough, make a small little bit-animation :)
+  // TODO: add a win and lose fanfare, like how the mario kart goal results change depending on placement :p
 
   // check if there's still a tie
   if (winningPnum != -1) {
     char winmsg[DESC_SIZE];
     sprintf_s(winmsg, LINE_MAX + 18, "%s won the game!!!\n", player[winningPnum].username);
-    Rainbow(winmsg);
+    DisplayMessage(winmsg);
   }
   else {
-    Blue();
-    printf("The game ended in a tie! Nobody wins :(\n");
-    ResetCol();
+    DisplayMessage("The game ended in a tie! Nobody wins :(");
   }
 
-  printf("\nPress any key to close the window...");
-  exit(0);
+  // stall until prompted to quit
+  // TODO: add a button to return instead of just returning on ANY click
+  while (!networkToggle) {
+    Sleep(20);
+  }
+
+  menuState = TITLEBLANK;
+  ExitThread(0);
 }

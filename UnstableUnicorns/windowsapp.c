@@ -1463,6 +1463,8 @@ int SelectBabyUnicorn(int pnum, POINT pnt) {
 }
 
 int SelectCard(int pnum, enum Tab *windownum, POINT pnt) {
+  // TODO: add a different sound effect here
+
   if (tabnum == *windownum ||
       (*windownum == ACTION_TAB && pnt.y > debugButtons[DECK_TAB].y + debugButtons[DECK_TAB].height)) {
     for (int i = 0; i < sizeof cardSlots / sizeof cardSlots[0]; i++) {
@@ -1483,6 +1485,19 @@ int SelectCard(int pnum, enum Tab *windownum, POINT pnt) {
   }
 
   return -2;
+}
+
+int SelectPlayer(POINT pnt) {
+  // TODO: add a different sound effect here
+
+  for (int i = 0; i < currentPlayers; i++) {
+    if (pnt.x >= playerNums[i].x && pnt.x < playerNums[i].x + playerNums[i].width &&
+        pnt.y >= playerNums[i].y && pnt.y < playerNums[i].y + playerNums[i].height) {
+      return i;
+    }
+  }
+
+  return -1;
 }
 
 void SetTabs(int pnum) {

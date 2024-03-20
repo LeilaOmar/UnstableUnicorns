@@ -88,6 +88,13 @@ int SelectBabyUnicorn(int pnum, POINT pnt);
 int SelectCard(int pnum, enum Tab *windownum, POINT pnt);
 
 /**
+ * @brief Selects the player to be affected by the relevant action
+ * @return == -1 No valid player was selected
+ * @return >=  0 Returns the player index of the targeted person
+ */
+int SelectPlayer(POINT pnt);
+
+/**
  * @brief Sets the starting tab display window to show your own hand
  */
 void SetTabs(int pnum);

@@ -179,7 +179,7 @@ void Steal(int pnum, int cType);
 /**
  * @brief Plays a card from player[pnum]'s hand during their turn
  */
-void PlayCard(int pnum);
+void PlayCard(int pnum, int cindex);
 
 /**
  * @param winningPnum Value = [0-7]: The winning player number; Value = -1: tie

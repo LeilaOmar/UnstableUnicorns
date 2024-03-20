@@ -24,12 +24,11 @@ int ActionPhase(int pnum) {
       networkToggle ^= 2;
       cindex = SelectCard(pnum, &tab, clientPnt);
     }
-    // index = NumInput(buf, &end, sizeof buf);
 
     if (cindex < -1)
       return -1;
     else if (cindex >= 0)
-      PlayCard(pnum); // TODO: include cindex as a param
+      PlayCard(pnum, cindex);
     else
       Draw(pnum, 1);
 
