@@ -20,8 +20,8 @@ int ActionPhase(int pnum) {
   int cindex = -2;
 
   while (moveCount > 0) {
-    if (networkToggle & 2) {
-      networkToggle ^= 2;
+    if (networkToggle == CLICK_CARD) {
+      networkToggle = 0;
       cindex = SelectCard(pnum, &tab, clientPnt);
     }
 

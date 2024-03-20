@@ -670,11 +670,11 @@ int ServerHost(LPVOID p) {
 
     // this should only activate once per action, so toggle the var again at the end
     // theoretically, only one flag should be active at a time; both being active at the same time signifies some serious issues (like the out of range bug)
-    if (networkToggle & 1) {
+    if (networkToggle == CLICK_LEAVE) {
       // clicked the leave button; udpfd was already closed in the main thread
       closesocket(sockfd);
       menuState = TITLEBLANK;
-      networkToggle ^= 1;
+      networkToggle = 0;
 
       // close all client fd's
       for (int i = 0; i < currentPlayers - 1; i++) {
@@ -691,16 +691,16 @@ int ServerHost(LPVOID p) {
       currentPlayers = 1;
       return 1;
     }
-    else if (networkToggle & 2) {
+    else if (networkToggle == CLICK_CARD) {
       // host changed their baby unicorn and must send the updated list to every client
       for (int i = 0; i < currentPlayers - 1; i++) {
         SendInt(INCOMING_MSG, clientsockfd[i]);
         SendLobbyPacket(currentPlayers, i + 1, clientsockfd[i]);
       }
-      networkToggle ^= 2;
+      networkToggle = 0;
     }
-    else if (networkToggle & 4) {
-      networkToggle ^= 4;
+    else if (networkToggle == CLICK_START) {
+      networkToggle = 0;
 
       int isvalid = 1;
       for (int i = 0; i < currentPlayers; i++) {

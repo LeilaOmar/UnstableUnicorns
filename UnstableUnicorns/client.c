@@ -481,22 +481,22 @@ int ClientJoin(LPVOID p) {
 
     // this should only activate once per action, so toggle the var again at the end
     // theoretically only one flag should be active at a time
-    if (networkToggle & 1) {
+    if (networkToggle == CLICK_LEAVE) {
       // clicked the leave button
       closesocket(sockfd);
       menuState = TITLEBLANK;
-      networkToggle ^= 1;
+      networkToggle = 0;
       memset(pselect, 0, sizeof pselect);
       return 1;
     }
-    else if (networkToggle & 2) {
+    else if (networkToggle == CLICK_CARD) {
       // client clicked somewhere and must send the point info to the server
       // to check whether or not they clicked a valid baby unicorn
       // TODO: (low priority) only send point when it's on a baby unicorn square;
       // could make another helper function for SelectBabyUnicorn that returns the unicorn index
       SendInt(clientPnt.x, sockfd);
       SendInt(clientPnt.y, sockfd);
-      networkToggle ^= 2;
+      networkToggle = 0;
     }
 
     Sleep(20);

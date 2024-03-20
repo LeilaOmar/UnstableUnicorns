@@ -1466,6 +1466,7 @@ int SelectCard(int pnum, enum Tab *windownum, POINT pnt) {
   // TODO: add a different sound effect here
 
   if (tabnum == *windownum ||
+      ((tabnum == UNICORN_TAB || tabnum == UPGRADE_TAB) && *windownum == STABLE_TAB) ||
       (*windownum == ACTION_TAB && pnt.y > debugButtons[DECK_TAB].y + debugButtons[DECK_TAB].height)) {
     for (int i = 0; i < sizeof cardSlots / sizeof cardSlots[0]; i++) {
       if (pnum == pnumindex &&
@@ -1611,53 +1612,6 @@ static void ClickLobby(POINT pnt) {
   // TODO: implement this with R-trees (specifically because the selectbabyunicorn function
   // has a lot of "buttons") so that it's more optimally chunked into bigger pieces
 
-  // TODO: use a mutex to selectively access currentPlayers, networkToggle, and clientPnt
-  // DWORD waitResult;
-  // waitResult = WaitForSingleObject(
-  //   mutex,      // mutex handle
-  //   INFINITE);  // no time-out interval
-  // 
-  // switch (waitResult) {
-  // case WAIT_OBJECT_0:
-  //   if (pnt.y >= 590 && pnt.y <= 639) {
-  //     if (pnt.x >= 360 && pnt.x <= 549) {
-  //       // user clicked the leave button
-  //       networkToggle ^= 1;
-  //       if (!isClient) {
-  //         closesocket(udpfd);
-  //       }
-  //       return;
-  //     }
-  //     else if (pnt.x >= 120 && pnt.x <= 309) {
-  //       // user clicked the start button; only the host can properly start the game
-  //       if (!isClient && currentPlayers >= 2) {
-  //         networkToggle ^= 4;
-  //         closesocket(udpfd);
-  //       }
-  //       return;
-  //     }
-  //   }
-  // 
-  //   if (isClient) {
-  //     clientPnt = pnt;
-  //     networkToggle ^= 2;
-  //   }
-  //   else {
-  //     ret = SelectBabyUnicorn(0, pnt); // server is always player index 0
-  //     if (ret) {
-  //       networkToggle ^= 2;
-  //     }
-  //   }
-  // 
-  //   if (!ReleaseMutex(mutex)) {
-  //     // handle error
-  //   }
-  //   break;
-  // case WAIT_ABANDONED:
-  //   // thread holding the mutex was killed rip in peace :'(
-  //   return;
-  // }
-
   for (int i = 0; i < sizeof lobbyButtons / sizeof lobbyButtons[0]; i++) {
     if (pnt.x >= lobbyButtons[i].x && pnt.x < lobbyButtons[i].x + lobbyButtons[i].width &&
         pnt.y >= lobbyButtons[i].y && pnt.y < lobbyButtons[i].y + lobbyButtons[i].height) {
@@ -1670,13 +1624,13 @@ static void ClickLobby(POINT pnt) {
 
   if (isClient) {
     clientPnt = pnt;
-    networkToggle ^= 2;
+    networkToggle = CLICK_CARD;
   }
   else {
     ret = SelectBabyUnicorn(0, pnt); // server is always player index 0
     if (ret && currentPlayers >= 2) {
       // only toggle it when there are actual players or else it won't untoggle on its own
-      networkToggle ^= 2;
+      networkToggle = CLICK_CARD;
     }
   }
 }
@@ -1698,7 +1652,7 @@ static void ClickDebug(POINT pnt) {
       debugButtons[i].OnClick(debugButtons[i].source);
 
       moveCount = 1;
-      networkToggle ^= 2;
+      networkToggle = CLICK_CARD;
       clientPnt = pnt;
       ActionPhase(0);
       return;
@@ -1732,9 +1686,9 @@ static void ClickDebug(POINT pnt) {
 
 static void ClickGame(POINT pnt) {
   // signal the game thread to select a card w/ the point
-  // TODO: actually use a mutex here >.<
-  networkToggle ^= 2;
+  // TODO: actually use a mutex for clientPnt and networkToggle >.<
   clientPnt = pnt;
+  networkToggle = CLICK_CARD; // the proper coordinate check is in the SelectCard function, no need to do it twice
 
   // general tab buttons
   for (int i = 0; i < sizeof debugButtons / sizeof debugButtons[0]; i++) {
@@ -1765,6 +1719,7 @@ static void ClickGame(POINT pnt) {
         tabnum = UNICORN_TAB;
       }
 
+      networkToggle = CLICK_PLAYER;
       PlaySound(TEXT("Assets\\Audio\\button-click.wav"), NULL, SND_FILENAME | SND_ASYNC);
       return;
     }
@@ -1942,7 +1897,7 @@ static void JoinGeneration(HWND hWnd) {
 
 static void LeaveLobby(void) {
   // user clicked the leave button
-  networkToggle ^= 1;
+  networkToggle = CLICK_LEAVE;
   if (!isClient) {
     closesocket(udpfd);
   }
@@ -1953,7 +1908,7 @@ static void LeaveLobby(void) {
 static void StartGame(HWND hWnd) {
   // user clicked the start button; only the host can properly start the game
   if (!isClient && currentPlayers >= 2) {
-    networkToggle ^= 4;
+    networkToggle = CLICK_START;
     closesocket(udpfd);
   }
 
@@ -1965,7 +1920,7 @@ static void StartGame(HWND hWnd) {
 static void ViewDeck(void) {
   // the deck should only be viewable during special card events (e.g. classy narwhal allowing the player to pick an upgrade card from the deck)
   // this checks against a random magic number for now, but it will be changed once the implementation is sorted out
-  if (((networkToggle & 255) == 255) || menuState == DEBUGMODE) {
+  if (networkToggle == 255 || menuState == DEBUGMODE) {
     tabnum = DECK_TAB;
     pagenum = 1;
   }

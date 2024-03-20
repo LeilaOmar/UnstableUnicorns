@@ -547,8 +547,8 @@ void Discard(int pnum, int numDiscard, int cType) {
   while (player[pnum].hand.numCards > 0 && numDiscard > 0) {
     for (;;) {
       DisplayMessage("Pick a valid card to discard.");
-      if (networkToggle & 2) {
-        networkToggle ^= 2;
+      if (networkToggle == CLICK_CARD) {
+        networkToggle = 0;
         index = SelectCard(pnum, &tab, clientPnt);
       }
 
@@ -608,41 +608,41 @@ int Sacrifice(int pnum, int cType) {
 }
 
 void Destroy(int pnum, int cType, int isMagicCard) {
-  int pindex, cindex, isvalid = 0;
-  char *end, buf[LINE_MAX];
+  int pindex = -1, cindex = -1, isvalid = 0;
+  enum Tab tab;
 
-  PrintPlayers();
+  // TODO: this seems quite messy, especially when considering the display window code.
+  // may have to combine the unicorn and upgrade/downgrade tabs after all??
+  if (cType == ANY)
+    tab = STABLE_TAB;
+  else if (CheckType(ANYUNICORN, cType))
+    tab = UNICORN_TAB;
+  else if (cType == UPGRADE || cType == DOWNGRADE)
+    tab = UPGRADE_TAB;
+
   do {
-    printf("Choose a player to destroy from: ");
-    pindex = NumInput(buf, &end, sizeof buf) - 1;
+    DisplayMessage("Choose a card to destroy from another player's stable.");
+    if (networkToggle == CLICK_PLAYER) {
+      networkToggle = 0;
+      pindex = SelectPlayer(clientPnt);
+    }
+    else if (networkToggle == CLICK_CARD && pindex != -1 && pindex != pnum) {
+      networkToggle = 0;
+      cindex = SelectCard(pindex, &tab, clientPnt);
+    }
+
+    Sleep(20);
 
     // index validation
     if (pindex < 0 || pindex >= currentPlayers || pindex == pnum ||
-        end != (buf + strlen(buf)))
+        cindex < 0 || cindex >= player[pindex].stable.size)
       continue;
 
-    for (int i = 0; i < player[pindex].stable.size; i++) {
-      if (CanBeDestroyed(pindex, i, cType, isMagicCard)) {
-        isvalid = 1;
-        break;
-      }
+    if (CanBeDestroyed(pindex, cindex, cType, isMagicCard)) {
+      isvalid = 1;
+      break;
     }
   } while (!isvalid);
-
-  PrintStable(pindex);
-  do {
-    printf("Choose the card number to destroy: ");
-    cindex = NumInput(buf, &end, sizeof buf) - 1;
-
-    // input validation
-    if (cindex < 0 || cindex >= player[pindex].stable.size || end != (buf + strlen(buf)))
-      continue;
-
-    // check for cType stuff
-    if (!CanBeDestroyed(pindex, cindex, cType, isMagicCard)) {
-      cindex = -1;
-    }
-  } while (cindex < 0 || cindex >= player[pindex].stable.size || end != (buf + strlen(buf)));
 
   if (player[pindex].stable.unicorns[cindex].species == NOSPECIES) {
     // Base_SacrificeDestroyEffects(pindex, cindex, player[pindex].stable.unicorns[cindex].effect);
@@ -729,8 +729,8 @@ void PlayCard(int pnum, int cindex) {
   if (corn.cType == UPGRADE || corn.cType == DOWNGRADE) {
     do {
       DisplayMessage("Choose a player to give the upgrade/downgrade card.");
-      if (networkToggle & 2) {
-        networkToggle ^= 2;
+      if (networkToggle == CLICK_PLAYER) {
+        networkToggle = 0;
         target_pindex = SelectPlayer(clientPnt);
       }
       Sleep(20);
@@ -790,7 +790,7 @@ void PlayCard(int pnum, int cindex) {
 
 void EndGame(int winningPnum) {
   // TODO: if feeling ambitious enough, make a small little bit-animation :)
-  // TODO: add a win and lose fanfare, like how the mario kart goal results change depending on placement :p
+  // TODO: add a win and a lose fanfare, like how the mario kart goal results change depending on placement :p
 
   // check if there's still a tie
   if (winningPnum != -1) {
