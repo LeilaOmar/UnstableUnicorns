@@ -24,7 +24,7 @@ int twofer_basic_check(void) {
   assert((player[0].flags & YAY) == YAY);
   PlayCard(0);
 
-  if (turnCount != 1) {
+  if (moveCount != 1) {
     num_fails++;
     Red();
     fprintf(stderr, "    sanity test: turn count failed\n");
@@ -76,7 +76,7 @@ int twofer_empty_check(void) {
   assert(player[1].stable.size == 2);
   ret = Base_ConditionalEffects(0, twofer_tmp, 0, 0);
 
-  if (turnCount != 2 || ret != 0) {
+  if (moveCount != 2 || ret != 0) {
     num_fails++;
     Red();
     fprintf(stderr, "    empty sacrifice test: turn count failed\n");
@@ -96,7 +96,7 @@ int twofer_empty_check(void) {
   assert(player[1].stable.size == 2);
   ret = Base_ConditionalEffects(0, twofer_tmp, 0, 0);
 
-  if (turnCount != 2 || ret != 0) {
+  if (moveCount != 2 || ret != 0) {
     num_fails++;
     Red();
     fprintf(stderr, "    empty destroy test: turn count failed\n");
@@ -116,7 +116,7 @@ int twofer_empty_check(void) {
   assert(player[1].stable.size == 2);
   ret = Base_ConditionalEffects(0, twofer_tmp, 0, 0);
 
-  if (turnCount != 2 || ret != 0) {
+  if (moveCount != 2 || ret != 0) {
     num_fails++;
     Red();
     fprintf(stderr, "    incomplete destroy test: turn count failed\n");

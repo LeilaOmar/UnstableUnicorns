@@ -18,7 +18,7 @@ int luck_basic_check(void) {
   assert(player[0].flags == YAY);
   PlayCard(0);
 
-  if (turnCount != 2) {
+  if (moveCount != 2) {
     num_fails++;
     Red();
     fprintf(stderr, "    sanity test: turn count failed\n");

@@ -17,7 +17,7 @@ int re_target_upgrade_check(void) {
   ret = Base_ConditionalEffects(0, target_tmp, 0, 0);
   if (ret) Base_MagicEffects(0, target_tmp.effect);
 
-  if (turnCount != 1 || ret != 1) {
+  if (moveCount != 1 || ret != 1) {
     num_fails++;
     Red();
     fprintf(stderr, "    upgrade test: turn count failed\n");
@@ -63,7 +63,7 @@ int re_target_downgrade_check(void) {
   ret = Base_ConditionalEffects(0, target_tmp, 0, 0);
   if (ret) Base_MagicEffects(0, target_tmp.effect);
 
-  if (turnCount != 1 || ret != 1) {
+  if (moveCount != 1 || ret != 1) {
     num_fails++;
     Red();
     fprintf(stderr, "    downgrade test: turn count failed\n");
@@ -109,7 +109,7 @@ int re_target_empty_check(void) {
   assert(player[1].stable.size == 1);
   ret = Base_ConditionalEffects(0, target_tmp, 0, 0);
 
-  if (turnCount != 2 || ret != 0) {
+  if (moveCount != 2 || ret != 0) {
     num_fails++;
     Red();
     fprintf(stderr, "    empty test: turn count failed\n");

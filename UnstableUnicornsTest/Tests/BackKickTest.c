@@ -122,7 +122,7 @@ int back_kick_empty_stable_check(void) {
   assert(player[1].stable.numUnicorns == 0);
   ret = Base_ConditionalEffects(0, back_kick_tmp, 0, 0);
 
-  if (turnCount != 2 || ret != 0) {
+  if (moveCount != 2 || ret != 0) {
     num_fails++;
     Red();
     fprintf(stderr, "    empty stable test: turn count failed\n");

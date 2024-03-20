@@ -19,7 +19,7 @@ int queen_bee_basic_check(void) {
 
   Base_EnterStableEffects(1, player[1].stable.unicorns[0].effect);
 
-  assert(turnCount == 1);
+  assert(moveCount == 1);
   player[0].flags |= YAY;
   player[2].flags |= YAY;
 
@@ -27,7 +27,7 @@ int queen_bee_basic_check(void) {
   PlayCard(2);
 
   // it should go up twice because both player[0] and player[2] were unable to play basic unicorns
-  if (turnCount != 3) {
+  if (moveCount != 3) {
     num_fails++;
     Red();
     fprintf(stderr, "    sanity test: turn count failed\n");

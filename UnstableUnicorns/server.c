@@ -779,6 +779,7 @@ int ServerHost(LPVOID p) {
 
     SetCurrPnum(counter);
     networkToggle = 0; // reset this to avoid accidentally queueing up input outside of the player's turn
+    totalTurns++;
 
     if (counter == 0) {
       // it's your turn! do your thing :>

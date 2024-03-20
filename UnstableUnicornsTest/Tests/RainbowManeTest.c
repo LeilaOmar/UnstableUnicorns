@@ -16,7 +16,7 @@ int rainbow_mane_basic_check(void) {
   assert(player[0].flags == YAY);
   PlayCard(0);
 
-  if (turnCount != 1) {
+  if (moveCount != 1) {
     num_fails++;
     Red();
     fprintf(stderr, "    sanity test: turn count failed\n");
@@ -61,7 +61,7 @@ int rainbow_mane_empty_check(void) {
   assert(player[0].stable.size == 0);
   ret = Base_ConditionalEffects(0, rainmane_tmp, 0, 0);
 
-  if (turnCount != 2 || ret != 0) {
+  if (moveCount != 2 || ret != 0) {
     num_fails++;
     Red();
     fprintf(stderr, "    empty stable test: turn count failed\n");

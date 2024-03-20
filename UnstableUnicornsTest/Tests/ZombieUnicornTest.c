@@ -30,7 +30,7 @@ int zombie_basic_check(void) {
     ResetCol();
   }
 
-  if (turnCount != -1) {
+  if (moveCount != -1) {
     num_fails++;
     Red();
     fprintf(stderr, "    sanity test: turn count failed\n");
@@ -71,7 +71,7 @@ int zombie_invalid_hand_check(void) {
     ResetCol();
   }
 
-  if (turnCount <= 0) {
+  if (moveCount <= 0) {
     num_fails++;
     Red();
     fprintf(stderr, "    invalid hand test: turn count failed\n");
@@ -113,7 +113,7 @@ int zombie_invalid_discard_check(void) {
     ResetCol();
   }
 
-  if (turnCount <= 0) {
+  if (moveCount <= 0) {
     num_fails++;
     Red();
     fprintf(stderr, "    invalid discard pile test 3 failed\n");

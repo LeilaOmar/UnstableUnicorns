@@ -514,6 +514,7 @@ int ClientJoin(LPVOID p) {
 
     SetCurrPnum(counter);
     networkToggle = 0; // reset this to avoid accidentally queueing up input outside of the player's turn
+    totalTurns++;
 
     if (counter == clientpnum) {
       // it's your turn! do your thing :>

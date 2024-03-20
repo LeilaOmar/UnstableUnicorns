@@ -59,7 +59,7 @@ int blinding_beginning_turn_check(void) {
 
   Base_BeginningTurnEffects(0, dutch_tmp);
 
-  if (turnCount != 2) {
+  if (moveCount != 2) {
     num_fails++;
     Red();
     fprintf(stderr, "    beginning turn (non-unicorn) test: turn count failed\n");
@@ -116,7 +116,7 @@ int blinding_enter_stable_check(void) {
   assert(player[0].flags == BLINDING_LIGHT);
   ret = Base_ConditionalEffects(0, tail_tmp, 0, 0);
 
-  if (turnCount != 2 || ret != 0) {
+  if (moveCount != 2 || ret != 0) {
     num_fails++;
     Red();
     fprintf(stderr, "    enter stable (non-unicorn) test: turn count failed\n");

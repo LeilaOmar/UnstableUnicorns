@@ -40,7 +40,7 @@ int reset_button_basic_check(void) {
   ret = Base_ConditionalEffects(0, reset_tmp, 0, 0);
   if (ret) Base_MagicEffects(0, reset_tmp.effect);
 
-  if (turnCount != 1 || ret != 1) {
+  if (moveCount != 1 || ret != 1) {
     num_fails++;
     Red();
     fprintf(stderr, "    sanity test: turn count failed\n");
@@ -112,7 +112,7 @@ int reset_button_empty_upgrade_check(void) {
   assert(player[1].stable.size == 2);
   ret = Base_ConditionalEffects(0, reset_tmp, 0, 0);
 
-  if (turnCount != 2 || ret != 0) {
+  if (moveCount != 2 || ret != 0) {
     num_fails++;
     Red();
     fprintf(stderr, "    empty upgrade test (player[0]): turn count failed\n");
@@ -148,7 +148,7 @@ int reset_button_empty_downgrade_check(void) {
   assert(player[1].stable.numUnicorns == 0);
   ret = Base_ConditionalEffects(0, reset_tmp, 0, 0);
 
-  if (turnCount != 2 || ret != 0) {
+  if (moveCount != 2 || ret != 0) {
     num_fails++;
     Red();
     fprintf(stderr, "    empty downgrade test (player[0]): turn count failed\n");
@@ -184,7 +184,7 @@ int reset_button_empty_other_check(void) {
   assert(player[1].stable.size == 1);
   ret = Base_ConditionalEffects(0, reset_tmp, 0, 0);
 
-  if (turnCount != 2 || ret != 0) {
+  if (moveCount != 2 || ret != 0) {
     num_fails++;
     Red();
     fprintf(stderr, "    empty stable test (player[1]): turn count failed\n");

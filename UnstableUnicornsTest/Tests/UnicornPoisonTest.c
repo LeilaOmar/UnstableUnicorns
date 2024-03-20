@@ -14,13 +14,13 @@ int poison_basic_check(void) {
   Base_ToggleFlags(0, YAY_EFFECT);
   player[0].hand.cards[player[0].hand.numCards++] = poison_tmp;
 
-  assert(turnCount == 1);
+  assert(moveCount == 1);
   assert(discardpile.size == 0);
   assert(player[0].hand.numCards == 1);
   assert(player[0].flags == YAY);
   PlayCard(0);
 
-  if (turnCount != 1) {
+  if (moveCount != 1) {
     num_fails++;
     Red();
     fprintf(stderr, "    sanity test: turn count failed\n");
@@ -117,11 +117,11 @@ int poison_empty_check(void) {
   player[0].hand.cards[player[0].hand.numCards++] = poison_tmp;
 
   int ret;
-  assert(turnCount == 1);
+  assert(moveCount == 1);
   assert(player[1].stable.numUnicorns == 0);
   ret = Base_ConditionalEffects(0, poison_tmp, 0, 0);
 
-  if (turnCount != 2 || ret != 0) {
+  if (moveCount != 2 || ret != 0) {
     num_fails++;
     Red();
     fprintf(stderr, "    non-unicorn test: turn count failed\n");

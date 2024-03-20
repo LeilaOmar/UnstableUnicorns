@@ -650,7 +650,7 @@ int Base_ConditionalEffects(int pnum, struct Unicorn corn, int hindex, int upgra
       printf(
         "You are unable to play 'Back Kick' because there are no cards "
         "in other player's stables\n");
-      turnCount++;
+      moveCount++;
       return 0;
     }
 
@@ -672,7 +672,7 @@ int Base_ConditionalEffects(int pnum, struct Unicorn corn, int hindex, int upgra
       printf(
         "You are unable to play 'Blatant Thievery' because no other "
         "players have any cards in their hands\n");
-      turnCount++;
+      moveCount++;
       return 0;
     }
 
@@ -689,7 +689,7 @@ int Base_ConditionalEffects(int pnum, struct Unicorn corn, int hindex, int upgra
       printf(
         "You are unable to play 'Change of Luck' because you would not "
         "have 3 cards in total to Discard\n");
-      turnCount++;
+      moveCount++;
       return 0;
     }
 
@@ -708,7 +708,7 @@ int Base_ConditionalEffects(int pnum, struct Unicorn corn, int hindex, int upgra
     printf(
       "You are unable to play 'Extra Tail' because there aren't any "
       "Basic Unicorn cards in the chosen player's stable\n");
-    turnCount++;
+    moveCount++;
     return 0;
   }
   case GLITTER_TORNADO:
@@ -728,7 +728,7 @@ int Base_ConditionalEffects(int pnum, struct Unicorn corn, int hindex, int upgra
       printf(
         "You are unable to play 'Glitter Tornado' because all players do "
         "not have at least 1 card in their stables\n");
-      turnCount++;
+      moveCount++;
       return 0;
     }
 
@@ -744,7 +744,7 @@ int Base_ConditionalEffects(int pnum, struct Unicorn corn, int hindex, int upgra
       printf(
         "You are unable to play 'Mystical Vortex' because you don't have any "
         "cards to Discard\n");
-      turnCount++;
+      moveCount++;
       return 0;
     }
 
@@ -763,7 +763,7 @@ int Base_ConditionalEffects(int pnum, struct Unicorn corn, int hindex, int upgra
     printf(
       "You are unable to play 'Rainbow Mane' because there aren't any "
       "Basic Unicorn cards in the chosen player's stable\n");
-    turnCount++;
+    moveCount++;
     return 0;
   }
   case RE_TARGET:
@@ -787,7 +787,7 @@ int Base_ConditionalEffects(int pnum, struct Unicorn corn, int hindex, int upgra
       printf(
         "You are unable to play 'Re-Target' because there are no Upgrade "
         "or Downgrade cards in place\n");
-      turnCount++;
+      moveCount++;
       return 0;
     }
 
@@ -832,7 +832,7 @@ int Base_ConditionalEffects(int pnum, struct Unicorn corn, int hindex, int upgra
       printf(
         "You are unable to play 'Reset Button' because there are not enough Upgrade "
         "or Downgrade cards in your own stable and/or other people's stables to sacrifice.\n");
-      turnCount++;
+      moveCount++;
       return 0;
     }
 
@@ -859,7 +859,7 @@ int Base_ConditionalEffects(int pnum, struct Unicorn corn, int hindex, int upgra
       printf(
         "You are unable to play 'Targeted Destruction' because there are "
         "no Upgrade or Downgrade cards in place\n");
-      turnCount++;
+      moveCount++;
       return 0;
     }
 
@@ -887,7 +887,7 @@ int Base_ConditionalEffects(int pnum, struct Unicorn corn, int hindex, int upgra
       printf(
         "You are unable to play 'Two-For-One' because there are "
         "not enough cards to Sacrifice and/or Destroy\n");
-      turnCount++;
+      moveCount++;
       return 0;
     }
 
@@ -909,7 +909,7 @@ int Base_ConditionalEffects(int pnum, struct Unicorn corn, int hindex, int upgra
       printf(
         "You are unable to play 'Unfair Bargain' because no other "
         "players have any cards in their hands\n");
-      turnCount++;
+      moveCount++;
       return 0;
     }
 
@@ -928,7 +928,7 @@ int Base_ConditionalEffects(int pnum, struct Unicorn corn, int hindex, int upgra
       printf(
         "You are unable to play 'Unicorn Poison' because there are "
         "no available cards to Destroy\n");
-      turnCount++;
+      moveCount++;
       return 0;
     }
 
@@ -966,7 +966,7 @@ int Base_ConditionalEffects(int pnum, struct Unicorn corn, int hindex, int upgra
       printf(
         "You are unable to play 'Unicorn Shrinkray' because there aren't "
         "enough available Baby Unicorns to replace any player's stable\n");
-      turnCount++;
+      moveCount++;
       return 0;
     }
 
@@ -993,7 +993,7 @@ int Base_ConditionalEffects(int pnum, struct Unicorn corn, int hindex, int upgra
         !isvalid) {
       printf(
         "You are unable to play 'Unicorn Swap' because there are not enough Unicorn cards to swap.\n");
-      turnCount++;
+      moveCount++;
       return 0;
     }
 
@@ -1008,7 +1008,7 @@ int Base_ConditionalEffects(int pnum, struct Unicorn corn, int hindex, int upgra
     (player[pnum].flags & QUEEN_BEE_UNICORN) != 0) {
     printf("%s is unable to play Basic Unicorns due to someone else's "
       "Queen Bee Unicorn\n", player[pnum].username);
-    turnCount++;
+    moveCount++;
     return 0;
   }
   // broken stable flag check
@@ -1017,7 +1017,7 @@ int Base_ConditionalEffects(int pnum, struct Unicorn corn, int hindex, int upgra
     printf(
       "%s is unable to play Upgrade cards due to the card "
       "Broken Stable's effect\n", player[pnum].username);
-    turnCount++;
+    moveCount++;
     return 0;
   }
 
@@ -1530,7 +1530,7 @@ void Base_MagicEffects(int pnum, int effect) {
     // end of turn phase and restart a new beginning of turn phase
     EndOfTurn(pnum);
     BeginningOfTurn(pnum);
-    turnCount++; // turnCount++ is for restarting the action phase too
+    moveCount++; // moveCount++ is for restarting the action phase too
     break;
   }
   case GLITTER_TORNADO:
@@ -2002,7 +2002,7 @@ void Base_BeginningTurnEffects(int pnum, struct Unicorn corn) {
     // Playing Double Dutch:
     // You may play 2 cards during your Action phase
 
-    turnCount++;
+    moveCount++;
     break;
   }
   case EXTRA_TAIL:
@@ -2125,7 +2125,7 @@ void Base_BeginningTurnEffects(int pnum, struct Unicorn corn) {
 
     if (ans == 'y') {
       Destroy(pnum, ANYUNICORN, FALSE);
-      turnCount = -1;
+      moveCount = -1;
     }
     break;
   }
@@ -2318,9 +2318,9 @@ void Base_BeginningTurnEffects(int pnum, struct Unicorn corn) {
       AddStable(pnum, discardpile.cards[index]);
       RearrangePile(&discardpile, index);
 
-      // reduce turnCount in favor of "ending turn," especially since there might
+      // reduce moveCount in favor of "ending turn," especially since there might
       // be multiple "beginning of turn" effects that could be played
-      turnCount = -1;
+      moveCount = -1;
     }
     break;
   }

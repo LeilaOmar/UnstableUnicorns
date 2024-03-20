@@ -81,7 +81,8 @@ extern struct Deck nursery;
 extern struct Deck discardpile;
 extern struct Player player[MAX_PLAYERS];
 extern int currentPlayers;
-extern int turnCount;
+extern int moveCount;
+extern int totalTurns;
 extern int WIN_CONDITION;
 
 // ********************************************************************************

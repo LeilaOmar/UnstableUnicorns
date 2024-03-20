@@ -12,7 +12,7 @@ int dutch_basic_check(void) {
   Base_BeginningTurnEffects(0, dutch_tmp);
 
   // first, check the turn count
-  if (turnCount != 2) {
+  if (moveCount != 2) {
     num_fails++;
     Red();
     fprintf(stderr, "    sanity test: pre-phase turn count failed\n");
@@ -27,7 +27,7 @@ int dutch_basic_check(void) {
 
   ActionPhase(0);
 
-  if (turnCount != 0) {
+  if (moveCount != 0) {
     num_fails++;
     Red();
     fprintf(stderr, "    sanity test: post-phase turn count failed\n");

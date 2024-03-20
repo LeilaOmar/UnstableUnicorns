@@ -19,7 +19,7 @@ int rainbow_aura_basic_check(void) {
   assert(player[0].flags == RAINBOW_AURA);
   ret = Base_ConditionalEffects(1, poison_tmp, 0, 1);
 
-  if (turnCount != 2 || ret != 0) {
+  if (moveCount != 2 || ret != 0) {
     num_fails++;
     Red();
     fprintf(stderr, "    sanity test: turn count failed\n");

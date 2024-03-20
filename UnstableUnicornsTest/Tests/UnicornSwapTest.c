@@ -21,7 +21,7 @@ int unicorn_swap_basic_check(void) {
   ret = Base_ConditionalEffects(0, swap_tmp, 0, 0);
   if (ret) Base_MagicEffects(0, swap_tmp.effect);
 
-  if (turnCount != 1 || ret != 1) {
+  if (moveCount != 1 || ret != 1) {
     num_fails++;
     Red();
     fprintf(stderr, "    sanity test: turn count failed\n");
@@ -141,7 +141,7 @@ int unicorn_swap_empty_check(void) {
   assert(player[0].hand.numCards == 1);
   ret = Base_ConditionalEffects(0, swap_tmp, 0, 0);
 
-  if (turnCount != 2 || ret != 0) {
+  if (moveCount != 2 || ret != 0) {
     num_fails++;
     Red();
     fprintf(stderr, "    empty stable test (player[0]): turn count failed\n");
@@ -163,7 +163,7 @@ int unicorn_swap_empty_check(void) {
   ret = Base_ConditionalEffects(0, swap_tmp, 0, 0);
   if (ret) Base_MagicEffects(0, swap_tmp.effect);
 
-  if (turnCount != 1 || ret != 1) {
+  if (moveCount != 1 || ret != 1) {
     num_fails++;
     Red();
     fprintf(stderr, "    empty stable test (player[1]): turn count failed\n");
@@ -204,7 +204,7 @@ int unicorn_swap_masquerade_check(void) {
   assert(player[0].flags == PANDAMONIUM);
   ret = Base_ConditionalEffects(0, swap_tmp, 0, 0);
 
-  if (turnCount != 2 || ret != 0) {
+  if (moveCount != 2 || ret != 0) {
     num_fails++;
     Red();
     fprintf(stderr, "    PANDAMONIUM test (player[0]): turn count failed\n");
@@ -225,7 +225,7 @@ int unicorn_swap_masquerade_check(void) {
   assert(player[1].flags == PANDAMONIUM);
   ret = Base_ConditionalEffects(0, swap_tmp, 0, 0);
 
-  if (turnCount != 2 || ret != 0) {
+  if (moveCount != 2 || ret != 0) {
     num_fails++;
     Red();
     fprintf(stderr, "    PANDAMONIUM test (player[0]): turn count failed\n");

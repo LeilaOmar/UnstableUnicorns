@@ -36,7 +36,7 @@ int shrinkray_basic_check(void) {
   ret = Base_ConditionalEffects(0, shrinkray_tmp, 0, 0);
   if (ret) Base_MagicEffects(0, shrinkray_tmp.effect);
 
-  if (turnCount != 1 || ret != 1) {
+  if (moveCount != 1 || ret != 1) {
     num_fails++;
     Red();
     fprintf(stderr, "    sanity test: turn count failed\n");
@@ -112,7 +112,7 @@ int shrinkray_empty_check(void) {
   assert(player[1].stable.numUnicorns == 3);
   ret = Base_ConditionalEffects(0, shrinkray_tmp, 0, 0);
 
-  if (turnCount != 2 || ret != 0) {
+  if (moveCount != 2 || ret != 0) {
     num_fails++;
     Red();
     fprintf(stderr, "    empty nursery test: turn count failed\n");
@@ -296,7 +296,7 @@ int shrinkray_pandamonium_check(void) {
   assert(player[1].flags == PANDAMONIUM);
   ret = Base_ConditionalEffects(0, shrinkray_tmp, 0, 0);
 
-  if (turnCount != 2 || ret != 0) {
+  if (moveCount != 2 || ret != 0) {
     num_fails++;
     Red();
     fprintf(stderr, "    PANDAMONIUM test: turn count failed\n");

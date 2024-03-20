@@ -16,7 +16,7 @@ void reset_players(void) {
   }
 
   currentPlayers = 1;
-  turnCount = 1;
+  moveCount = 1;
 }
 
 void reset_nursery(void) {

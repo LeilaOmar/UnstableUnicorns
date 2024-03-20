@@ -6,7 +6,7 @@ int rhinocorn_basic_check(void) {
   struct Unicorn basic_tmp = Base_DECK[13];
   struct Unicorn rhinocorn_tmp = Base_DECK[37];
 
-  turnCount = 1;
+  moveCount = 1;
   currentPlayers = 2;
   AddStable(0, rhinocorn_tmp);
   AddStable(1, basic_tmp);
@@ -22,7 +22,7 @@ int rhinocorn_basic_check(void) {
   }
 
   // assert end of turn phase
-  if (turnCount > 0) {
+  if (moveCount > 0) {
     num_fails++;
     Red();
     fprintf(stderr, "    sanity test: end of turn failed\n");

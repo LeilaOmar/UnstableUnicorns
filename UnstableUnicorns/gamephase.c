@@ -4,7 +4,7 @@
 #include "windowsapp.h"
 
 void BeginningOfTurn(int pnum) {
-  turnCount = 1;
+  moveCount = 1;
   uniLassoIndex[0] = -1;
 
   for (int i = 0; i < player[pnum].stable.size; i++) {
@@ -19,7 +19,7 @@ int ActionPhase(int pnum) {
   int tab = ACTION_TAB;
   int cindex = -2;
 
-  while (turnCount > 0) {
+  while (moveCount > 0) {
     if (networkToggle & 2) {
       networkToggle ^= 2;
       cindex = SelectCard(pnum, &tab, clientPnt);
@@ -32,7 +32,7 @@ int ActionPhase(int pnum) {
     else
       Draw(pnum, 1);
 
-    turnCount--;
+    moveCount--;
   }
 
   return 0;

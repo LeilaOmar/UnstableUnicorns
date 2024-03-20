@@ -19,7 +19,7 @@ int bargain_greater_check(void) {
   assert(player[0].flags == YAY);
   PlayCard(0);
 
-  if (turnCount != 1) {
+  if (moveCount != 1) {
     num_fails++;
     Red();
     fprintf(stderr, "    greater test: turn count failed\n");
@@ -68,7 +68,7 @@ int bargain_lesser_check(void) {
   assert(player[0].flags == YAY);
   PlayCard(0);
 
-  if (turnCount != 1) {
+  if (moveCount != 1) {
     num_fails++;
     Red();
     fprintf(stderr, "    lesser test: turn count failed\n");
@@ -114,7 +114,7 @@ int bargain_empty_check(void) {
   assert(player[1].hand.numCards == 0);
   ret = Base_ConditionalEffects(0, bargain_tmp, 0, 0);
 
-  if (turnCount != 2 || ret != 0) {
+  if (moveCount != 2 || ret != 0) {
     num_fails++;
     Red();
     fprintf(stderr, "    empty test (player[1]): turn count failed\n");
@@ -135,7 +135,7 @@ int bargain_empty_check(void) {
   assert(player[0].flags == YAY);
   PlayCard(0);
 
-  if (turnCount != 1) {
+  if (moveCount != 1) {
     num_fails++;
     Red();
     fprintf(stderr, "    empty test (player[0]): turn count failed\n");

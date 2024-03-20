@@ -1697,7 +1697,7 @@ static void ClickDebug(POINT pnt) {
       // left click action
       debugButtons[i].OnClick(debugButtons[i].source);
 
-      turnCount = 1;
+      moveCount = 1;
       networkToggle ^= 2;
       clientPnt = pnt;
       ActionPhase(0);
@@ -1890,6 +1890,16 @@ static void PaintDebug(HDC *hdcMem) {
   if (hoverTip.isHover) {
     DisplayCustomToolTip(hdcMem, hoverTip);
   }
+
+  // display the turn count
+  char turntxt[32];
+  snprintf(turntxt, sizeof turntxt, "Turn #%d", totalTurns);
+
+  SelectObject(*hdcMem, fonts[FANCYFONT]);
+  SetBkMode(*hdcMem, TRANSPARENT); // box surrounding text is transparent instead of white
+  SetTextColor(*hdcMem, RGB(255, 255, 255));
+  RECT rc2 = { 30, 30, 200, 60 }; // the purple tab at the top-left corner
+  DrawText(*hdcMem, turntxt, strlen(turntxt), &rc2, DT_LEFT | DT_NOCLIP | DT_WORDBREAK);
 }
 
 // ********************************************************************************

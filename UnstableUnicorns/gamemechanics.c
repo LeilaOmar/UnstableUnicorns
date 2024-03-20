@@ -783,7 +783,7 @@ void PlayCard(int pnum, int cindex) {
   default:
     // something went wrong here... there should be no baby unicorns, instant, or typeless cards
     DisplayMessage("Unicorn type error, please choose a different card.");
-    turnCount++;
+    moveCount++;
     return;
   }
 }

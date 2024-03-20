@@ -10,7 +10,8 @@ struct Deck nursery;
 struct Deck discardpile;
 struct Player player[MAX_PLAYERS];
 int currentPlayers = 1; //!< the host is a player too! :)
-int turnCount = 0;      //!< number of moves during the action phase
+int moveCount = 0;      //!< number of moves during the action phase
+int totalTurns = 0;     //!< number of completed player turns throughout the entire game
 int WIN_CONDITION = 7;  //!< usually 7, but can be 6 with 6-8 players
 
 // ********************************************************************************
